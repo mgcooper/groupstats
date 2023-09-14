@@ -47,9 +47,9 @@ function varargout = scattercats(T, xdatavar, ydatavar, cgroupvar, ...
    % note: xgroupvar would become the stacked bar data
 
    % import groupstats package
-   import gs.groupselect
-   import gs.boxchartxdata
-   import gs.prepareTableGroups
+   import groupstats.groupselect
+   import groupstats.boxchartxdata
+   import groupstats.prepareTableGroups
 
    %---------------------- validate inputs
    T = prepareTableGroups(T, ydatavar, xdatavar, xgroupvar, cgroupvar, ...

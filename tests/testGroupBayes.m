@@ -13,10 +13,10 @@ end
 function testDefaultCase(testCase)
 
 % Ensure that the function returns the correct sum for positive numbers
-[TestData, Expected] = gs.test.generateTestData('groupbayes');
+[TestData, Expected] = groupstats.test.generateTestData('groupbayes');
 
 % Use the function groupbayes to calculate conditional probabilities
-Actual = gs.groupbayes(TestData.T, TestData.groupvar, TestData.groupA, TestData.groupB);
+Actual = groupstats.groupbayes(TestData.T, TestData.groupvar, TestData.groupA, TestData.groupB);
 
 % Verify the function returns the expected result
 verifyEqual(testCase, Actual.P_A(:), Expected.P_A(:));

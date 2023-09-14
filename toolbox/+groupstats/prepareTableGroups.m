@@ -60,7 +60,7 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
    % Downselect the table by rows if requested
    if ~isempty(RowSelectVar)
       validatestring(RowSelectVar, VarNames, Caller, 'RowSelectVar');
-      T = gs.groupselect(T, VarNames, RowSelectMembers);
+      T = groupstats.groupselect(T, VarNames, RowSelectMembers);
    end
    
    % Confirm each XGroupMember is a member of T.(XGroupVar)
@@ -99,12 +99,12 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
 
    % Remove cats that are not in xgroupuse
    if ~isempty(XGroupVar)
-      T = gs.dropcats(T, XGroupVar);
+      T = groupstats.dropcats(T, XGroupVar);
    end
 
    % Remove cats that are not in cgroupuse
    if ~isempty(CGroupVar)
-      T = gs.dropcats(T, CGroupVar);
+      T = groupstats.dropcats(T, CGroupVar);
    end
 
    % Check if YDataVar is categorical, and try to convert it if so

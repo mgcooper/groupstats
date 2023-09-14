@@ -15,7 +15,7 @@ function replacePackagePrefix(projectpath, old_pfx, new_pfx, dryrun)
       dryrun = true;
    end
 
-   [projectpath, old_pfx, new_pfx] = convertCharsToStrings( ...
+   [projectpath, old_pfx, new_pfx] = convertStringsToChars( ...
       projectpath, old_pfx, new_pfx);
    
    % Confirm that the last character of the old/new prefix is a dot

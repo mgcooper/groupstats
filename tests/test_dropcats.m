@@ -1,6 +1,6 @@
 %TEST_DROPCATS Test dropcats function
 
-import gs.dropcats
+import groupstats.dropcats
 
 % Define test data
 T = table(categorical({'a'; 'b'; 'c'}), categorical({'x'; 'y'; 'z'}));

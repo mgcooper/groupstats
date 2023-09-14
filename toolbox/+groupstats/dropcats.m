@@ -10,7 +10,7 @@ function T = dropcats(T, varnames)
    %  T = table(categorical({'a'; 'b'; 'c'}));
    %  T.Var1 = addcats(T.Var1, 'd');
    %  oldcats = categories(T.Variables)
-   %  T = gs.dropcats(T, 'Var1');
+   %  T = groupstats.dropcats(T, 'Var1');
    %  % Confirm the category 'd' has been removed from the categorical variable:
    %  newcats = categories(T.Variables)
    %

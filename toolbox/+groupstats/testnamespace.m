@@ -10,7 +10,7 @@ function varargout = testnamespace(whichtest)
       case 'internal'
 
          % test +internal folder
-         [varargout{1:max(1, nargout)}] = gs.internal.getversion();
+         [varargout{1:max(1, nargout)}] = groupstats.internal.getversion();
          % [varargout{1:max(1, nargout)}] = getversion(); % does not work
 
       case 'private'

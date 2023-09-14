@@ -7,7 +7,7 @@ function varargout = runtests(what)
 
    import matlab.unittest.TestSuite;
 
-   testfolder = gs.internal.projectpath('tests');
+   testfolder = groupstats.internal.projectpath('tests');
 
    % Found here https://github.com/ragavsathish/mmockito/blob/master/runtests.m
 
@@ -17,7 +17,7 @@ function varargout = runtests(what)
       case 'all'
          suite = TestSuite.fromFolder(testfolder, 'IncludingSubfolders', true);
          result = transpose(suite.run());
-         % suite = TestSuite.fromPackage("gs.test", "IncludingSubpackages", true);
+         % suite = TestSuite.fromPackage("groupstats.test", "IncludingSubpackages", true);
       case 'acceptance'
          suite = TestSuite.fromFolder(fullfile(testfolder, 'acceptance'));
          result = transpose(suite.run());
