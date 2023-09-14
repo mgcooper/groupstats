@@ -1,0 +1,21 @@
+{
+   "_schemaVersion": "1.0.0",
+   "groupstats.groupstats":
+   {
+      "inputs":
+      [
+         {"name":"T", "kind":"required", "type":"tabular", "purpose":"the table containing the input data"},
+         {"name":"groupvars", "kind":"required", "type":["char","string"], "purpose":"the grouping variables"},
+         {"name":"methods", "kind":"required", "type":["char","string"], "purpose":"the statistical methods"},
+         {"name":"datavar", "kind":"required", "type":["char","string"], "purpose":"the data variable"},
+         {"name":"groupbins", "kind":"required", "type":["char","string","numeric"], "purpose":"the grouping bins"},
+         {"name":"groupsets", "kind":"required", "type":["char","string"], "purpose":"the grouping sets"},
+         {"name":"rowselectmembers", "kind":"required", "type":["char","string"], "purpose":"the group members to down-select rows of input table"}
+      ],
+      "outputs":
+      [
+         {"name":"Stats", "type":"tabular", "purpose":"the grouped statistics"}
+      ],
+      "description":"Computes grouped statistics"
+   }
+}
