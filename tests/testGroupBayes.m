@@ -16,7 +16,7 @@ function testDefaultCase(testCase)
 [TestData, Expected] = groupstats.test.generateTestData('groupbayes');
 
 % Use the function groupbayes to calculate conditional probabilities
-Actual = groupstats.groupbayes(TestData.T, TestData.groupvar, TestData.groupA, TestData.groupB);
+Actual = groupstats.groupbayes(TestData.T, TestData.groupA, TestData.groupB, TestData.groupvar);
 
 % Verify the function returns the expected result
 verifyEqual(testCase, Actual.P_A(:), Expected.P_A(:));

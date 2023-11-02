@@ -1,28 +1,31 @@
-function P = groupbayes(T, groupvar, groupA, groupB)
-   %GROUPBAYES Compute group-wise bayes probabilities.
+function P = groupbayes(T, groupA, groupB, groupvar)
+   %GROUPBAYES Compute group-wise conditional (Bayesian) probabilities.
    %
    % Syntax:
-   % P = groupbayes(T, groupvar, groupA, groupB)
-   % 
+   % P = groupbayes(T, groupA, groupB)
+   % P = groupbayes(T, groupA, groupB, groupvar)
+   %
    % Description:
    % This function calculates group-wise Bayesian probabilities based on the
-   % information provided in a table. This is particularly useful in cases
-   % where you are working with multiple categories and want to understand the
-   % conditional probabilities between them.
+   % information provided in a table. This is useful in cases where you are
+   % working with multiple categories and want to understand the conditional
+   % probabilities between them.
    %
    % Input Arguments:
-   % T - A MATLAB table containing the information about the events. Each row
-   % represents a unique event. 
-   % 
-   % groupvar - The column (i.e., variable) name in table T which contains the
-   % group labels. Can be a string, cellstr, or char.
-   % 
+   % T - A MATLAB table containing the information about the events.
+   %
    % groupA - An array containing the group labels for which you want to
    % calculate the Bayesian probabilities in relation to groupB. Can be a cell,
    % string, categorical, or char array.
-   % 
+   %
    % groupB - An array (like groupA) containing the group labels for which you
    % want to calculate the Bayesian probabilities in relation to groupA.
+   %
+   % groupvar - (Optional) The column (i.e., variable) name in table T which
+   % contains the group labels. Can be a string, cellstr, or char. If provided,
+   % rows of the table define the event "A" and columns define "and B". If not
+   % provided, columns belonging to groupA and groupB define the events "A" and
+   % "B".
    %
    % Output Arguments:
    % P - A MATLAB table that contains the calculated probabilities, including
@@ -103,65 +106,116 @@ function P = groupbayes(T, groupvar, groupA, groupB)
    %
    % See also:
 
+   narginchk(3, 4)
+   
+   % Set the persistent assert flag
+   assertF off
+   
    % Cast any table variable of type char or cellstr to string
-   T = convertvars(T,@ischar,"string");
-   T = convertvars(T,@iscellstr,"string");
-
-   % Cast T.(groupvar) to categorical
-   try
-      T.(groupvar) = categorical(T.(groupvar));
-   catch ME
-      error("groupbayes: " + ...
-         "T.(groupvar) must be categorical or compatible with categorical")
-   end
+   T = convertvars(T, @ischar, "string");
+   T = convertvars(T, @iscellstr, "string");
 
    % Ensure groupA and groupB are columns of strings
    try
-      groupA = reshape(string(groupA),[],1);
-      groupB = reshape(string(groupB),[],1);
-   catch
+      groupA = reshape(string(groupA), [], 1);
+      groupB = reshape(string(groupB), [], 1);
+   catch e
+      error("Error in converting group labels to strings: %s", e.message);
    end
 
-   % Counts of each groupA and groupB
-   N_A = cellfun(@(group) sum(T.(groupvar) == group), groupA);
-   N_B = cellfun(@(group) sum(T.(groupvar) == group), groupB);
+   % If one of either groupA or groupB has one member and it is present in the
+   % other, remove it.
+   if isscalar(groupA) && ismember(groupA, groupB)
+      groupB = groupB(groupB ~= groupA);
+   elseif isscalar(groupB) && ismember(groupB, groupA)
+      groupA = groupA(groupA ~= groupB);
+   end
 
-   % Counts of each groupA and groupB happening together
-   N_A_AND_B = cell2mat(arrayfun(@(A) cellfun(@(B) sum(T.(groupvar) == A & ...
-      T{:, B}), groupB), groupA, 'UniformOutput', false));
+   % Counts of each groupA and groupB, and groupA and groupB happening together
+   if nargin == 3
+      % Events are defined by variable (column) names
+      N_A = cellfun(@(A) sum(T{:, A}), groupA);
+      N_B = cellfun(@(B) sum(T{:, B}), groupB);
+      N_A_AND_B = cell2mat(arrayfun(@(A) ...
+         cellfun(@(B) sum(T{:, A} & T{:, B}), groupB), groupA, 'Un', 0));
+
+      assertF(@() all(N_A_AND_B <= N_A))
+      assertF(@() all(N_A_AND_B <= N_B))
+      
+      % Need to consider if N should be:
+      % N = N_A + N_B - N_A_AND_B;
+
+   else
+      % Events are defined by rows of column T.(groupvar)
+      if ~iscategorical(T.(groupvar))
+         try
+            % Cast T.(groupvar) to categorical
+            T.(groupvar) = categorical(T.(groupvar));
+         catch e
+            warning("T.(groupvar) must be convertible to categorical")
+            rethrow(e)
+         end
+      end
+      
+      N_A = cellfun(@(A) sum(T.(groupvar) == A), groupA); % N(A,C), or N(A)
+      N_B = cellfun(@(B) sum(T.(groupvar) == B), groupB); % N(B), or N(B,D)
+
+      % Subset groupB rows, count groupA columns
+      N_B_AND_A = cell2mat(arrayfun(@(A) ...
+         arrayfun(@(B) sum(T.(groupvar) == B & T{:, A}), groupB), ...
+         groupA, 'Uniform', 0)); % N(A and B)
+
+      % Subset groupA rows, count groupB columns
+      N_A_AND_B = cell2mat(arrayfun(@(A) ...
+         arrayfun(@(B) sum(T.(groupvar) == A & T{:, B}), groupB), ...
+         groupA, 'Uniform', 0)); % N(A,C and B) or N(A and B,D)
+
+      if ~isequal(N_A_AND_B, N_B_AND_A)
+         % warning('N(A and B) ~= N(B and A)')
+      end
+
+      % Use N_A_AND_B, as described in the documentation (rows define the event
+      % "A", columns define the event "and B")
+      assertF(@() all(N_A_AND_B <= N_A))
+      assertF(@() all(N_A_AND_B <= N_B))
+   end
+   % Quantities computed below here depend only on N_A, N_B, and N_A_AND_B.
 
    % Total counts
-   N = height(T);
+   N = sum(N_A) + sum(N_B); % N(A,C) + N(B) = N(A,C or B)
 
    % Compute marginal probabilities of A and B
-   P_A = N_A ./ N;
-   P_B = N_B ./ N;
+   P_A = N_A ./ N; % N(A,C) / N(A,C or B)
+   P_B = N_B ./ N; % N(B) / N(A,C or B)
 
    % Compute joint probability of A and B
-   P_A_AND_B = N_A_AND_B ./ N; % P(A ∩ B) = P(B ∩ A)
+   P_A_AND_B = N_A_AND_B ./ N; % P(A ∩ B) = P(B ∩ A) % N(A,C and B) / N(A,C or B)
+
+   assert(abs(sum(P_B) + sum(P_A) - 1) < 1e-3)
+   assert(all(0 < P_A_AND_B ) & all(P_A_AND_B < 1))
 
    % Repeat counts and marginal probabilities for each pair
-   N_A = repelem(N_A, numel(groupB), 1);
-   P_A = repelem(P_A, numel(groupB), 1);
    N_B = repmat(N_B, numel(groupA), 1);
    P_B = repmat(P_B, numel(groupA), 1);
+   N_A = repelem(N_A, numel(groupB), 1);
+   P_A = repelem(P_A, numel(groupB), 1);
 
-   epsilon = 1e-10;  % A small number to avoid division by zero
+   epsilon = 1e-10; % A small number to avoid division by zero
 
    % Compute conditional probabilities.
    P_B_GIVEN_A = P_A_AND_B ./ (P_A + epsilon); % P(B|A)
-   P_A_GIVEN_B = P_A_AND_B ./ (P_B + epsilon); % P(A|B) = P(B|A)P(A)/P(B) (Bayes Rule)
+   P_A_GIVEN_B = P_A_AND_B ./ (P_B + epsilon); % P(A|B) = P(B|A)P(A)/P(B)
 
-   % P(B|A) = P(B ∩ A) / P(A) - The conditional probability of an outlet flood
-   % given a subbasin flood i.e., when a flood occurs in a specific subbasin,
-   % how likely is it that a flood is also occurring at the outlet? Can be
-   % interpreted as the likelihood of a subbasin flood "contributing" to a
-   % basin-scale flood, given that a flood has occurred in that sub-basin.
+   % Compute the relative joint frequencies - note: not equal to P(B)
+   F_A = N_A / sum(N_A_AND_B);
+   F_B = N_B ./ sum(N_A_AND_B);
+   F_A_AND_B = N_A_AND_B ./ sum(N_A_AND_B);
 
    % Organize into a table
-   P = table(N_A, N_B, P_A, P_B, P_A_AND_B, P_B_GIVEN_A, P_A_GIVEN_B, ...
-      'VariableNames', ...
-      ["N_A", "N_B", "P_A", "P_B", "P_A_AND_B", "P_B_GIVEN_A", "P_A_GIVEN_B"]);
+   P = table(N_A, N_B, N_A_AND_B, P_A, P_B, P_A_AND_B, F_A, F_B, F_A_AND_B, ...
+      P_B_GIVEN_A, P_A_GIVEN_B, 'VariableNames', ...
+      ["N_A", "N_B", "N_A_AND_B", "P_A", "P_B", "P_A_AND_B", "F_A", "F_B", ...
+      "F_A_AND_B", "P_B_GIVEN_A", "P_A_GIVEN_B"]);
 
    % Adding group names to the table
    [a, b] = meshgrid(groupA, groupB);

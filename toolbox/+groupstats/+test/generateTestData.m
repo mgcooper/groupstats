@@ -18,7 +18,7 @@ function varargout = generateTestData(whichfunction)
             'VariableNames', {groupvar, 'A1', 'A2', 'B1', 'B2'});
 
          % Use the function groupbayes to calculate conditional probabilities
-         % P = groupbayes(T, groupvar, groupA, groupB);
+         % P = groupbayes(T, groupA, groupB, groupvar);
 
          TestData.T = T;
          TestData.groupvar = groupvar;
