@@ -1,6 +1,6 @@
 function varargout = groupstats(T, groupvars, methods, datavar, ...
       groupbins, groupsets, varargin)
-   %GROUPSTATS Comput group-wise statistics 
+   %GROUPSTATS Compute group-wise statistics 
    % 
    %  Stats = groupstats(T, groupvars, methods, datavar, groupbins, groupsets)
    %  Calls groupsummary with custom function methods. 
@@ -77,7 +77,7 @@ function varargout = groupstats(T, groupvars, methods, datavar, ...
    end
    methods = setarg(methods, nargin, 3, {'mean'});
    datavar = setarg(datavar, nargin, 4, vartype("numeric"));
-   groupbins = setarg(groupbins, nargin, 5, repmat("none",numel(groupvars),1));
+   groupbins = setarg(groupbins, nargin, 5, repmat("none", numel(groupvars), 1));
    groupsets = setarg(groupsets, nargin, 6, "none");
 
    % This is to sub-select rows. Not sure its worth the trouble
