@@ -193,8 +193,10 @@ function T = downselectvars(T, groupvars, groupvarselect)
       % enforce one groupvar for downselection
       assert(sum(tf) <= 1, "only one groupvar can be downselected using groupvarselect")
 
-      % Remove members of groupvars that are "groupvarselect"
-      T = T(ismember(string(T.(groupvars(tf))),groupvarselect), :);
+      % Keep members of groupvars that are in "groupvarselect", if any found
+      if any(tf)
+         T = T(ismember(string(T.(groupvars(tf))),groupvarselect), :);
+      end
    end
 end
 

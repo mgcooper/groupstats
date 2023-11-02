@@ -1,18 +1,18 @@
-function T = dropcats(T, varnames)
+function tbl = dropcats(tbl, varnames)
    % DROPCATS Remove categories that are not present in a table variable.
    %
-   %  T = DROPCATS(T, VARNAME) takes a table T and the name of a categorical
-   %  variable VARNAME. It removes any categories in VARNAME that are not
-   %  present in the actual data, and returns the modified table.
+   %  TBL = DROPCATS(TBL, VARNAME) takes a table TBL and the name of a
+   %  categorical variable VARNAME. It removes any categories in VARNAME that
+   %  are not present in the actual data, and returns the modified table.
    %
    % Example:
    %
-   %  T = table(categorical({'a'; 'b'; 'c'}));
-   %  T.Var1 = addcats(T.Var1, 'd');
-   %  oldcats = categories(T.Variables)
-   %  T = groupstats.dropcats(T, 'Var1');
+   %  tbl = table(categorical({'a'; 'b'; 'c'}));
+   %  tbl.Var1 = addcats(tbl.Var1, 'd');
+   %  oldcats = categories(tbl.Variables)
+   %  tbl = groupstats.dropcats(tbl, 'Var1');
    %  % Confirm the category 'd' has been removed from the categorical variable:
-   %  newcats = categories(T.Variables)
+   %  newcats = categories(tbl.Variables)
    %
    % Copyright (c) 2023, Matt Cooper, BSD 3-Clause License, github.com/mgcooper
    %
@@ -20,15 +20,15 @@ function T = dropcats(T, varnames)
    
    % PARSE ARGUMENTS
    arguments
-      T tabular % Ensure T is a table or other tabular data structure
-      varnames (1, :) string = T(:, vartype('categorical')).Properties.VariableNames;
+      tbl tabular % Ensure tbl is a table or other tabular data structure
+      varnames (1, :) string = tbl(:, vartype('categorical')).Properties.VariableNames;
    end
    
    % I might just return rather than error on the first if, and in the else,
    % only error if ALL categorical ... actually I think I should keep the else
    % errors because if varnames is default, they are guaranteed not to trigger,
    % so they are useful for understanding how the function is designed to work,
-   % if a user wants all cats dropped, just call dropcats(T), also it will
+   % if a user wants all cats dropped, just call dropcats(tbl), also it will
    % provide an error if the user thinks a var is categorical but it isnt', but
    % need to confirm what happens when a table is constructed with a categorical
    % variable then that variable is converted to a string and/or cats are
@@ -42,12 +42,12 @@ function T = dropcats(T, varnames)
    else
       % Confirm the requested variables exist in the table and are categorical
       for var = varnames(:)'
-         if ~any(strcmp(var, T.Properties.VariableNames))
+         if ~any(strcmp(var, tbl.Properties.VariableNames))
             msg = 'Variable name "%s" not found in the table.';
             eid = 'groupstats:dropcats:badVariableName';
             error(eid, msg, var);
          end
-         if ~iscategorical(T.(var))
+         if ~iscategorical(tbl.(var))
             msg = 'Variable "%s" must be categorical.';
             eid = 'groupstats:dropcats:nonCategoricalVar';
             error(eid, msg, var);
@@ -61,19 +61,19 @@ function T = dropcats(T, varnames)
    
    % Iterate through the categorical variables and remove unused categories
    for var = varnames(:)'
-      T.(var) = removecats(T.(var));
+      tbl.(var) = removecats(tbl.(var));
    end
    
 %    % Iterate through the categorical variables and remove unused categories
 %    for var = varnames(:)'
 %       % Retrieve the categories in the given variable
-%       allcats = categories(T.(var));
+%       allcats = categories(tbl.(var));
 %    
 %       % Find categories that are not present in the actual data
-%       oldcats = allcats(~ismember(allcats, T.(var)));
+%       oldcats = allcats(~ismember(allcats, tbl.(var)));
 %    
 %       % Remove the unused categories
-%       T.(var) = removecats(T.(var), oldcats);
+%       tbl.(var) = removecats(tbl.(var), oldcats);
 %    end
 end
 
