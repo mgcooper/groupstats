@@ -1,21 +1,413 @@
 {
    "_schemaVersion": "1.0.0",
-   "groupstats.groupstats":
+   "groupstats.groupsummary":
    {
       "inputs":
       [
-         {"name":"T", "kind":"required", "type":"tabular", "purpose":"the table containing the input data"},
-         {"name":"groupvars", "kind":"required", "type":["char","string"], "purpose":"the grouping variables"},
-         {"name":"methods", "kind":"required", "type":["char","string"], "purpose":"the statistical methods"},
-         {"name":"datavar", "kind":"required", "type":["char","string"], "purpose":"the data variable"},
-         {"name":"groupbins", "kind":"required", "type":["char","string","numeric"], "purpose":"the grouping bins"},
-         {"name":"groupsets", "kind":"required", "type":["char","string"], "purpose":"the grouping sets"},
-         {"name":"rowselectmembers", "kind":"required", "type":["char","string"], "purpose":"the group members to down-select rows of input table"}
+         {
+            "name":"tbl", 
+            "kind":"required", 
+            "type":"tabular", 
+            "purpose":"the table containing the input data"
+         },
+         {
+            "name":"groupvars", 
+            "kind":"required", 
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["choices=tablecompletions(tbl)"]
+            ],
+            "purpose":"the grouping variables"
+         },
+         {
+            "name":"methods", 
+            "kind":"required", 
+            "type":
+            [
+               ["choices={'nummissing','nnz','mean','median','mode','var','std','min','max','range','sum','all'}"],
+               ["function_handle"]
+            ],
+            "purpose":"the statistical methods"
+         },
+         {
+            "name":"datavar", 
+            "kind":"required", 
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["choices=tablecompletions(tbl)"]
+            ],
+            "purpose":"the data variable"
+         },
+         {
+            "name":"groupbins", 
+            "kind":"required", 
+            "type":["char","string","numeric"], "purpose":"the grouping bins"
+         },
+         {
+            "name":"groupsets", 
+            "kind":"required", 
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl)"]
+            ],
+            "purpose":"the grouping sets"
+         },
+         {
+            "name":"rowselectmembers", 
+            "kind":"ordered", 
+            "type":["char","string"], 
+            "purpose":"the group members to down-select rows of input table"
+         }
       ],
       "outputs":
       [
-         {"name":"Stats", "type":"tabular", "purpose":"the grouped statistics"}
+         {
+            "name":"Stats",
+            "type":"tabular",
+            "purpose":"the grouped statistics"
+         }
       ],
-      "description":"Computes grouped statistics"
+      "keywords": "groupstats, summary, groupby, aggregate",
+      "description":"Compute grouped statistics"
+   },
+      "groupstats.dropcats":
+   {
+      "inputs":
+      [
+         {
+            "name":"tbl",
+            "kind":"required",
+            "type":"tabular",
+            "purpose":"the table containing the input data"
+         },
+         {
+            "name":"varnames",
+            "kind":"required",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl, 'vartype', 'categorical')"]
+            ],
+            "purpose":"the data variable"
+         }
+      ],
+      "outputs":
+      [
+         {
+            "name":"tbl",
+            "type":"tabular",
+            "purpose":"the table"
+         }
+      ],
+      "description":"Remove categorical data from table"
+   },
+   "groupstats.histogram":
+   {
+      "inputs":
+      [
+         {
+            "name":"tbl",
+            "kind":"required",
+            "type":"tabular",
+            "purpose":"the table containing the input data"
+         },
+         {
+            "name":"datavar",
+            "kind":"required",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+            ],
+            "purpose":"the data variable"
+         },
+         {
+            "name":"GroupVar",
+            "kind":"namevalue",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl)"]
+            ],
+            "purpose":"the grouping variables"
+         },
+         {
+            "name":"GroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl,'selectby', GroupVar)",
+            "purpose":"the grouping variable members"
+         },
+         {
+            "name":"RowSelectVar",
+            "kind":"namevalue",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl)"]
+            ],
+            "purpose":"the variable to down-select rows of input table"
+         },
+         {
+            "name":"RowSelectMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl,'selectby',RowSelectVar)",
+            "purpose":"the group members to down-select rows of input table"
+         },
+         {
+            "name":"MergeGroupVar",
+            "kind":"namevalue",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl)"]
+            ],
+            "purpose":"the variable that contains groups to merge"
+         },
+         {
+            "name":"MergeGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl,'selectby',MergeGroupVar)",
+            "purpose":"the group members to merge"
+         },
+         {
+            "name":"Parent",
+            "kind":"namevalue",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes to plot into"
+         },
+         {
+            "name":"LegendString",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string", "cellstr"],
+               ["notempty"]
+            ],
+            "purpose":"the legend string"
+         },
+         {
+            "name":"LegendOrientation",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices={'horizontal', 'vertical'}"]
+            ],
+            "purpose":"the legend orientation"},
+         {
+            "name":"Props",
+            "kind":"properties",
+            "type":"matlab.graphics.chart.primitive.Histogram"}
+      ],
+      "outputs":
+      [
+         {
+            "name":"H",
+            "type":"matlab.graphics.chart.primitive.Histogram",
+            "purpose":"the histogram handle"
+         },
+         {
+            "name":"L",
+            "type":"matlab.graphics.illustration.Legend",
+            "purpose":"the legend handle"
+         }
+      ],
+      "description":"Create histogram of grouped data"
+   },
+   "groupstats.scatter":
+   {
+      "inputs":
+      [
+         {
+            "name":"tbl",
+            "kind":"required",
+            "type":"tabular",
+            "purpose":"the table containing the input data"
+         },
+         {
+            "name":"xdatavar",
+            "kind":"required",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+            ],
+            "purpose":"the x-axis variable"
+         },
+         {
+            "name":"ydatavar",
+            "kind":"required",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+            ],
+            "purpose":"the y-axis variable"
+         },
+         {
+            "name":"cgroupvar",
+            "kind":"required",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+            ],
+            "purpose":"the face color variable"
+         },
+         {
+            "name":"sgroupvar",
+            "kind":"ordered",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+            ],
+            "purpose":"the symbol size variable"
+         },
+         {
+            "name":"CGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "purpose":"the color grouping variable members"
+         },
+         {
+            "name":"SGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl, 'selectby', sgroupvar)",
+            "purpose":"the symbol size grouping variable members"
+         },
+         {
+            "name":"RowSelectVar",
+            "kind":"namevalue",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl)"]
+            ],
+            "purpose":"the variable to down-select rows of input table"
+         },
+         {
+            "name":"RowSelectMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl,'selectby',RowSelectVar)",
+            "purpose":"the group members to down-select rows of input table"
+         },
+         {
+            "name":"MergeGroupVar",
+            "kind":"namevalue",
+            "type":
+            [
+               ["cellstr","char","string","vartype","pattern"],
+               ["scalar"],
+               ["choices=tablecompletions(tbl)"]
+            ],
+            "purpose":"the variable that contains groups to merge"
+         },
+         {
+            "name":"MergeGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl,'selectby',MergeGroupVar)",
+            "purpose":"the group members to merge"
+         },
+         {
+            "name":"SortVar",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices={'xdatavar', 'ydatavar'}"]
+            ],
+            "purpose":"order the legend from high to low along the SortVar axis"},
+         {
+            "name":"SortGroup",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices={'cgroupvar', 'sgroupvar'}"]
+            ],
+            "purpose":"order the legend from high to low mean value of the SortGroup data"},
+         {
+            "name":"Parent",
+            "kind":"namevalue",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes to plot into"
+         },
+         {
+            "name":"SortBy",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices={'ascend', 'descend'}"]
+            ],
+            "purpose":"which direction to sort by"},
+         {
+            "name":"Legend",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices={'on', 'off'}"]
+            ],
+            "purpose":"switch to turn the legend on or off"},
+         {
+            "name":"LegendString",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string", "cellstr"],
+               ["notempty"]
+            ],
+            "purpose":"the legend string"
+         },
+         {
+            "name":"LegendOrientation",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices={'horizontal', 'vertical'}"]
+            ],
+            "purpose":"the legend orientation"},
+         {
+            "name":"Props",
+            "kind":"properties",
+            "type":"matlab.graphics.chart.primitive.Scatter"}
+      ],
+      "outputs":
+      [
+         {
+            "name":"H",
+            "type":"matlab.graphics.chart.primitive.Scatter",
+            "purpose":"the scatter chart handle"
+         },
+         {
+            "name":"L",
+            "type":"matlab.graphics.illustration.Legend",
+            "purpose":"the legend handle"
+         }
+      ],
+      "description":"Create scatter chart of grouped data"
    }
 }
