@@ -32,78 +32,6 @@ function P = groupbayes(T, groupA, groupB, groupvar)
    %     marginal probabilities, joint probabilities, and conditional
    %     probabilities.
    %
-   % The function calculates the counts for each of the specified groups and
-   % computes marginal probabilities, joint probabilities, and conditional
-   % probabilities according to Bayes' Theorem.
-   %
-   % Precautions:
-   % Make sure that the inputs T, groupvar, groupA, and groupB are valid and
-   % formatted correctly. Invalid or incorrectly formatted inputs may result in
-   % errors or incorrect outputs.
-   %
-   % It's important to note that the group labels specified in groupA and groupB
-   % need to be column names in the table T, and T must contain the column
-   % T.(groupvar), each element of which is a member of either groupA or groupB.
-   % That is, T.(groupA(n)) must exist, where n goes from 1:numel(groupA), same
-   % for T.(groupB(m)), with m from 1:numel(groupB). Each element of
-   % T.(groupA(n)) and T.(groupB(m)) columns must be true or false indicating if
-   % the event in the i'th row of the table is true for those groups, i.e., if
-   % the event represented by T.(groupvar)(i) is also true for T.(groupA(n))(i)
-   % and/or T.(groupB(m))(i).
-   %
-   % Example
-   %
-   % % Create a table T representing events
-   % groupvar = 'Group';
-   % groupA = {'A1', 'A2'};
-   % groupB = {'B1', 'B2'};
-   % T = table({'A1'; 'A2'; 'B1'; 'B2'; 'A1'; 'B2'; 'A1'; 'B1'; 'A2'; 'B2'}, ...
-   %     [true; false; true; true; true; false; true; false; true; true], ...
-   %     [false; true; true; false; true; true; false; true; false; false], ...
-   %     [true; true; false; false; true; true; false; false; true; true], ...
-   %     [false; false; true; true; false; true; true; false; false; true], ...
-   %     'VariableNames', {groupvar, 'A1', 'A2', 'B1', 'B2'});
-   %
-   % % Use the function groupbayes to calculate conditional probabilities
-   % P = groupbayes(T, groupvar, groupA, groupB);
-   %
-   % % Display the resulting table
-   % disp(P);
-   %
-   % % Expected Result:
-   % % GroupA    GroupB     P_A       P_B       P_A_AND_B    P_B_GIVEN_A    P_A_GIVEN_B
-   % % 'A1'      'B1'       0.3       0.2       0.2          0.6667         1.0000
-   % % 'A1'      'B2'       0.3       0.3       0.1          0.3333         0.3333
-   % % 'A2'      'B1'       0.2       0.2       0.2          1.0000         1.0000
-   % % 'A2'      'B2'       0.2       0.3       0            0.0000         0.0000
-   % %
-   %
-   % Reference
-   %
-   % Bayes' theorem is:
-   %
-   %                 P(B|A)P(A)
-   %       P(A|B) = ------------
-   %                    P(B)
-   %
-   %
-   % The total probabilities schema is:
-   %
-   %                    A                     ~A
-   %          ----------------------------------------------
-   %      B  |  P(A∩B)= P(B|A)P(A)     P(~AB)= P(B|~X)p(~A) | P(B)
-   %         |                                              |
-   %     ~B  |  B(A~B)= P(~B|A)P(A)   P(~A~B)= P(~B|~A)P(~A)| P(~B)
-   %          ----------------------------------------------
-   %                   P(A)                  P(~A)
-   %
-   %
-   % Reading from left to right, | means 'given'. Reading from right to left, |
-   % means 'implies' or 'leads to'. Thus A|B reads 'A given B' or 'the
-   % probability that an element is A, given that the element is B'. From right
-   % to left, A|B reads 'B implies A or 'the probability that an element
-   % containing B is A'. - attributed to Eliezer S. Yudkowsky
-   %
    % See also:
 
    narginchk(3, 4)
@@ -226,6 +154,65 @@ function P = groupbayes(T, groupA, groupB, groupvar)
    P = movevars(P,"GroupA","Before","N_A");
    P = movevars(P,"GroupB","After","GroupA");
 end
+
+% It is helpful to remember:
+% P_B_GIVEN_A = N_A_AND_B ./ N_A
+% P_A_GIVEN_B = N_A_AND_B ./ N_B
+
+% P_B_GIVEN_A = P_A_AND_B / P_A
+% P_B_GIVEN_A = Fcs * F_A_AND_B
+% P_B_GIVEN_A = N_A_AND_B / N_A
+% F_A_AND_B = N_A_AND_B / sum(N_A_AND_B)
+% Fcs = sum(N_A_AND_B) / N_A
+
+% P_A_GIVEN_B = P_B_GIVEN_A * P(A)/P(B)
+% P_A_GIVEN_B = N_A_AND_B / N_A * N_A)/P(B)
+
+% P(B|A) = P(B ∩ A) / P(A) - The conditional probability of an outlet flood
+% given a subbasin flood i.e., when a flood occurs in a specific subbasin,
+% how likely is it that a flood is also occurring at the outlet? Can be
+% interpreted as the likelihood of a subbasin flood "contributing" to a
+% basin-scale flood, given that a flood has occurred in that sub-basin.
+
+% Should be able to construct a table:
+% ========================================|
+%  A   \ Basin |  Yes   |   No   |  Total |
+% Inlet \  B   |        |        |        |
+% ========================================|
+%  Yes         |  105   |  100   |  205   | <- Total # of inlet floods
+% -------------------------------|--------|
+%  No          |   92   | 1372   | 1464   | <- Total # of non-inlet floods
+% ========================================|
+%  Total       |  198   | 1472   | 1669   |
+%------------------------------------------
+%                  ^
+%                Total
+%                # of
+%                basin
+%                floods
+%
+%
+% P_A = P_Inlet = (105+100) / 1669 = 0.1228
+% P_B = P_Basin = (105+92) / 1669 = 0.1180
+% P_A_GIVEN_B = P_Inlet_Given_Basin = N_A_AND_B / N_B = 105/198 = 0.5303
+% P_B_GIVEN_A = P_Basin_Given_Inlet = N_A_AND_B / N_A = 105/205 = 0.5122
+
+% Should be
+
+
+%    sum(T.basin == "Outlet") % 205
+%    sum(T.basin == "Outlet" & T.UpperDelaware) % 105
+%    sum(T.basin == "Outlet" & ~T.UpperDelaware) % 100
+%
+%    sum(T.basin == "UpperDelaware") % 198
+%    sum(T.basin == "UpperDelaware" & T.Outlet) % 106
+%    sum(T.basin == "UpperDelaware" & ~T.Outlet) % 92
+%
+%    sum(T.basin ~= "Outlet" & T.basin ~= "UpperDelaware") % 1372
+%
+%    % These are the wrong ones
+%    sum(T.basin ~= "Outlet" & T.UpperDelaware) % 941
+%    sum(T.basin ~= "UpperDelaware" & T.Outlet) % 1117
 
 % % Keep these for now b/c they show how to get the sum of all the columns
 % % Counts of each groupA and groupB

@@ -1,6 +1,9 @@
 function validatemember(GroupMembers, ValidMembers, FunctionName, ArgName)
    GroupMembers = string(unique(GroupMembers));
    ValidMembers = string(unique(ValidMembers));
+   
+   % This requires all GroupMembers be members of ValidMembers, but not the
+   % reverse
    arrayfun(@(str) validatestring(str, ValidMembers, FunctionName, ArgName), ...
       GroupMembers);
    

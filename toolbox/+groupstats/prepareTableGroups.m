@@ -36,16 +36,30 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
    
    Caller = upper(mcallername());
 
+   % UPDATE: if YDataVar is categorical, and the calling function also accepts a
+   % "Member"-of var, then the next check is too restrictive. Also, the next
+   % check makes it difficult / impossible to mimic built-in functions for the
+   % simple case where no grouping is desired. 
+   
+   % Before commenting it out, I added isempty(RowSelectVar) as another
+   % requirement, but ultimately I think its better to let it pass and then
+   % mimic built-in behavior in the calling function.
+   
    % Exit if at least one grouping variable was not provided.
-   if isempty(CGroupVar) && isempty(XGroupVar)
-      eid = sprintf('groupstats:%s:noGroupingVarProvided', Caller);
-      msg = 'No XGroupVar or CGroupVar provided, try %s(T.(ydatavar))';
-      error(eid, msg, Caller);
-   end
+   % if isempty(CGroupVar) && isempty(XGroupVar) && isempty(RowSelectVar)
+   %    eid = sprintf('groupstats:%s:noGroupingVarProvided', Caller);
+   %    msg = 'No XGroupVar or CGroupVar provided, try %s(T.(ydatavar))';
+   %    error(eid, msg, Caller);
+   % end
 
    % Validate variable names by confirming that they are column names of T.
    VarNames = T.Properties.VariableNames;
 
+   % If a timetable is passed in, append the Time dimension
+   if istimetable(T)
+      VarNames = [T.Properties.DimensionNames(1) VarNames];
+   end
+   
    % other than YDataVar, we need ~isempty, then validatestr, then
    % validateGroupMembers. The groupmembers default assignment eliminates the
    % default assigmnent step, but that's it
@@ -60,7 +74,12 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
    % Downselect the table by rows if requested
    if ~isempty(RowSelectVar)
       validatestring(RowSelectVar, VarNames, Caller, 'RowSelectVar');
-      T = groupstats.groupselect(T, VarNames, RowSelectMembers);
+      T = groupstats.groupselect(T, RowSelectVar, RowSelectMembers);
+      % Dec 2023 - replaced VarNames with RowSelectVar, otherwise if
+      % RowSelectMembers are present in more than one of VarNames, groupselect
+      % errors b/c it only allows one variable to select rows by. Not sure why 
+      % VarNames was ever used.
+      % T = groupstats.groupselect(T, VarNames, RowSelectMembers);
    end
    
    % Confirm each XGroupMember is a member of T.(XGroupVar)
@@ -68,6 +87,18 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
       validatestring(XGroupVar, VarNames, Caller, 'XGroupVar');
    end
    if ~isempty(XGroupMembers)
+      % 18 Nov 2023 - I reversed XGroupMembers and T.(XGroupVar). I think this
+      % is the desired behavior - XGroupMembers defines the "ValidMembers"
+      % provided by the user, T.(XGroupVar) defines the actual members. 
+      % UPDATE: reversing them fixes the situation where the data does not
+      % contain one of the expected group members e.g. in my application, I sent
+      % in all months from Jan-Dec which were previously defined, but the table
+      % did not contain any Feb data points. If instead I used
+      % unique(T.(XGroupVar)) to define XGroupMembers, it would work. So I
+      % commented out the "fix" and re-activated the old behavior, otherwise the
+      % expected behavior where a specific group member is designated by
+      % XGroupMembers leads to failure in validatemember.
+      % validatemember(T.(XGroupVar), XGroupMembers, Caller, 'XGroupMembers')
       validatemember(XGroupMembers, T.(XGroupVar), Caller, 'XGroupMembers')
       inxgroup = ismember(string(T.(XGroupVar)), XGroupMembers);
    else
@@ -117,11 +148,18 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
    end
 
    % Check if xdatavar is categorical, and try to convert it if provided
-   if ~isempty(XDataVar) && iscategorical(T.(XDataVar))
+   if ~isempty(XDataVar) && ~isnumeric(T.(XDataVar))
+      
+      % Try to convert categorical to double
       try
          T.(XDataVar) = cat2double(T.(XDataVar));
       catch
-         % let the built-in error catching do the work.
+         % Try to convert string to double
+         try
+            T.(XDataVar) = str2double(T.(XDataVar));
+         catch
+            % let the built-in error catching do the work.
+         end
       end
    end
 end

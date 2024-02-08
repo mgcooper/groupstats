@@ -161,10 +161,43 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
       % Original, need to test the join with non-none bins
       % G = groupsummary(tbl,groupvars,groupbins,methods,datavar);
 
-      G = join( ...
-         groupsummary(tbl, groupvars, groupbins, methods, datavar), ...
-         groupstats.grouppercent(tbl, groupvars, groupbins, groupsets) );
+      % G = join( ...
+      %    groupsummary(tbl, groupvars, groupbins, methods, datavar), ...
+      %    groupstats.grouppercent(tbl, groupvars, groupbins, groupsets) );
 
+      % 19 Nov 2023 UPDATE:
+      % I think groupsets must be also included in groupvars, and maybe up to
+      % now that never came up but I called this function with "months" for
+      % groupvar and "scenario" for groupsets expecting it to compute
+      % groupsummary for all months by scenario, but groupsets is only used in
+      % the call to grouppercent. So I added the [groupvars, groupsets].
+      if groupsets == "none"
+         G = groupsummary(tbl, groupvars, groupbins, methods, datavar);
+      else
+         G = groupsummary(tbl, [groupvars, groupsets], groupbins, methods, datavar);
+      end
+      G.Properties.VariableNames = replace( ...
+            G.Properties.VariableNames, "disc_", "");
+      
+      % If groupbins are used and there is <undefined> e.g. if the groupbins did
+      % not include enough edges to define all bins, join will fail with error
+      % "The key variables cannot contain any missing values". So, try to
+      % replace with NaN. BUT this gets complicated if any values are ordinal or
+      % categorical (I think the <undefined> issue is due to categorical)
+      %
+      % This was a start to fix this, idea was to replace missing with nan, but
+      % then I realized its due to categorical, so its complicated whether that
+      % should be done or not, and insead, probably better to use a join
+      % approach similar to stacktables. But for now my solution was to properly
+      % efine the FCS bins outside this function
+      % vars = G.Properties.VariableNames;
+      % for n = 1:numel(vars)
+      %    idx = ismissing(G{:, vars{n}});
+      % end
+      
+      G = join(G, ...
+         groupstats.grouppercent(tbl, groupvars, groupbins, groupsets));
+      
       % Reset the variable names to match custom function names in methods. The
       % first variables will be groupvars followed by GroupCount from
       % groupsummary, and then the groupvar_method columns, then 'Percent' and
@@ -225,13 +258,14 @@ function groupbins = parseGroupBins(groupbins, groupvars)
    % to require groiupbins to be a cell array I tink
 
    if ~iscell(groupbins)
-      if ~isstring(groupbins) && groupbins == "none"
+      if isstring(groupbins) && ~all(groupbins == "none")
          error( ...
             ['groupbins must be a cell array with one binning scheme per ' ...
             'variable in groupvars or a scalar string "none"'])
       end
+   end
 
-   elseif numel(groupbins) ~= numel(groupvars)
+   if numel(groupbins) ~= numel(groupvars)
       % this tries to apply groupbins to each variable, or assume its for the
       % first one and set the rest "none" ...
       groupbins = [groupbins, {repmat("none", numel(groupvars)-1, 1)}];

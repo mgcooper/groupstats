@@ -1,6 +1,6 @@
-function varargout = scattercats(T, xdatavar, ydatavar, cgroupvar, ...
-      xgroupvar, CustomOpts, ScatterChartOpts)
-   %SCATTERCATS scatter chart categorical table data
+function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
+      sgroupvar, Opts, Props)
+   %SCATTER scatter chart categorical table data
    %
    %
    % See also: boxchartcats, barchartcats
@@ -11,29 +11,31 @@ function varargout = scattercats(T, xdatavar, ydatavar, cgroupvar, ...
 
    % PARSE INPUTS
    arguments
-      T table
+      tbl table
       xdatavar (1, 1) string { mustBeNonempty(xdatavar) }
       ydatavar (1, 1) string { mustBeNonempty(ydatavar) }
       cgroupvar (1, 1) string { mustBeNonempty(cgroupvar) }
-      xgroupvar string = string.empty()
-      CustomOpts.CGroupMembers string = groupmembers(T, cgroupvar)
-      CustomOpts.XGroupMembers string = groupmembers(T, xgroupvar)
-      CustomOpts.RowSelectVar string = string.empty()
-      CustomOpts.RowSelectMembers string = string.empty()
-      CustomOpts.SortGroup (1, 1) string {mustBeMember(CustomOpts.SortGroup, ...
-         ["cgroupvar", "xgroupvar"])} = "cgroupvar"
-      CustomOpts.SortVar (1, 1) string {mustBeMember(CustomOpts.SortVar, ...
+      sgroupvar string = string.empty()
+      Opts.CGroupMembers string = groupmembers(tbl, cgroupvar)
+      Opts.SGroupMembers string = groupmembers(tbl, sgroupvar)
+      Opts.RowSelectVar string = string.empty()
+      Opts.RowSelectMembers string = string.empty()
+      Opts.SortGroup (1, 1) string {mustBeMember(Opts.SortGroup, ...
+         ["cgroupvar", "sgroupvar"])} = "cgroupvar"
+      Opts.SortVar (1, 1) string {mustBeMember(Opts.SortVar, ...
          ["xdatavar", "ydatavar"])} = "xdatavar"
-      CustomOpts.SortBy (1, 1) string {mustBeMember(CustomOpts.SortBy, ...
+      Opts.SortBy (1, 1) string {mustBeMember(Opts.SortBy, ...
          ["ascend", "descend"])} = "ascend"
-      CustomOpts.Legend (1, 1) string = "on"
-      CustomOpts.LegendText (:, 1) string = string.empty()
-      ScatterChartOpts.?matlab.graphics.chart.primitive.Scatter
-      % LegendOpts.?matlab.graphics.illustration.Legend
+%       Opts.Parent (1,1) { mustBeA(Opts.Parent, ...
+%          "matlab.graphics.axis.AbstractAxes") } = gca
+      Opts.Legend (1, 1) string = "on"
+      Opts.LegendString (:, 1) string = string.empty()
+      Opts.LegendOrientation (1, 1) string = "vertical"
+      Props.?matlab.graphics.chart.primitive.Scatter
    end
    
-   if CustomOpts.SortVar == "ydatavar"
-      CustomOpts.SortBy = "descend";
+   if Opts.SortVar == "ydatavar"
+      Opts.SortBy = "descend";
    end
 
 %    ScatterChartDefaults = metaclassDefaults( ...
@@ -44,11 +46,11 @@ function varargout = scattercats(T, xdatavar, ydatavar, cgroupvar, ...
 %       LegendDefaults, ?matlab.graphics.illustration.Legend);
 
    % cgroupvar = groupvar
-   % xgroupvar = withingroupvar
+   % sgroupvar = withingroupvar
 
    % for boxchartcats, there is no xdata, there is xgroupdata which defines the
    % unique groups along the xaxis. In barchartcats, that
-   % note: xgroupvar would become the stacked bar data
+   % note: sgroupvar would become the stacked bar data
 
    % import groupstats package
    import groupstats.groupselect
@@ -56,19 +58,19 @@ function varargout = scattercats(T, xdatavar, ydatavar, cgroupvar, ...
    import groupstats.prepareTableGroups
 
    %---------------------- validate inputs
-   T = prepareTableGroups(T, ydatavar, xdatavar, xgroupvar, cgroupvar, ...
-      CustomOpts.XGroupMembers, CustomOpts.CGroupMembers, ...
-      CustomOpts.RowSelectVar, CustomOpts.RowSelectMembers);
+   tbl = prepareTableGroups(tbl, ydatavar, xdatavar, sgroupvar, cgroupvar, ...
+      Opts.SGroupMembers, Opts.CGroupMembers, ...
+      Opts.RowSelectVar, Opts.RowSelectMembers);
 
    % Assign the data to plot
-   XData = T.(xdatavar);
-   YData = T.(ydatavar);
-   CData = T.(cgroupvar); % this should 
+   XData = tbl.(xdatavar);
+   YData = tbl.(ydatavar);
+   CData = tbl.(cgroupvar); % this should 
 
-   if isempty(xgroupvar)
+   if isempty(sgroupvar)
       SData = true(size(YData));
    else
-      SData = T.(xgroupvar);
+      SData = tbl.(sgroupvar);
    end
    
    SGrps = unique(SData);
@@ -76,11 +78,11 @@ function varargout = scattercats(T, xdatavar, ydatavar, cgroupvar, ...
    
    % Make the figure using gscatter
    [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
-      SGrps, CustomOpts);
+      SGrps, Opts);
 
 %    % Make the figure using plot
 %    [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
-%       SGrps, CustomOpts);
+%       SGrps, Opts);
    
    % replace underscores with spaces
    
@@ -99,7 +101,7 @@ end
 
 %%
 function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
-      SGrps, CustomOpts)
+      SGrps, Opts)
 
    [colors, symbols, sizes] = getPlotDecorators(CGrps);
 
@@ -108,8 +110,15 @@ function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
    figure; hold on;
    for m = 1:numel(SGrps)
       I = ismember(SData, SGrps(m));
-      H(:, m) = gscatterOneGroup(XData(I), YData(I), CData(I), colors, ...
-         symbols{m}, sizes(m));
+
+      try
+         H(:, m) = gscatterOneGroup(XData(I), YData(I), CData(I), colors, ...
+            symbols{m}, sizes(m));
+      catch
+         h = gscatterOneGroup(XData(I), YData(I), CData(I), colors, ...
+            symbols{m}, sizes(m));
+         H(1:numel(h), m) = h;
+      end
    end
    
    if numel(SGrps) > 1
@@ -120,18 +129,18 @@ function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
       SGrps = [];
    end
    
-   order = legendOrder(XData, YData, CData, SData, CustomOpts);
+   order = legendOrder(XData, YData, CData, SData, Opts);
    
-   if CustomOpts.SortGroup == "cgroupvar"
+   if Opts.SortGroup == "cgroupvar"
       L = groupLegend(cleg(order), sleg, CGrps(order), SGrps);
-   elseif CustomOpts.SortGroup == "xgroupvar"
+   elseif Opts.SortGroup == "sgroupvar"
       L = groupLegend(cleg, sleg(order), CGrps, SGrps(order));
    end
 end
 
 %%
 function [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
-      SGrps, CustomOpts)
+      SGrps, Opts)
 
    [colors, symbols, sizes] = getPlotDecorators(CGrps);
    
@@ -168,7 +177,7 @@ function [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
    end
    hold off
 
-   order = legendOrder(XData, YData, CData, SData, CustomOpts);
+   order = legendOrder(XData, YData, CData, SData, Opts);
 
    L = legend([cleg(order); sleg], [CGrps(order); SGrps], 'Location', 'eastoutside');
    
@@ -177,20 +186,20 @@ function [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
 end
 
 %%
-function order = legendOrder(XData, YData, CData, SData, CustomOpts)
+function order = legendOrder(XData, YData, CData, SData, Opts)
    
-   if CustomOpts.SortVar == "ydatavar"
+   if Opts.SortVar == "ydatavar"
       % order the legend from high to low along the y axis
       sortdata = YData;
-   elseif CustomOpts.SortVar == "xdatavar"
+   elseif Opts.SortVar == "xdatavar"
       % order the legend from low to high along the x axis
       sortdata = XData;
    end
    
-   if CustomOpts.SortGroup == "cgroupvar"
+   if Opts.SortGroup == "cgroupvar"
       % order the legend according to the mean within CData groups
       sortgroup = CData;
-   elseif CustomOpts.SortGroup == "xgroupvar"
+   elseif Opts.SortGroup == "sgroupvar"
       % order the legend according to the mean within SData groups
       sortgroup = SData;
    end
@@ -208,21 +217,21 @@ function order = legendOrder(XData, YData, CData, SData, CustomOpts)
          rethrow(e)
       end
    end
-   [~, order] = sort(mu, CustomOpts.SortBy);
+   [~, order] = sort(mu, Opts.SortBy);
    
-%    switch CustomOpts.SortVar
+%    switch Opts.SortVar
 %       case "ydatavar"
 %          % order the legend from high to low along the y axis
-%          if CustomOpts.SortGroup == "cgroupvar"
+%          if Opts.SortGroup == "cgroupvar"
 %             mu = grpstats(YData, CData, 'mean');
-%          elseif CustomOpts.SortGroup == "xgroupvar"
+%          elseif Opts.SortGroup == "sgroupvar"
 %             mu = grpstats(YData, SData, 'mean');
 %          end
 %       case "xdatavar"
 %          % order the legend from low to high along the x axis
 %          mu = grpstats(XData, CData, 'mean');
 %    end
-%    [~, order] = sort(mu, CustomOpts.SortBy);
+%    [~, order] = sort(mu, Opts.SortBy);
 end
 
 %%
@@ -302,7 +311,7 @@ function [cleg, sleg] = legendhandles(CGrps, SGrps, colors, symbols, sizes)
 end
 
 %%
-function L = groupLegend(cleg, sleg, CGrps, SGrps, CustomOpts)
+function L = groupLegend(cleg, sleg, CGrps, SGrps, Opts)
 
    % This creates one legend
    L = legend([cleg; sleg], [CGrps; SGrps], 'Location', 'eastoutside');
@@ -313,7 +322,7 @@ function L = groupLegend(cleg, sleg, CGrps, SGrps, CustomOpts)
    % leg1 = legend(ax1, cleg, CGrps, 'Location','northoutside');
    % leg2 = legend(ax2, sleg, SGrps, 'Location','EastOutside');
    % title(leg1, cgroupvar);
-   % title(leg2, xgroupvar);
+   % title(leg2, sgroupvar);
 
    % % This creates one legend for either C or S groups
    % legend(cleg, CGrps, 'location', 'northoutside', 'numcolumns', 2, 'fontsize', 10)
@@ -321,7 +330,7 @@ function L = groupLegend(cleg, sleg, CGrps, SGrps, CustomOpts)
 
 %    % Add the legend
 %    withwarnoff('MATLAB:legend:IgnoringExtraEntries');
-%    legendtxt = CustomOpts.LegendText;
+%    legendtxt = Opts.LegendString;
 %    if isempty(legendtxt)
 %       legendtxt = CGrps;
 %    end

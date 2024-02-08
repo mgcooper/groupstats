@@ -9,6 +9,7 @@ function G = grouppercent(G, groupvars, groupbins, groupsets)
    % 
    % See also: groupsummary
    
+   % Update: I did this see the else block below
    % It might be helpful to remove "disc_" from binned variables, since the
    % table returned by this function won't ever have the original variable there
    % won't be any conflict i.e. if we send in a table with variable FCS, we get
@@ -98,6 +99,10 @@ function G = grouppercent(G, groupvars, groupbins, groupsets)
       else
       
          G = groupcounts(G, groupvars, groupbins);
+         
+         % Remove disc_ appended to variable 
+         G.Properties.VariableNames = replace( ...
+            G.Properties.VariableNames, "disc_", "");
       end
 
       % warning(['Input 1, G, does not contain GroupCount variable. ' ...
@@ -108,6 +113,17 @@ function G = grouppercent(G, groupvars, groupbins, groupsets)
    for m = 1:numel(groupsets)
       groupvar = groupsets(m);
       grps = unique(G.(groupvar));
+      
+      % For now, require conversion of cell to string, otherwise grps(n) fails
+      if iscell(grps) && ~isnumeric(grps{1})
+         try
+            grps = string(unique(G.(groupvar)));
+         catch e
+            rethrow(e)
+         end
+      end
+      
+      % Compute the within group percentages
       if numel(grps) == height(G)
          G.("Percent_" + groupvar) = 100.*G.GroupCount./sum(G.GroupCount);
       else
