@@ -35,10 +35,10 @@ function P = groupbayes(T, groupA, groupB, groupvar)
    % See also:
 
    narginchk(3, 4)
-   
+
    % Set the persistent assert flag
    assertF off
-   
+
    % Cast any table variable of type char or cellstr to string
    T = convertvars(T, @ischar, "string");
    T = convertvars(T, @iscellstr, "string");
@@ -69,7 +69,7 @@ function P = groupbayes(T, groupA, groupB, groupvar)
 
       assertF(@() all(N_A_AND_B <= N_A))
       assertF(@() all(N_A_AND_B <= N_B))
-      
+
       % Need to consider if N should be:
       % N = N_A + N_B - N_A_AND_B;
 
@@ -84,7 +84,7 @@ function P = groupbayes(T, groupA, groupB, groupvar)
             rethrow(e)
          end
       end
-      
+
       N_A = cellfun(@(A) sum(T.(groupvar) == A), groupA); % N(A,C), or N(A)
       N_B = cellfun(@(B) sum(T.(groupvar) == B), groupB); % N(B), or N(B,D)
 
@@ -271,7 +271,177 @@ end
 % groupB = allBasins(4:end);
 % % % % % % % % % %
 
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+% Between here was in peakflows but not here
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
+function J = groupjaccard(T, groupvar, groupA, groupB)
+
+   % Counts of each groupA and groupB
+   N_A = cellfun(@(group) sum(T.(groupvar) == group), groupA);
+   N_B = cellfun(@(group) sum(T.(groupvar) == group), groupB);
+
+   % Counts of each groupA and groupB happening together
+   N_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) == A & ...
+      T{:, B}), groupB), groupA, 'UniformOutput', false));
+
+   % To compute Jaccard similarity
+   N_B_AND_A = cell2mat(arrayfun(@(B) arrayfun(@(A) ...
+      sum(T{T.(groupvar) == B, A}), groupA), groupB, 'UniformOutput', false));
+
+   % These should be symmetric
+   J_A_AND_B = N_A_AND_B ./ (N_A + N_B - N_A_AND_B)
+   J_B_AND_A = N_B_AND_A ./ (N_A + N_B - N_B_AND_A)
+
+   % Check if it is symmetric (they're not)
+   [J_A_AND_B J_B_AND_A]
+
+   % try this way
+   J_A_AND_B = N_A_AND_B ./ (N_A + N_B - N_B_AND_A);
+   J_B_AND_A = N_B_AND_A ./ (N_A + N_B - N_A_AND_B);
+   [J_A_AND_B J_B_AND_A] % not
+end
+
+function phi = groupphicoeff(T, groupvar, groupA, groupB)
+
+   % Counts of each group not A and not B
+   N_NOT_A = cellfun(@(A) sum(T.(groupvar) ~= A), groupA);
+   N_NOT_B = cellfun(@(B) sum(T.(groupvar) ~= B), groupB);
+
+   % Counts of A and not B, and not A and B
+   N_A_AND_NOT_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) == A & ...
+      T{:, B}==false), groupB), groupA, 'UniformOutput', false));
+
+   N_NOT_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) == B & ...
+      T{:, A}), groupA), groupB, 'UniformOutput', false));
+
+   % N_NOT_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) ~= A & ...
+   %    T{:, B}), groupB), groupA, 'UniformOutput', false));
+
+   % Counts of each group not A and not B happening together
+   N_NOT_A_AND_NOT_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) ~= A & ...
+      T{:, B}==false), groupB), groupA, 'UniformOutput', false));
+
+   % phi coeff
+   phi = (N_A_AND_B .* N_NOT_A_AND_NOT_B - N_A_AND_NOT_B .* N_NOT_A_AND_B) ./ ...
+      sqrt(N_A .* N_NOT_A .* N_B .* N_NOT_B);
+
+end
+
+function dummy(T, groupvar, groupA, groupB)
+
+   % N_A_AND_B should equal N_B_AND_A, but it does not. The test below demonstrates
+   % why, and clarified why we need to subset rows by groupA (subbasins) not groupB
+   % (outlet) (when computing bayes? Or when diagnosing FCS? I think bayes)
+
+   % This shows that it changes when groupA sets are chosen based on rows where
+   % T.(groupvar) == groupA(n) and then N_A_AND_B is computed using the columns
+   % T.(groupB) == true, versus the other way around. It might be specific to my
+   % flood data and how I removed non-unique events.
+
+   % Counts of each groupA and groupB happening together. This is how it's done in
+   % the main function above.
+   N_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) == A & ...
+      T{:, B}), groupB), groupA, 'UniformOutput', false));
+
+   % This replicates N_A_AND_B above for clarity. It uses groupA rows and then sums
+   % down groupB columns for those rows.
+   N_A_AND_B = nan(numel(groupA), 1);
+   for n = 1:numel(groupA)
+      N_A_AND_B(n) = sum(T.(groupvar) == groupA(n) & T{:, groupB});
+   end
+
+   % This uses events where groupB is true, to test if it provides the same result
+   % as the percentOfdFCS
+   N_B_AND_A = cell2mat(arrayfun(@(B) arrayfun(@(A) ...
+      sum(T{T.(groupvar) == B, A}), groupA), groupB, 'UniformOutput', false));
+
+   % This replicates N_B_AND_A above for clarity. It uses the groupB rows and then
+   % sums down groupA columns for those rows.
+   N_B_AND_A = nan(numel(groupA), 1);
+   for n = 1:numel(groupA)
+      N_B_AND_A(n) = sum(T.(groupvar) == groupB & T{:, groupA(n)});
+   end
+
+   % These are equivalent to above, but only work b/c groupB is scalar. They were
+   % helpful for clarifying how the methods used in precentDeltaFCS relate to the
+   % methods used in groupbayes.
+   N_B_AND_A = arrayfun(@(A) sum(T.(groupvar) == groupB & T{:, A}), groupA);
+   N_A_AND_B = arrayfun(@(A) sum(T{T.(groupvar) == A, groupB}), groupA);
+
+   % This is how I compute the contribution of each sub-basin to outlet dFCS,
+   % Counts == N_B_AND_A
+   Fcount = @(a) sum(T{T.(groupvar) == groupB, a});
+   Counts_B_AND_A = arrayfun(@(a) Fcount(a), groupA);
+
+   % This replicates N_A_AND_B:
+   Fcount = @(a) sum(T{T.(groupvar) == a, groupB});
+   Counts_A_AND_B = arrayfun(@(a) Fcount(a), groupA)
+
+   % Compare them:
+   test = [N_A_AND_B N_B_AND_A Counts_A_AND_B Counts_B_AND_A]
+end
+
+% % Keep these for now b/c they show how to get the sum of all the columns
+% % Counts of each groupA and groupB
+% countA = sum(T{:, groupA}, 1);
+% countB = sum(T{:, groupB}, 1);
+%
+% % Counts of each groupA and groupB happening together
+% count_B_AND_A = cell2mat(arrayfun(@(A) arrayfun(@(B) ...
+%    sum(T{:, A} & T{:, B}), groupB), groupA, 'UniformOutput', false));
+
+% To confirm count_A_AND_B
+% test_A_AND_B = nan(numel(groupA)*numel(groupB),1);
+% i = 0;
+% for n = 1:numel(groupA)
+%    A = groupA(n);
+%    for m = 1:numel(groupB)
+%       i = i+1;
+%       B = groupB(m);
+%       test_A_AND_B(i) = sum(T.(groupvar) == A & T.(B));
+%    end
+% end
+
+% count_B_AND_A = nan(numel(groupA),1);
+% for n = 1:numel(groupA)
+%    count_B_AND_A(n) = sum(T.(groupvar) == groupA{n} & T.(groupB));
+% end
+
+%
+% Inputs:
+% T - table, each row represents an event
+% groupvar - string, cellstr, or char, indicating the column (variable) name in
+% T containing the group names for each event
+% groupA - string, cellstr, or char, indicating the members of all unique values
+% in T.(groupvar) for which the conditional probability of A given B should be
+% computed
+% groupB - string, cellstr, or char, indicating the members of all unique values
+% in T.(groupvar) for which the conditional probability of A given B should be
+% computed
+% datavar - the
+%
+% T must contain the column T.(groupvar), each element of which is a member of
+% either groupA or groupB, and one column for each member of groupA and groupB
+% e.g. T.(groupA(i)) must exist, where i goes from 1:numel(groupA), same for
+% T.(groupB(j)), with j from 1:numel(groupB). Each element of T.(groupA(i)) and
+% T.(groupB(j)) columns must be true or false indicating if the event
+% Assumptions:
+% 1. groupA and groupB are both cell arrays containing column names in T.
+% 2. T.(groupA{i}) and T.(groupB{j}) contain boolean (true/false) data.
+
+% % % % % % % % % %
+% for testing with floodFrequency variables:
+% T = Info;
+% groupvar = "basin";
+% allBasins = unique(Info.basin); % including the outlet
+% groupA = allBasins(1:3);
+% groupB = allBasins(4:end);
+
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+
+%%
 % % Keep this b/c it is more explicit w/ the loop
 % function P = groupbayes2(T,groupvar,groupA,groupB)
 %

@@ -124,12 +124,12 @@ function varargout = histogram(tbl, datavar, Opts, Props)
    import groupstats.groupselect
    import groupstats.prepareTableGroups
 
-   Props = namedargs2cell(Props);
+   Props = namedargs2cell(Props); % replace with struct2varargin for pre-2022b
 
    % Special validation for categorical histogram
-%    makeCategoricalHistogram = iscategorical(tbl.(datavar)) && ...
-%       isempty(Opts.GroupVar) && ~isempty(Opts.GroupMembers);
-   
+   %    makeCategoricalHistogram = iscategorical(tbl.(datavar)) && ...
+   %       isempty(Opts.GroupVar) && ~isempty(Opts.GroupMembers);
+
    makeCategoricalHistogram = iscategorical(tbl.(datavar)) && ...
       isempty(Opts.GroupVar);
 
@@ -168,7 +168,7 @@ function varargout = histogram(tbl, datavar, Opts, Props)
       H = createHistogram(XData, YData, Opts, Props);
       L = createLegend(Opts);
    end
-   
+
    formatHistogram(H)
 
    if nargout > 0

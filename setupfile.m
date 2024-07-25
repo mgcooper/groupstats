@@ -1,8 +1,8 @@
 function setupfile(varargin)
    %SETUPFILE project setup file to add paths, run userhooks, etc.
    %
-   %  setupfile() 
-   %  setupfile(SETVARS) 
+   %  setupfile()
+   %  setupfile(SETVARS)
    %  setupfile(PROJECTNAME, PROJECTPATH)
    %  setupfile(PROJECTNAME, PROJECTPATH, SETVARS)
    %

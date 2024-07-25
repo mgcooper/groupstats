@@ -47,7 +47,7 @@ P_Cond = P_A_AND_B ./ P_A_B;
 % it also contains P(B|A) since P(A|B) = P(B|A) for the case where A and B are
 % reversed i.e., if we have GroupA = A1, GroupB = B1, then P(A1|B1) is the value
 % of P_A_GIVEN_B for that pairwise probability, which is equivalent to the
-% P_B_GIVEN_A value for the pair GroupA = B1, GroupB = A1. 
+% P_B_GIVEN_A value for the pair GroupA = B1, GroupB = A1.
 
 v = {'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8'};
 T = array2table(events', 'VariableNames', v);
@@ -141,9 +141,9 @@ end
 % % "components" example
 % events = sort(randi(3, [1 10])).';
 % component = ["System", "c1", "c2", "c3"];
-% 
+%
 % T = table(component, events);
-% 
+%
 % T = table();
 % for n = 1:numel(component)
 %    failures = randi([0 1], [1 10])';
@@ -166,7 +166,7 @@ N_B_AND_A = arrayfun(@(b) sum(T{T.Component == "System", b}), components);
 P_B_GIVEN_A = N_B_AND_A ./ N_A;
 
 % To compute P_A_GIVEN_B, need P(A) and P(B). However, the math can be
-% simplified to use just the counts: 
+% simplified to use just the counts:
 N_B = arrayfun(@(b) sum(T.Component == b), components);
 P_A_GIVEN_B = N_B_AND_A ./ N_B;
 [P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
@@ -216,7 +216,7 @@ assert(isequaltol(P_Bi_GIVEN_A, P_B_GIVEN_A))
 % PeakFlows.mlx and present them to gpt but now I have to move on.
 
 % The goal of this was to collate the differet ways and see if gpt can identify
-% whats wrong /right with them 
+% whats wrong /right with them
 
 N_A = sum(T.basin == "Outlet");
 N_B_AND_A = arrayfun(@(b) sum(T{T.basin == "Outlet", b}), basins);
@@ -231,11 +231,11 @@ P_B = N_B / N;
 sum(P_B)+P_A
 [P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
 
-%% Use column sums 
+%% Use column sums
 
 % these provide the total number of times each subbasin has a peak within the
 % window of another peak, not the unique events. BUT, check if they yield
-% similar and/or identical probabilities.  
+% similar and/or identical probabilities.
 N_A = sum(T_unique.Outlet)
 N_B = arrayfun(@(b) sum(T_unique{:, b}), basins)
 N = N_A + sum(N_B)

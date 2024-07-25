@@ -4,7 +4,7 @@
 %% Compare categorical histogram using built in versus groupstats
 
 % For a simple categorical histogram, groupstats.histogram behaves exactly like
-% the built in histogram function  
+% the built in histogram function
 figure(1)
 histogram(Info.month, members)
 
@@ -19,10 +19,10 @@ groupstats.histogram(Info, "month")
 
 members = {'Jan', 'Feb', 'Mar', 'Apr'};
 
-figure; 
+figure;
 histogram(Info.month, members)
 
-figure; 
+figure;
 groupstats.histogram(Info, "month", "GroupMembers", members);
 
 %% Use grouping variables

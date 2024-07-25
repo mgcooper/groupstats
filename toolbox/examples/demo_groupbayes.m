@@ -37,7 +37,7 @@ T = T(contains(T.Group, {'B1', 'B2'}), :);
 % sample size, then we could assume the rows are groupB, and the columns that
 % match groupA members we'd sum down to get N_A, so in that case we'd need to
 % assert that summing down the B groupd members matches the row counts, as a
-% check 
+% check
 
 
 % Adjust T so there are no B's in the rows
@@ -53,7 +53,7 @@ P = groupstats.groupbayes(T, groupA, groupB, groupvar);
 % Adjust T so there are no B's in the rows
 T = T(~contains(T.Group, {'B1', 'B2'}), {'Group', 'B1', 'B2'});
 
-% Now when the function is called, groupA needs to be 
+% Now when the function is called, groupA needs to be
 groupA = {'B1', 'B2'};
 groupB = {'A1', 'A2'};
 P = groupstats.groupbayes(T, groupA, groupB, groupvar);

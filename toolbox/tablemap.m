@@ -1,8 +1,8 @@
 function tbl = tablemap(T, groupvar, fcn, varargin)
 
-%    if contains(func2str(fcn), 'tbl')
-%       fcn = str2func(strrep(func2str(fcn), 'tbl', 'tt'));
-%    end
+   % if contains(func2str(fcn), 'tbl')
+   %    fcn = str2func(strrep(func2str(fcn), 'tbl', 'tt'));
+   % end
    members = unique(T.(groupvar));
    tbl = cell(numel(members), 1);
    for n = 1:numel(members)

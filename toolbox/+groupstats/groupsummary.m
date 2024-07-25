@@ -1,25 +1,25 @@
 function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
       groupbins, groupsets, varargin)
-   %GROUPSUMMARY Compute group-wise statistics 
-   % 
+   %GROUPSUMMARY Compute group-wise statistics
+   %
    % Syntax:
-   % 
+   %
    % G = groupstats.groupsummary(tbl,groupvars)
    % G = groupstats.groupsummary(tbl,groupvars,method)
    % G = groupstats.groupsummary(tbl,groupvars,method,datavars)
    % G = groupstats.groupsummary(tbl,groupvars,groupbins)
    % G = groupstats.groupsummary(tbl,groupvars,groupbins,method)
-   % G = groupstats.groupsummary(tbl,groupvars,groupbins,method,datavars) 
-   % 
-   % Description:
-   % 
-   % G = groupsummary(tbl, groupvars, methods, datavar, groupbins, groupsets)
-   % Calls groupsummary with custom function methods. 
+   % G = groupstats.groupsummary(tbl,groupvars,groupbins,method,datavars)
    %
-   % G = groupsummary(_, varargin) where 
-   % 
+   % Description:
+   %
+   % G = groupsummary(tbl, groupvars, methods, datavar, groupbins, groupsets)
+   % Calls groupsummary with custom function methods.
+   %
+   % G = groupsummary(_, varargin) where
+   %
    % Inputs:
-   % 
+   %
    % tbl       - tabular object (table or timetable)
    % groupvars - char, cellstr, or string of variable names in T
    % methods   - char, cellstr, string, function handle, or combination thereof
@@ -28,7 +28,7 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
    %             specifies which groupvars define distinct sets, also known as
    %             "ingroups". For all groupvars in groupsets,
    %             G.(Percent_<varname>) will sum to 100%.
-   % 
+   %
    % varargin - a set of Name-Value arguments accepted by groupsummary
    %
    %
@@ -56,9 +56,9 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
    % The toolbox function grouppercent is like groupcounts but supports
    % groupsets. This function combines the ability to compute additional
    % statistics using groupsummary with the default frequencies returned by
-   % grouppercent. 
+   % grouppercent.
 
-   % TODO: 
+   % TODO:
    % - argument block
    % - call prepareTableGroups
    % - replace rowselectmembers with rowselectvar + rowselectmembers
@@ -75,7 +75,7 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
    %    groupbins (1,:) = "none"
    %    groupsets = "none"
    % end
-   
+
    % Parse inputs
    narginchk(2, Inf);
 
@@ -83,7 +83,7 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
 
    % Set matrix/table switch flag
    tableFlag = istabular(tbl);
-   
+
    if nargin < 3 || isempty(methods)
       methods = {'mean'};
    end
@@ -102,6 +102,10 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
       selectvars = string(varargin{:});
    else
       selectvars = "none";
+   end
+
+   if ~iscell(methods)
+      methods = {methods};
    end
 
    % Downselect rows in T matching selectvars
@@ -142,7 +146,7 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
    % Next was replaced by more robust method in if tableFlag section. This was
    % for the first case where I just wanted to replace the function handles,
    % before bringing in the groupsummary/grouppercent join, I think.
-   % 
+   %
    % Create a cellstr array of method names converting function handles to names
    % names = methods;
    % for n = 1:numel(methods)
@@ -177,8 +181,8 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
          G = groupsummary(tbl, [groupvars, groupsets], groupbins, methods, datavar);
       end
       G.Properties.VariableNames = replace( ...
-            G.Properties.VariableNames, "disc_", "");
-      
+         G.Properties.VariableNames, "disc_", "");
+
       % If groupbins are used and there is <undefined> e.g. if the groupbins did
       % not include enough edges to define all bins, join will fail with error
       % "The key variables cannot contain any missing values". So, try to
@@ -194,10 +198,10 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
       % for n = 1:numel(vars)
       %    idx = ismissing(G{:, vars{n}});
       % end
-      
+
       G = join(G, ...
          groupstats.grouppercent(tbl, groupvars, groupbins, groupsets));
-      
+
       % Reset the variable names to match custom function names in methods. The
       % first variables will be groupvars followed by GroupCount from
       % groupsummary, and then the groupvar_method columns, then 'Percent' and
@@ -207,6 +211,9 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
 
       G = movevars(G, "GroupCount", "Before", "Percent");
       V = G.Properties.VariableNames;
+
+      % NOTE: Apr 2024 - if methods is function handle like @(x) mean(x) then
+      % the stuff below literally makes the variable name "@(x)mean(x)_varname"
 
       % this replaces the V2 part below but also negates the need for V1
       keep = cellfun(@(m) ~isa(m, 'function_handle'), methods);
@@ -279,61 +286,61 @@ function groupbins = parseGroupBins(groupbins, groupvars)
    end
 end
 
-   % % TEST
-   %    % This shows how I cannot get something like the change between groups
-   %    without addding new functinaliyt like "ReferenceGroup" which is probably
-   %    better for a standalone function
-   %
-   %    % If there was a "ReferenceGroup" option, I could make it work:
-   %    ReferenceGroupVar = "basin";
-   %    ReferenceGroup = "Outlet";
-   %    Tref = T(T.(ReferenceGroupVar) == ReferenceGroup, :);
-   %
-   %
-   %    Fcount = @(s, b, m) sum(T{T.rcp == s & T.month == m, b});
-   %    Fcount("Historical", "Outlet", "Jan")
-   %    months = unique(T.month);
-   %    for n = 1:numel(months)
-   %       idxInfo = T.month==months(n);
-   %       idxStats = G.month==months(n);
-   %       [Percents, Counts] = pfa.percentDeltaFCS(T(idxInfo, :), "rcp");
-   %
-   %       % to assign them,
-   %       basinStats.Counts(idxStats) = Counts(:);
-   %       basinStats.percentDeltaFCS(idxStats) = Percents(:);
-   %    end
-   %    % TEST
+% % TEST
+%    % This shows how I cannot get something like the change between groups
+%    without addding new functinaliyt like "ReferenceGroup" which is probably
+%    better for a standalone function
+%
+%    % If there was a "ReferenceGroup" option, I could make it work:
+%    ReferenceGroupVar = "basin";
+%    ReferenceGroup = "Outlet";
+%    Tref = T(T.(ReferenceGroupVar) == ReferenceGroup, :);
+%
+%
+%    Fcount = @(s, b, m) sum(T{T.rcp == s & T.month == m, b});
+%    Fcount("Historical", "Outlet", "Jan")
+%    months = unique(T.month);
+%    for n = 1:numel(months)
+%       idxInfo = T.month==months(n);
+%       idxStats = G.month==months(n);
+%       [Percents, Counts] = pfa.percentDeltaFCS(T(idxInfo, :), "rcp");
+%
+%       % to assign them,
+%       basinStats.Counts(idxStats) = Counts(:);
+%       basinStats.percentDeltaFCS(idxStats) = Percents(:);
+%    end
+%    % TEST
 
-   % try
-   %    [G,GR,GC] = groupsummary(tbl,groupvars,methods,datavar);
-   % catch
-   %    G = groupsummary(tbl,groupvars,methods,datavar);
-   % end
+% try
+%    [G,GR,GC] = groupsummary(tbl,groupvars,methods,datavar);
+% catch
+%    G = groupsummary(tbl,groupvars,methods,datavar);
+% end
 
-   % Replace discretized (binned) groupvars. Note - might have worked to just
-   % search for varnames containing datavar, but oh well. Update - I think this
-   % just rebuilds the disc_<datavar> column names, so I commented it out when I
-   % creatd the method below that searches for fun_ anmes
-   % V1 = groupvars;
-   % ok = false(size(groupbins));
-   % ii = cellfun(@ischarlike, groupbins);
-   % ok(ii) = cellfun(@(groupvar) ismember(groupvar, "none"), groupbins(ii));
-   % V1(~ok) = cellfun(@(groupvar) ...
-   %    strcat('disc_', groupvar), groupvars(~ok),'un',0);
+% Replace discretized (binned) groupvars. Note - might have worked to just
+% search for varnames containing datavar, but oh well. Update - I think this
+% just rebuilds the disc_<datavar> column names, so I commented it out when I
+% creatd the method below that searches for fun_ anmes
+% V1 = groupvars;
+% ok = false(size(groupbins));
+% ii = cellfun(@ischarlike, groupbins);
+% ok(ii) = cellfun(@(groupvar) ismember(groupvar, "none"), groupbins(ii));
+% V1(~ok) = cellfun(@(groupvar) ...
+%    strcat('disc_', groupvar), groupvars(~ok),'un',0);
 
-   % % Replace custom function handles
+% % Replace custom function handles
 
-   % % This works if datavar is a scalar
-   % ok = cellfun(@(m) ~isa(m,'function_handle'), methods);
-   % V2 = methods;
-   % V2(ok) = strcat(methods(ok),'_', char(datavar));
-   % V2(~ok) = cellfun(@(x) ...
-   %    strcat(func2str(x),'_',char(datavar)), methods(~ok),'un',0);
+% % This works if datavar is a scalar
+% ok = cellfun(@(m) ~isa(m,'function_handle'), methods);
+% V2 = methods;
+% V2(ok) = strcat(methods(ok),'_', char(datavar));
+% V2(~ok) = cellfun(@(x) ...
+%    strcat(func2str(x),'_',char(datavar)), methods(~ok),'un',0);
 
-   % % this could work when datavar is not a scalar, but not sure
-   % vv = arrayfun(@(y) cellfun(@(x) ...
-   %    strcat(x,'_', y), methods(ok),'un',0), datavar, 'un',0);
-   % V2(ok) = cellstr(horzcat(vv{:}))
+% % this could work when datavar is not a scalar, but not sure
+% vv = arrayfun(@(y) cellfun(@(x) ...
+%    strcat(x,'_', y), methods(ok),'un',0), datavar, 'un',0);
+% V2(ok) = cellstr(horzcat(vv{:}))
 
-   % % Put them all together
-   % V = horzcat(V1{:}, V2{:}, V(numel(groupvars)+numel(methods)+1:end));
+% % Put them all together
+% V = horzcat(V1{:}, V2{:}, V(numel(groupvars)+numel(methods)+1:end));

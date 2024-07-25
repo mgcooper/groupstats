@@ -14,7 +14,7 @@ expected.Var2 = removecats(expected.Var2, 'w');
 
 % Note: the verify success and verify failure are redundant with the tests that
 % follow them, but keep them for reference for using the custom function-based
-% testing in a script-based test framework. 
+% testing in a script-based test framework.
 
 %% Test function accuracy with one variable name
 returned = dropcats(T, 'Var1');
@@ -100,35 +100,35 @@ end
 % LOCAL FUNCTIONS
 % -------------------------------------
 function assertError(fh, eid, varargin)
-%ASSERTERROR assert error using function handle and error id
+   %ASSERTERROR assert error using function handle and error id
 
    import matlab.unittest.diagnostics.Diagnostic;
    import matlab.unittest.constraints.Throws;
-   
+
    throws = Throws(eid);
    passed = throws.satisfiedBy(fh);
    diagText = ""; % set empty string for passed == true
    if ~passed
-       diag = Diagnostic.join(varargin{:}, throws.getDiagnosticFor(fh));
-       arrayfun(@diagnose, diag);
-       diagText = strjoin({diag.DiagnosticText},[newline newline]);
+      diag = Diagnostic.join(varargin{:}, throws.getDiagnosticFor(fh));
+      arrayfun(@diagnose, diag);
+      diagText = strjoin({diag.DiagnosticText},[newline newline]);
    end
-   assert(passed, diagText); 
+   assert(passed, diagText);
 end
 
 function assertSuccess(fnc, eid, varargin)
-%ASSERTSUCCESS assert success using function handle and error id
+   %ASSERTSUCCESS assert success using function handle and error id
 
    import matlab.unittest.diagnostics.Diagnostic;
    import matlab.unittest.constraints.Throws;
-   
+
    throws = Throws(eid);
    passed = throws.satisfiedBy(fnc);
    diagText = ""; % set empty string for passed == true
    if passed
-       diag = Diagnostic.join(varargin{:}, throws.getDiagnosticFor(fnc));
-       arrayfun(@diagnose, diag);
-       diagText = strjoin({diag.DiagnosticText},[newline newline]);
+      diag = Diagnostic.join(varargin{:}, throws.getDiagnosticFor(fnc));
+      arrayfun(@diagnose, diag);
+      diagText = strjoin({diag.DiagnosticText},[newline newline]);
    end
-   assert(~passed, diagText); 
+   assert(~passed, diagText);
 end

@@ -1,10 +1,11 @@
 function [stats, samples, result] = groupdifference(T, groupvar, datavar, opts)
+   %GROUPDIFFERENCE Estimate group differences
    %
-   %
+   %  [STATS, SAMPLES, RESULT] = GROUPDIFFERENCE(T, GROUPVAR, DATAVAR, OPTS)
    %
    % Note: pooling is applied across groupars, within the condition var sets, so
-   % pay attention to the difference if you want to specify pooled true 
-   % 
+   % pay attention to the difference if you want to specify pooled true
+   %
    % See also:
    arguments
       T tabular
@@ -27,7 +28,7 @@ function [stats, samples, result] = groupdifference(T, groupvar, datavar, opts)
    catch
       stats = struct2table(stats, "AsArray", false);
    end
-   
+
    samples = stats.boot_medians;
    result = stats.result;
    stats = removevars(stats, "boot_medians");
@@ -121,8 +122,8 @@ function stats = allSetDifferences(T, groupvar, datavar, groupsets, opts)
       end
 
       % In this case what I want is to pool the data across the condition var
-      % but I still want to 
-      
+      % but I still want to
+
       % If the first data is all zeros, it means we want to compare all of
       % the other datasets to the null hypothesis that they come from a
       % distribution with median zero, which is the signrank test.
