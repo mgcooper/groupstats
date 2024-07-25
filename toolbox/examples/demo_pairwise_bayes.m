@@ -212,6 +212,9 @@ assert(isequaltol(P_Bi_GIVEN_A, P_B_GIVEN_A))
 
 %%
 
+% Jul 2024 - added dummy definition of basins to address codeissues
+basins = ["basinA", "basinB", "basinC"];
+
 % Below here is where I was going to try to summarize the different methods in
 % PeakFlows.mlx and present them to gpt but now I have to move on.
 

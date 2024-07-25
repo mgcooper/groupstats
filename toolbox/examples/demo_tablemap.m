@@ -1,6 +1,8 @@
 
-% These are equivalent:
+% Jul 2024 - added dummy definition of basins to address codeissues
+basins = ["basinA", "basinB", "basinC"];
 
+% These are equivalent:
 fcn = @(tbl) groupstats.groupbayes(tbl, basins, basins, "basin");
 P = tablemap(Info, "scenario", fcn);
 

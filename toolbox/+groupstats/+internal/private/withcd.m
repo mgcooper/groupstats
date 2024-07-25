@@ -5,16 +5,13 @@ function varargout = withcd(dir)
    %
    % Based on Andrew Janke's code.
    %
-   % Matt Cooper, 2023, https://github.com/mgcooper
+   % Matt Cooper, 26-May-2023, https://github.com/mgcooper
    %
    % See also: withwarnoff
 
-   %% parse arguments
    arguments
       dir (1,1) string {mustBeFolder}
    end
-
-   %% main code
 
    % Temporarily change to a new directory
    originalDir = pwd;
@@ -27,14 +24,9 @@ function varargout = withcd(dir)
    end
 end
 
-% Custom validation function
-function mustBeFolder(dir)
-   if ~isfolder(dir)
-      error("Input must be a valid directory.");
-   end
-end
+%% LICENSE
 
-%% BSD 3-Clause License
+% BSD 3-Clause License
 %
 % Copyright (c) 2023, Matt Cooper (mgcooper) All rights reserved.
 %

@@ -1,12 +1,12 @@
 function updatecontents(folder)
    %UPDATECONTENTS Create a Contents.m file including subdirectories
    %
-   %   IOSR.GENERAL.UPDATECONTENTS scans through the current directory, and
+   %   UPDATECONTENTS scans through the current directory, and
    %   its subdirectories, and builds a Contents file similar to Matlab's
    %   report-generated Contents.m files. Any existing Contents.m file will be
    %   overwritten.
    %
-   %   IOSR.GENERAL.UPDATECONTENTS(FOLDER) scans through the directory FOLDER.
+   %   UPDATECONTENTS(FOLDER) scans through the directory FOLDER.
    %
    %   Typing
    %
@@ -21,7 +21,7 @@ function updatecontents(folder)
    %
    %   NB: Do not use Matlab's Contents Report generator to edit the
    %   Contents.m file. Execute this function to update it.
-
+   %
    %   Copyright 2016 University of Surrey.
 
    % apply function in current directory
@@ -51,14 +51,14 @@ function updatecontents(folder)
    end
 
    % get subfolders
-   dirs = tbx.internal.getcontents(folder,'filter','folders','rec',true,'path','full','sort',true);
+   dirs = getcontents(folder,'filter','folders','rec',true,'path','full','sort',true);
    dirs = [{folder}; dirs];
 
    % get files
    files = cell(0,1);
    H1_lines = cell(0,1);
    for d = 1:length(dirs)
-      temp = tbx.internal.getcontents(dirs{d},'filter','files','sort',true);
+      temp = getcontents(dirs{d},'filter','files','sort',true);
       if ~isempty(temp)
          temp = temp(cellfun(@(x) isempty(strfind(x,'~')),temp)); % remove temporary files
          temp = temp(cellfun(@(x) isempty(strfind(x,'.mex')),temp)); % remove compiled mex files

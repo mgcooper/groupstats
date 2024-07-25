@@ -1,5 +1,9 @@
 function varargout = generateTestData(whichfunction)
-   %GENERATETESTDATA Generate test data.
+   %GENERATETESTDATA Generate data for unit tests.
+   %
+   %  data = groupstats.internal.generateTestData(casename)
+   %
+   % See also
 
    switch whichfunction
 

@@ -120,7 +120,7 @@ function P = groupbayes(T, groupA, groupB, groupvar)
    P_A_AND_B = N_A_AND_B ./ N; % P(A ∩ B) = P(B ∩ A) % N(A,C and B) / N(A,C or B)
 
    assert(abs(sum(P_B) + sum(P_A) - 1) < 1e-3)
-   assert(all(0 < P_A_AND_B ) & all(P_A_AND_B < 1))
+   assert(all(0 <= P_A_AND_B ) & all(P_A_AND_B < 1))
 
    % Repeat counts and marginal probabilities for each pair
    N_B = repmat(N_B, numel(groupA), 1);
@@ -302,29 +302,38 @@ function J = groupjaccard(T, groupvar, groupA, groupB)
    [J_A_AND_B J_B_AND_A] % not
 end
 
-function phi = groupphicoeff(T, groupvar, groupA, groupB)
+function phi = groupphicoeff(T, groupvar, groupA, groupB, ...
+      N_A, N_B, N_A_AND_B)
 
    % Counts of each group not A and not B
    N_NOT_A = cellfun(@(A) sum(T.(groupvar) ~= A), groupA);
    N_NOT_B = cellfun(@(B) sum(T.(groupvar) ~= B), groupB);
 
    % Counts of A and not B, and not A and B
-   N_A_AND_NOT_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) == A & ...
-      T{:, B}==false), groupB), groupA, 'UniformOutput', false));
+   N_A_AND_NOT_B = cell2mat( ...
+      arrayfun(@(A) ...
+      arrayfun(@(B) sum(T.(groupvar) == A & T{:, B}==false), groupB), groupA, ...
+      'UniformOutput', false));
 
-   N_NOT_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) == B & ...
-      T{:, A}), groupA), groupB, 'UniformOutput', false));
+   N_NOT_A_AND_B = cell2mat( ...
+      arrayfun(@(A) ...
+      arrayfun(@(B) sum(T.(groupvar) == B & T{:, A}), groupA), groupB, ...
+      'UniformOutput', false));
 
-   % N_NOT_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) ~= A & ...
-   %    T{:, B}), groupB), groupA, 'UniformOutput', false));
+   % N_NOT_A_AND_B = cell2mat( ...
+   %    arrayfun(@(A) ...
+   %    arrayfun(@(B) sum(T.(groupvar) ~= A & T{:, B}), groupB), groupA, ...
+   %    'UniformOutput', false));
 
    % Counts of each group not A and not B happening together
-   N_NOT_A_AND_NOT_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) ~= A & ...
-      T{:, B}==false), groupB), groupA, 'UniformOutput', false));
+   N_NOT_A_AND_NOT_B = cell2mat( ...
+      arrayfun(@(A) arrayfun(@(B) ...
+      sum(T.(groupvar) ~= A & T{:, B}==false), groupB), groupA, ...
+      'UniformOutput', false));
 
    % phi coeff
-   phi = (N_A_AND_B .* N_NOT_A_AND_NOT_B - N_A_AND_NOT_B .* N_NOT_A_AND_B) ./ ...
-      sqrt(N_A .* N_NOT_A .* N_B .* N_NOT_B);
+   phi = (N_A_AND_B .* N_NOT_A_AND_NOT_B - N_A_AND_NOT_B .* N_NOT_A_AND_B) ...
+      ./ sqrt(N_A .* N_NOT_A .* N_B .* N_NOT_B);
 
 end
 
@@ -341,8 +350,10 @@ function dummy(T, groupvar, groupA, groupB)
 
    % Counts of each groupA and groupB happening together. This is how it's done in
    % the main function above.
-   N_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) == A & ...
-      T{:, B}), groupB), groupA, 'UniformOutput', false));
+   N_A_AND_B = cell2mat( ...
+      arrayfun(@(A) arrayfun(@(B) ...
+      sum(T.(groupvar) == A & T{:, B}), groupB), groupA, ...
+      'UniformOutput', false));
 
    % This replicates N_A_AND_B above for clarity. It uses groupA rows and then sums
    % down groupB columns for those rows.
@@ -379,7 +390,7 @@ function dummy(T, groupvar, groupA, groupB)
    Counts_A_AND_B = arrayfun(@(a) Fcount(a), groupA)
 
    % Compare them:
-   test = [N_A_AND_B N_B_AND_A Counts_A_AND_B Counts_B_AND_A]
+   test = [N_A_AND_B N_B_AND_A Counts_A_AND_B Counts_B_AND_A];
 end
 
 % % Keep these for now b/c they show how to get the sum of all the columns

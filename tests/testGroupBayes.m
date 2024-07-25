@@ -13,7 +13,7 @@ end
 function testDefaultCase(testCase)
 
    % Ensure that the function returns the correct sum for positive numbers
-   [TestData, Expected] = groupstats.test.generateTestData('groupbayes');
+   [TestData, Expected] = groupstats.internal.generateTestData('groupbayes');
 
    % Use the function groupbayes to calculate conditional probabilities
    Actual = groupstats.groupbayes(TestData.T, TestData.groupA, TestData.groupB, TestData.groupvar);

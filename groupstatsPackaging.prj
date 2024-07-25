@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.toolbox" plugin-version="1.0">
-  <configuration file="/Users/coop558/myprojects/matlab/groupstats/toolboxPackaging.prj" location="/Users/coop558/myprojects/matlab/groupstats" name="toolboxPackaging" target="target.toolbox" target-name="Package Toolbox">
+  <configuration file="/Users/coop558/myprojects/matlab/groupstats/groupstatsPackaging.prj" location="/Users/coop558/myprojects/matlab/groupstats" name="groupstatsPackaging" target="target.toolbox" target-name="Package Toolbox">
     <param.appname>GroupStatsToolbox</param.appname>
     <param.authnamewatermark>Matt Cooper</param.authnamewatermark>
     <param.email>matt.cooper@pnnl.gov</param.email>
@@ -104,11 +104,20 @@
       <file>${PROJECT_ROOT}/toolbox</file>
     </fileset.rootdir>
     <fileset.rootfiles>
-      <file>${PROJECT_ROOT}/toolbox/+gs</file>
+      <file>${PROJECT_ROOT}/toolbox/+groupstats</file>
+      <file>${PROJECT_ROOT}/toolbox/barchartcats.m</file>
+      <file>${PROJECT_ROOT}/toolbox/boxchartcats.m</file>
+      <file>${PROJECT_ROOT}/toolbox/boxchartxdata.m</file>
+      <file>${PROJECT_ROOT}/toolbox/boxchartydata.m</file>
+      <file>${PROJECT_ROOT}/toolbox/docs</file>
       <file>${PROJECT_ROOT}/toolbox/examples</file>
       <file>${PROJECT_ROOT}/toolbox/functionSignatures.json</file>
       <file>${PROJECT_ROOT}/toolbox/gettingStarted.mlx</file>
+      <file>${PROJECT_ROOT}/toolbox/groupmembers.m</file>
       <file>${PROJECT_ROOT}/toolbox/internal</file>
+      <file>${PROJECT_ROOT}/toolbox/tablemap.m</file>
+      <file>${PROJECT_ROOT}/toolbox/test_bootstrap.m</file>
+      <file>${PROJECT_ROOT}/toolbox/validatemember.m</file>
       <file>${PROJECT_ROOT}/toolbox/version.txt</file>
     </fileset.rootfiles>
     <fileset.depfun.included />
@@ -150,7 +159,7 @@
       <vista>false</vista>
       <linux>false</linux>
       <solaris>false</solaris>
-      <osver>12.6.7</osver>
+      <osver>14.5</osver>
       <os32>false</os32>
       <os64>true</os64>
       <arch>maci64</arch>

@@ -3,33 +3,52 @@
 %   Contents file for +GROUPSTATS and its subfolders.
 %   
 %   +GROUPSTATS
-%   groupstats.boxchartxdata                 - Retrieve x-axis data for boxcharts in handle H
-%   groupstats.dropcats                      - Remove categories that are not present in a table variable
-%   groupstats.groupbayes                    - Compute group-wise bayes probabilities
-%   groupstats.grouppercent                  - Compute group-wise frequencies (percents) including groupsets
-%   groupstats.groupselect                   - Select rows of table by variable name and group members
-%   groupstats.groupstats                    - Comput group-wise statistics
-%   groupstats.prepareTableGroups            - Prepare group data in table
-%   groupstats.testnamespace                 - Test namespace access
+%   groupstats.boxchartxdata                       - Retrieve x-axis data for boxcharts in handle H
+%   groupstats.dropcats                            - Remove categories that are not present in a table variable
+%   groupstats.groupbayes                          - Compute group-wise conditional (Bayesian) probabilities
+%   groupstats.groupdifference                     - Estimate group differences
+%   groupstats.grouppercent                        - Compute group-wise frequencies (percents) including groupsets
+%   groupstats.groupselect                         - Select rows of table by variable name and group members
+%   groupstats.groupsummary                        - Compute group-wise statistics
+%   groupstats.histogram                           - Histogram grouped data
+%   groupstats.prepareTableGroups                  - Prepare group data in table
+%   groupstats.scatter                             - Scatter chart categorical table data
+%   groupstats.testnamespace                       - Test namespace access
 %   
 %   +GROUPSTATS/+INTERNAL
-%   groupstats.internal.filelist             - List all files in folder and (optionally) subfolders
-%   groupstats.internal.getversion           - Read version.txt in the toolbox root directory
-%   groupstats.internal.installpath          - Get toolbox installation path from user preferences group
-%   groupstats.internal.isoctave             - Determine if the environment is Octave
-%   groupstats.internal.makecontents         - Make contents.m for each toolbox folder including packages
-%   groupstats.internal.projectpath          - Return the full path to the top-level project directory
-%   groupstats.internal.replacePackagePrefix - Replace namespace package prefix in function files
-%   groupstats.internal.updatecontents       - Create a Contents.m file including subdirectories
-%   groupstats.internal.withcd               - Temporarily cd to a directory
+%   groupstats.internal.buildpath                  - Build full path to toolbox folder or file
+%   groupstats.internal.generateTestData           - Generate data for unit tests
+%   groupstats.internal.makecontents               - Make contents.m for each folder including package folders
+%   groupstats.internal.replacePackagePrefix       - Replace namespace package prefix in function files
+%   groupstats.internal.runtests                   - Run all tests in the test suite
+%   groupstats.internal.version                    - GETVERSION Read version.txt in the toolbox root directory
 %   
-%   +GROUPSTATS/+TEST
-%   groupstats.test.generateTestData         - Generate test data
-%   groupstats.test.runtests                 - Run unit tests
+%   +GROUPSTATS/+INTERNAL/PRIVATE
+%   groupstats.internal/private.backupfile         - Create a backup file name or folder name and (optionally) a copy
+%   groupstats.internal/private.cellmap            - Apply function to cell-array
+%   groupstats.internal/private.convertlivescripts - Convert live script to m-files
+%   groupstats.internal/private.getCases           - Return all cases handled by a switch structure
+%   groupstats.internal/private.getcontents        - Get the contents of a specified directory
+%   groupstats.internal/private.getRequiredFiles   - Retrieve requirements for MATLAB functions or toolboxes
+%   groupstats.internal/private.installpath        - Return toolbox installation path from user preferences group
+%   groupstats.internal/private.isoctave           - Return true if the environment is Octave
+%   groupstats.internal/private.listfiles          - List all files in folder and (optionally) subfolders
+%   groupstats.internal/private.listfolders        - Return a list of folders under a top-level directory
+%   groupstats.internal/private.mpackagefolders    - List all package and sub-package folders in folder
+%   groupstats.internal/private.mpackagename       - Return the package namespace name
+%   groupstats.internal/private.projectpath        - Return the full path to the top-level project directory
+%   groupstats.internal/private.rmdotfolders       - Remove dot folders from directory list
+%   groupstats.internal/private.toolboxpath        - Return toolbox basepath
+%   groupstats.internal/private.updatecontents     - Create a Contents.m file including subdirectories
+%   groupstats.internal/private.withcd             - Temporarily cd to a directory
+%   
+%   +GROUPSTATS/PERMUTEST
+%   license.txt
+%   groupstats/permutest.permutest                 - Permutation test for dependent or independent measures of 1-D or 2-D data
 %   
 %   +GROUPSTATS/PRIVATE
-%   groupstats/private.isvariable            - Determine if VARNAME is a variable in table T
-%   groupstats/private.settablevarnames      - Set table variable names
-%   groupstats/private.withwarnoff           - Temporarily disable warnings
+%   groupstats/private.isvariable                  - Determine if VARNAME is a variable in table T
+%   groupstats/private.settablevarnames            - Set table variable names
+%   groupstats/private.withwarnoff                 - Temporarily disable warnings
 %    
-%   This file was generated by updatecontents.m on 14 Sep 2023 at 15:35:58.
+%   This file was generated by updatecontents.m on 24 Jul 2024 at 20:21:55.
