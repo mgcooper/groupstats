@@ -45,6 +45,7 @@ function releaseTask(~)
    % Create toolbox release
 
    releaseFolderName = "release";
+
    % Create a release and put it in the release directory
    opts = matlab.addons.toolbox.ToolboxOptions("toolboxPackaging.prj");
 

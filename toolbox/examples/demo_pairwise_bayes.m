@@ -1,4 +1,6 @@
-clean
+clearvars
+close
+clc
 
 % Generate random events for 8 components
 N = 10000;
