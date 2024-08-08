@@ -5,9 +5,9 @@ scenarios = ["scenarioA", "scenarioB", "scenarioC"];
 
 % These are equivalent:
 fcn = @(tbl) groupstats.groupbayes(tbl, basins, basins, "basin");
-P = tablemap(Info, "scenario", fcn);
+P = groupmap(Info, "scenario", fcn);
 
-P = tablemap(Info, "scenario", @groupstats.groupbayes, basins, basins, "basin");
+P = groupmap(Info, "scenario", @groupstats.groupbayes, basins, basins, "basin");
 
 P = cell(numel(scenarios), 1);
 for n = 1:numel(scenarios)
