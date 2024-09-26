@@ -269,7 +269,7 @@ function [mumat, medmat, xlocs] = boxchartstats(H, XData, YData, CData)
       [mu, uv] = groupsummary(YData, XData, "mean"); % uv = [uv{:}];
       med = groupsummary(YData, XData, "median");
    end
-   % Table format: 
+   % Table format:
    % muTbl = groupsummary(Tplot,{xgroupvar,cgroupvar}, "mean", ydatavar);
 
    % If there were no missing charts on any xticks:

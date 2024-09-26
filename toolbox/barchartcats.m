@@ -19,11 +19,6 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    % of each bar chart along the x-axis. ydata must be a vector, and xgroupdata
    % must have the same length as ydata.
    %
-   % creates a bar chart, or bar plot, for column ydatavar in table T. If
-   % T.(ydatavar) is a vector, then barchart creates a single bar chart. In this
-   % mode, BARCHARTCATS behaves exactly like BOXCHART(ydata) where ydata =
-   % T.(ydatavar).
-   %
    % h = barchartcats(T, ydatavar, xgroupvar, cgroupvar, "XGroupMembers",
    %  xgroupmembers, "CGroupMembers", cgroupmembers) uses color to differentiate
    % between bar charts. The software groups the data in the vector ydata
@@ -98,7 +93,9 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    % thinking the data would be in stable order. It could also lead to errors
    % within this function, but will require time to sort out.
 
-   % TODO: add a "histogram" or "frequencies" or maybe "groupfilter" option in
+   % TODO:
+   %
+   % - add a "histogram" or "frequencies" or maybe "groupfilter" option in
    % which the xgroupvar is transformed to generate the values on the y axis. In
    % this case, ydatavar and xgroupvar would be the same, and the data would
    % therefor need to be numeric in an underlying sense or ordinal or otherwise
@@ -106,6 +103,12 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    % an option to use piechart instead of barchart. Or, this type of
    % functionality could go to piechartcats, and that function could have a
    % "DisplayType" option that uses bars instead of pies.
+   %
+   % - allow ydatavar to be a vector of strings indicating multiple columns in a
+   % table? Ran into this for the case where a table is already a summary table
+   % and I want to plot different vars side by side. This could be accomplished
+   % by transforming the table so that these vars are stacked into one var with
+   % a categorical var added which has the original varnames.
 
    % Add MergeGroups and PlotError to function signatures.
    % Check groupstats.histogram first, it uses MergeGroupVar/Members.

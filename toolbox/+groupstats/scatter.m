@@ -4,7 +4,7 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    %
    %
    % See also: boxchartcats, barchartcats
-   
+
    % see scatterplot in:
    % fullfile(matlabroot, ...
    % 'toolbox/matlab/specgraph/+matlab/+graphics/+chart/@ScatterHistogramChart')
@@ -26,24 +26,24 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
          ["xdatavar", "ydatavar"])} = "xdatavar"
       Opts.SortBy (1, 1) string {mustBeMember(Opts.SortBy, ...
          ["ascend", "descend"])} = "ascend"
-%       Opts.Parent (1,1) { mustBeA(Opts.Parent, ...
-%          "matlab.graphics.axis.AbstractAxes") } = gca
+      %       Opts.Parent (1,1) { mustBeA(Opts.Parent, ...
+      %          "matlab.graphics.axis.AbstractAxes") } = gca
       Opts.Legend (1, 1) string = "on"
       Opts.LegendString (:, 1) string = string.empty()
       Opts.LegendOrientation (1, 1) string = "vertical"
       Props.?matlab.graphics.chart.primitive.Scatter
    end
-   
+
    if Opts.SortVar == "ydatavar"
       Opts.SortBy = "descend";
    end
 
-%    ScatterChartDefaults = metaclassDefaults( ...
-%       ScatterChartOpts, ?matlab.graphics.chart.primitive.Scatter);
-% 
-%    LegendDefaults = struct();
-%    LegendDefaults = metaclassDefaults( ...
-%       LegendDefaults, ?matlab.graphics.illustration.Legend);
+   %    ScatterChartDefaults = metaclassDefaults( ...
+   %       ScatterChartOpts, ?matlab.graphics.chart.primitive.Scatter);
+   %
+   %    LegendDefaults = struct();
+   %    LegendDefaults = metaclassDefaults( ...
+   %       LegendDefaults, ?matlab.graphics.illustration.Legend);
 
    % cgroupvar = groupvar
    % sgroupvar = withingroupvar
@@ -65,30 +65,30 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    % Assign the data to plot
    XData = tbl.(xdatavar);
    YData = tbl.(ydatavar);
-   CData = tbl.(cgroupvar); % this should 
+   CData = tbl.(cgroupvar); % this should
 
    if isempty(sgroupvar)
       SData = true(size(YData));
    else
       SData = tbl.(sgroupvar);
    end
-   
+
    SGrps = unique(SData);
    CGrps = unique(CData);
-   
+
    % Make the figure using gscatter
    [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
       SGrps, Opts);
 
-%    % Make the figure using plot
-%    [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
-%       SGrps, Opts);
-   
+   %    % Make the figure using plot
+   %    [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
+   %       SGrps, Opts);
+
    % replace underscores with spaces
-   
+
    xlabel(strrep(xdatavar, '_', ' '));
    ylabel(strrep(ydatavar, '_', ' '));
-   
+
    hold off
    switch nargout
       case 1
@@ -106,7 +106,7 @@ function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
    [colors, symbols, sizes] = getPlotDecorators(CGrps);
 
    H = gobjects(numel(CGrps), numel(SGrps));
-   
+
    figure; hold on;
    for m = 1:numel(SGrps)
       I = ismember(SData, SGrps(m));
@@ -120,7 +120,7 @@ function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
          H(1:numel(h), m) = h;
       end
    end
-   
+
    if numel(SGrps) > 1
       [cleg, sleg] = legendhandles(CGrps, SGrps, colors, symbols, sizes);
    else
@@ -128,11 +128,12 @@ function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
       sleg = gobjects().empty;
       SGrps = [];
    end
-   
+
    order = legendOrder(XData, YData, CData, SData, Opts);
-   
+
    if Opts.SortGroup == "cgroupvar"
       L = groupLegend(cleg(order), sleg, CGrps(order), SGrps);
+      % L = groupLegend(cleg, sleg, CGrps, SGrps);
    elseif Opts.SortGroup == "sgroupvar"
       L = groupLegend(cleg, sleg(order), CGrps, SGrps(order));
    end
@@ -143,14 +144,14 @@ function [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
       SGrps, Opts)
 
    [colors, symbols, sizes] = getPlotDecorators(CGrps);
-   
+
    figure; hold on;
-   
+
    % Create two series, one for colors, one for symbols
    H = gobjects(numel(CGrps), numel(SGrps));
    cleg = gobjects(numel(CGrps), 1);
    sleg = gobjects(numel(SGrps), 1);
-   
+
    % TODO: put the loop back in the if-else so for logicalscalar we dont ned
    % the dummy patch cleg, we use the default symbol so the lgend only has one
    % symbol and all the colors, but check the other function to see if celg and
@@ -173,21 +174,26 @@ function [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
       sleg = gobjects().empty;
       SGrps = [];
    else
-      
+
    end
    hold off
 
    order = legendOrder(XData, YData, CData, SData, Opts);
 
    L = legend([cleg(order); sleg], [CGrps(order); SGrps], 'Location', 'eastoutside');
-   
+
    % This creates one legend
    L = groupLegend(cleg(order), sleg, CGrps(order), SGrps);
 end
 
 %%
 function order = legendOrder(XData, YData, CData, SData, Opts)
-   
+
+   % This appears to assume that whatever is assigned to sortdata is numeric or
+   % otherwise compatible with grpstats(sortdata, sortgroup, 'mean');
+   % specifically with "mean", so I added a default dummy order ... but its
+   % creating problems
+
    if Opts.SortVar == "ydatavar"
       % order the legend from high to low along the y axis
       sortdata = YData;
@@ -195,7 +201,10 @@ function order = legendOrder(XData, YData, CData, SData, Opts)
       % order the legend from low to high along the x axis
       sortdata = XData;
    end
-   
+
+   % Default order (appears it needs to be sortgroups not sortdata)
+   % order = 1:numel(unique(sortdata));
+
    if Opts.SortGroup == "cgroupvar"
       % order the legend according to the mean within CData groups
       sortgroup = CData;
@@ -203,35 +212,54 @@ function order = legendOrder(XData, YData, CData, SData, Opts)
       % order the legend according to the mean within SData groups
       sortgroup = SData;
    end
-   
+
+   % Default order
+   order = 1:numel(unique(sortgroup));
+
+   % Check if sortdata is sortable (numeric or categorical/ordinal)
+   issortable = isordinal(sortdata) || isnumeric(sortdata);
+
    try
       mu = grpstats(sortdata, sortgroup, 'mean');
+      [~, order] = sort(mu, Opts.SortBy);
    catch e
-      if strcmp(e.identifier, 'MATLAB:license:checkouterror')
-         members = unique(sortgroup);
-         mu = nan(numel(members), 1);
-         for m = members(:)'
-            mu(m) = mean(sortdata(ismember(sortgroup, m)));
-         end
-      else
-         rethrow(e)
+      switch e.identifier
+         case 'MATLAB:license:checkouterror'
+
+            members = unique(sortgroup);
+            mu = nan(numel(members), 1);
+            for m = members(:)'
+               mu(m) = mean(sortdata(ismember(sortgroup, m)));
+            end
+            [~, order] = sort(mu, Opts.SortBy);
+
+         case 'stats:grpstats:FunctionErrorGroup'
+            % probably not sortable data
+            if issortable
+               % do something with the ordinality, fix later
+            else
+
+            end
+            % For now, return the default order
+
+         otherwise
+            rethrow(e)
       end
    end
-   [~, order] = sort(mu, Opts.SortBy);
-   
-%    switch Opts.SortVar
-%       case "ydatavar"
-%          % order the legend from high to low along the y axis
-%          if Opts.SortGroup == "cgroupvar"
-%             mu = grpstats(YData, CData, 'mean');
-%          elseif Opts.SortGroup == "sgroupvar"
-%             mu = grpstats(YData, SData, 'mean');
-%          end
-%       case "xdatavar"
-%          % order the legend from low to high along the x axis
-%          mu = grpstats(XData, CData, 'mean');
-%    end
-%    [~, order] = sort(mu, Opts.SortBy);
+
+   %    switch Opts.SortVar
+   %       case "ydatavar"
+   %          % order the legend from high to low along the y axis
+   %          if Opts.SortGroup == "cgroupvar"
+   %             mu = grpstats(YData, CData, 'mean');
+   %          elseif Opts.SortGroup == "sgroupvar"
+   %             mu = grpstats(YData, SData, 'mean');
+   %          end
+   %       case "xdatavar"
+   %          % order the legend from low to high along the x axis
+   %          mu = grpstats(XData, CData, 'mean');
+   %    end
+   %    [~, order] = sort(mu, Opts.SortBy);
 end
 
 %%
@@ -295,9 +323,9 @@ function [cleg, sleg] = legendhandles(CGrps, SGrps, colors, symbols, sizes)
    % Create dummy plots for CData legend entries (colors) and SData legend
    % entries (symbols)
 
-   cleg = gobjects(numel(CGrps), 1); 
+   cleg = gobjects(numel(CGrps), 1);
    sleg = gobjects(numel(SGrps), 1);
-   
+
    hold on;
    for n = 1:numel(CGrps)
       cleg(n) = patch(nan, nan, colors(n, :), 'EdgeColor', 'none');
@@ -328,20 +356,20 @@ function L = groupLegend(cleg, sleg, CGrps, SGrps, Opts)
    % legend(cleg, CGrps, 'location', 'northoutside', 'numcolumns', 2, 'fontsize', 10)
    % legend(sleg, SGrps, 'location', 'northoutside', 'numcolumns', 2, 'fontsize', 10)
 
-%    % Add the legend
-%    withwarnoff('MATLAB:legend:IgnoringExtraEntries');
-%    legendtxt = Opts.LegendString;
-%    if isempty(legendtxt)
-%       legendtxt = CGrps;
-%    end
-%    try
-%       legend(legendtxt, ...
-%          'Orientation', 'horizontal', ...
-%          'Location', 'northoutside', ...
-%          'AutoUpdate', 'off', ...
-%          'numcolumns', numel(legendtxt) );
-%    catch
-%    end
+   %    % Add the legend
+   %    withwarnoff('MATLAB:legend:IgnoringExtraEntries');
+   %    legendtxt = Opts.LegendString;
+   %    if isempty(legendtxt)
+   %       legendtxt = CGrps;
+   %    end
+   %    try
+   %       legend(legendtxt, ...
+   %          'Orientation', 'horizontal', ...
+   %          'Location', 'northoutside', ...
+   %          'AutoUpdate', 'off', ...
+   %          'numcolumns', numel(legendtxt) );
+   %    catch
+   %    end
 end
 
 %% LICENSE
