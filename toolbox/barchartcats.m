@@ -392,7 +392,16 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ydatavar, .
    withwarnoff('MATLAB:legend:IgnoringExtraEntries');
    legendtxt = opts.LegendString;
    if isempty(legendtxt)
-      legendtxt = unique(CData);
+
+      % If no cgroupvar was provided, CData will be a vector of "true". This
+      % means a legend is unneccesary, if legendtxt was not provided.
+      if islogical(CData)
+         legendtxt = '';
+         opts.Legend = 'off';
+      else
+         legendtxt = unique(CData);
+      end
+
    end
    try
       L = legend(legendtxt, ...
@@ -403,10 +412,11 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ydatavar, .
       % 'Location', 'northoutside', ...
       % 'AutoUpdate', 'off', ...
       % 'numcolumns', numel(legendtxt) );
+
+      set(L, 'Visible', opts.Legend)
    catch
    end
 
-   set(L, 'Visible', opts.Legend)
    % % Note: this might work if table data is passed in with all the group data,
    % but % in my example I used the metadata table from Info which already has
    % the group % summary calcualtions so I cannot get the std
