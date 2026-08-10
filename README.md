@@ -24,6 +24,20 @@ To run the test suite:
 
 ## Toolbox Features
 
+Grouped statistics for MATLAB tables:
+
+* Group-wise summary statistics (`groupstats.groupsummary`)
+* Group-wise frequencies and percentages, including groupsets (`groupstats.grouppercent`)
+* Group-wise conditional (Bayesian) probabilities (`groupstats.groupbayes`)
+* Group difference estimation, including permutation tests (`groupstats.groupdifference`)
+* Row selection by group membership (`groupstats.groupselect`)
+* Apply a function to each group in a table and recombine the results (`groupmap`)
+
+Charts for categorical (grouped) table data:
+
+* Bar and box charts grouped along the x-axis and colored within groups (`barchartcats`, `boxchartcats`)
+* Grouped scatter charts and histograms (`groupstats.scatter`, `groupstats.histogram`)
+
 ## Contributing
 
 ## License
