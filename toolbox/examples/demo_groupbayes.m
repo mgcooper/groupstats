@@ -1,10 +1,10 @@
 
 
-% Create a table T representing events
+% Create a table tbl representing events
 groupvar = 'Group';
 groupA = {'A1', 'A2'};
 groupB = {'B1', 'B2'};
-T = table({'A1'; 'A2'; 'B1'; 'B2'; 'A1'; 'B2'; 'A1'; 'B1'; 'A2'; 'B2'}, ...
+tbl = table({'A1'; 'A2'; 'B1'; 'B2'; 'A1'; 'B2'; 'A1'; 'B1'; 'A2'; 'B2'}, ...
    [true; false; true; true; true; false; true; false; true; true], ...
    [false; true; true; false; true; true; false; true; false; false], ...
    [true; true; false; false; true; true; false; false; true; true], ...
@@ -12,7 +12,7 @@ T = table({'A1'; 'A2'; 'B1'; 'B2'; 'A1'; 'B2'; 'A1'; 'B1'; 'A2'; 'B2'}, ...
    'VariableNames', {groupvar, 'A1', 'A2', 'B1', 'B2'});
 
 % Use the function groupbayes to calculate conditional probabilities
-P = groupstats.groupbayes(T, groupA, groupB, groupvar);
+P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
 
 % Display the resulting table
 disp(P);
@@ -24,11 +24,11 @@ disp(P);
 % 'A2'      'B1'       0.2       0.2       0.2          1.0000         1.0000
 % 'A2'      'B2'       0.2       0.3       0            0.0000         0.0000
 
-% Keep a copy of the original T
-Tkeep = T;
+% Keep a copy of the original tbl
+Tkeep = tbl;
 
-% Adjust T so there are no A's in the rows
-T = T(contains(T.Group, {'B1', 'B2'}), :);
+% Adjust tbl so there are no A's in the rows
+tbl = tbl(contains(tbl.Group, {'B1', 'B2'}), :);
 
 % Need to return to these, but removing A's from the rows is less confusing b/c
 % groupB can still be B1, B2, but the function fails b/c it counts N_A by rows
@@ -40,26 +40,26 @@ T = T(contains(T.Group, {'B1', 'B2'}), :);
 % check
 
 
-% Adjust T so there are no B's in the rows
-T = Tkeep;
-T = T(contains(T.Group, {'A1', 'A2'}), :);
+% Adjust tbl so there are no B's in the rows
+tbl = Tkeep;
+tbl = tbl(contains(tbl.Group, {'A1', 'A2'}), :);
 
 % Now when the function is called, groupB needs to be the A's, since the rows
 % are the "givens"
 groupA = {'B1', 'B2'};
 groupB = {'A1', 'A2'};
-P = groupstats.groupbayes(T, groupA, groupB, groupvar);
+P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
 
-% Adjust T so there are no B's in the rows
-T = T(~contains(T.Group, {'B1', 'B2'}), {'Group', 'B1', 'B2'});
+% Adjust tbl so there are no B's in the rows
+tbl = tbl(~contains(tbl.Group, {'B1', 'B2'}), {'Group', 'B1', 'B2'});
 
 % Now when the function is called, groupA needs to be
 groupA = {'B1', 'B2'};
 groupB = {'A1', 'A2'};
-P = groupstats.groupbayes(T, groupA, groupB, groupvar);
+P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
 
 % Adjust it so there are no B's in the rows
-T = T(~contains(T.Group, {'B1', 'B2'}), {'Group', 'B1', 'B2'});
+tbl = tbl(~contains(tbl.Group, {'B1', 'B2'}), {'Group', 'B1', 'B2'});
 
 % This note was in groupbayes right after the "Counts of each groupA and groupB"
 % section:

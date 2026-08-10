@@ -21,10 +21,10 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
    % Inputs:
    %
    % tbl       - tabular object (table or timetable)
-   % groupvars - char, cellstr, or string of variable names in T
+   % groupvars - char, cellstr, or string of variable names in tbl
    % methods   - char, cellstr, string, function handle, or combination thereof
-   % datavar   - char, cellstr, or string of variable names in T
-   % groupsets - char or string scalar indicating a variable name in T which
+   % datavar   - char, cellstr, or string of variable names in tbl
+   % groupsets - char or string scalar indicating a variable name in tbl which
    %             specifies which groupvars define distinct sets, also known as
    %             "ingroups". For all groupvars in groupsets,
    %             G.(Percent_<varname>) will sum to 100%.
@@ -68,7 +68,7 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
 
    % Todo: use arguments block
    % arguments
-   %    T tabular
+   %    tbl tabular
    %    groupvars
    %    methods = {'mean'}
    %    datavar = vartype("numeric")
@@ -108,7 +108,7 @@ function varargout = groupsummary(tbl, groupvars, methods, datavar, ...
       methods = {methods};
    end
 
-   % Downselect rows in T matching selectvars
+   % Downselect rows in tbl matching selectvars
    tbl = downselectvars(tbl, groupvars, selectvars);
 
    % Parse group bins
@@ -294,16 +294,16 @@ end
 %    % If there was a "ReferenceGroup" option, I could make it work:
 %    ReferenceGroupVar = "basin";
 %    ReferenceGroup = "Outlet";
-%    Tref = T(T.(ReferenceGroupVar) == ReferenceGroup, :);
+%    Tref = tbl(tbl.(ReferenceGroupVar) == ReferenceGroup, :);
 %
 %
-%    Fcount = @(s, b, m) sum(T{T.rcp == s & T.month == m, b});
+%    Fcount = @(s, b, m) sum(tbl{tbl.rcp == s & tbl.month == m, b});
 %    Fcount("Historical", "Outlet", "Jan")
-%    months = unique(T.month);
+%    months = unique(tbl.month);
 %    for n = 1:numel(months)
-%       idxInfo = T.month==months(n);
+%       idxInfo = tbl.month==months(n);
 %       idxStats = G.month==months(n);
-%       [Percents, Counts] = pfa.percentDeltaFCS(T(idxInfo, :), "rcp");
+%       [Percents, Counts] = pfa.percentDeltaFCS(tbl(idxInfo, :), "rcp");
 %
 %       % to assign them,
 %       basinStats.Counts(idxStats) = Counts(:);

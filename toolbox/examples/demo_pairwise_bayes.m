@@ -52,8 +52,8 @@ P_Cond = P_A_AND_B ./ P_A_B;
 % P_B_GIVEN_A value for the pair GroupA = B1, GroupB = A1.
 
 v = {'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8'};
-T = array2table(events', 'VariableNames', v);
-P = groupstats.groupbayes(T, v, v);
+tbl = array2table(events', 'VariableNames', v);
+P = groupstats.groupbayes(tbl, v, v);
 
 % Reshape the P_Cond matrix for comparison with P from groupbayes
 P.P2 = reshape(P_Cond, [], 1);
@@ -144,32 +144,32 @@ end
 % events = sort(randi(3, [1 10])).';
 % component = ["System", "c1", "c2", "c3"];
 %
-% T = table(component, events);
+% tbl = table(component, events);
 %
-% T = table();
+% tbl = table();
 % for n = 1:numel(component)
 %    failures = randi([0 1], [1 10])';
-%    T{:, component(n)} = failures;
+%    tbl{:, component(n)} = failures;
 % end
 
 %% prep for gpt system-component example
 
 components = basins;
-T.Component = T.basin;
-T.Component(T.basin == "Outlet") = "System";
-T.system = T.Outlet;
-T.Event = T.tpeaks;
+tbl.Component = tbl.basin;
+tbl.Component(tbl.basin == "Outlet") = "System";
+tbl.system = tbl.Outlet;
+tbl.Event = tbl.tpeaks;
 
 %% Compute system-compoenet example using my methods
 
 % components = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "System"];
-N_A = sum(T.Component == "System");
-N_B_AND_A = arrayfun(@(b) sum(T{T.Component == "System", b}), components);
+N_A = sum(tbl.Component == "System");
+N_B_AND_A = arrayfun(@(b) sum(tbl{tbl.Component == "System", b}), components);
 P_B_GIVEN_A = N_B_AND_A ./ N_A;
 
 % To compute P_A_GIVEN_B, need P(A) and P(B). However, the math can be
 % simplified to use just the counts:
-N_B = arrayfun(@(b) sum(T.Component == b), components);
+N_B = arrayfun(@(b) sum(tbl.Component == b), components);
 P_A_GIVEN_B = N_B_AND_A ./ N_B;
 [P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
 
@@ -186,23 +186,23 @@ sum(P_B)+P_A
 % the purpose
 
 % Number of unique failure events where the system failed
-NA = sum(T.Component == "System");
+NA = sum(tbl.Component == "System");
 
 % Total number of unique failure events
-N = height(T);
+N = height(tbl);
 
 % Probability that the system fails
 PA = NA / N;
 
 % Probability that each component i fails
-PB = arrayfun(@(b) sum(T.Component == b), components) / N;
+PB = arrayfun(@(b) sum(tbl.Component == b), components) / N;
 
 % Conditional probabilities
-P_A_GIVEN_Bi = arrayfun(@(b) sum(T.Component == "System" & T{:, b}) / ...
-   sum(T.Component == b), components);
+P_A_GIVEN_Bi = arrayfun(@(b) sum(tbl.Component == "System" & tbl{:, b}) / ...
+   sum(tbl.Component == b), components);
 
-P_Bi_GIVEN_A = arrayfun(@(b) sum(T.Component == "System" & T{:, b}) / ...
-   sum(T.Component == "System"), components);
+P_Bi_GIVEN_A = arrayfun(@(b) sum(tbl.Component == "System" & tbl{:, b}) / ...
+   sum(tbl.Component == "System"), components);
 
 assert(isequaltol(PA, P_A))
 assert(isequaltol(PB, P_B))
@@ -223,10 +223,10 @@ basins = ["basinA", "basinB", "basinC"];
 % The goal of this was to collate the differet ways and see if gpt can identify
 % whats wrong /right with them
 
-N_A = sum(T.basin == "Outlet");
-N_B_AND_A = arrayfun(@(b) sum(T{T.basin == "Outlet", b}), basins);
+N_A = sum(tbl.basin == "Outlet");
+N_B_AND_A = arrayfun(@(b) sum(tbl{tbl.basin == "Outlet", b}), basins);
 P_B_GIVEN_A = N_B_AND_A ./ N_A;
-N_B = arrayfun(@(b) sum(T.basin == b), basins);
+N_B = arrayfun(@(b) sum(tbl.basin == b), basins);
 P_A_GIVEN_B = N_B_AND_A ./ N_B;
 
 % Confirm it using this method:

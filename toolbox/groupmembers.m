@@ -1,4 +1,4 @@
-function vars = groupmembers(T, GroupVar, PreferredEmptyValue)
+function vars = groupmembers(tbl, GroupVar, PreferredEmptyValue)
    %GROUPMEMBERS Return unique members of a table column (variable)
    %
    %
@@ -7,6 +7,6 @@ function vars = groupmembers(T, GroupVar, PreferredEmptyValue)
    if isempty(GroupVar)
       vars = string.empty();
    else
-      vars = unique(T.(GroupVar));
+      vars = unique(tbl.(GroupVar));
    end
 end

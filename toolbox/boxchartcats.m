@@ -1,4 +1,4 @@
-function varargout = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props)
+function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)
    %BOXCHARTCATS Box chart by groups along x-axis and by color within groups.
    %
    % Description
@@ -7,18 +7,18 @@ function varargout = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    %
    % Syntax
    %
-   % h = boxchartcats(T, ydatavar) creates a box chart, or box plot, for column
-   % DATAVAR in table T. If T.(DATAVAR) is a vector, then boxchart creates a
+   % h = boxchartcats(tbl, ydatavar) creates a box chart, or box plot, for column
+   % DATAVAR in table tbl. If tbl.(DATAVAR) is a vector, then boxchart creates a
    % single box chart. In this mode, BOXCHARTCATS behaves exactly like
-   % BOXCHART(ydata) where ydata = T.(ydatavar).
+   % BOXCHART(ydata) where ydata = tbl.(ydatavar).
    %
-   % h = boxchartcats(T, ydatavar, xgroupvar) groups the data in the vector
-   % T.(DATAVAR) according to the unique values in T.(xgroupvar) and plots each
+   % h = boxchartcats(tbl, ydatavar, xgroupvar) groups the data in the vector
+   % tbl.(DATAVAR) according to the unique values in tbl.(xgroupvar) and plots each
    % group of data as a separate box chart. xgroupdata determines the position
    % of each box chart along the x-axis. ydata must be a vector, and xgroupdata
    % must have the same length as ydata.
    %
-   % h = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, xgroupuse, cgroupuse)
+   % h = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, xgroupuse, cgroupuse)
    % uses color to differentiate between box charts. The software groups the
    % data in the vector ydata according to the unique value combinations in
    % xgroupdata (if specified) and cgroupdata, and plots each group of data as a
@@ -35,12 +35,12 @@ function varargout = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    %
    % Input Arguments
    %
-   % T: A table containing the data to be plotted.
-   % ydatavar: The name of the variable in the table T that contains the data
+   % tbl: A table containing the data to be plotted.
+   % ydatavar: The name of the variable in the table tbl that contains the data
    % values for the box chart.
-   % xgroupvar: The name of the categorical variable in the table T used to
+   % xgroupvar: The name of the categorical variable in the table tbl used to
    % define groups along the x-axis.
-   % cgroupvar: The name of the categorical variable in the table T used to
+   % cgroupvar: The name of the categorical variable in the table tbl used to
    % define groups for the colors of the boxes.
    % xgroupuse: A cell array of categories to be used for the x-axis grouping.
    % cgroupuse: A cell array of categories to be used for the color grouping.
@@ -52,23 +52,23 @@ function varargout = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    %
    % Example
    %
-   % This example reads data from a CSV file into a table T, and plots a box
+   % This example reads data from a CSV file into a table tbl, and plots a box
    % chart of the Value variable, grouped by the CategoryX and CategoryC
    % variables. The x-axis grouping includes categories 'Cat1', 'Cat2', and
    % 'Cat3', while the color grouping includes categories 'Group1' and 'Group2'.
    %
-   % T = readtable('data.csv');
+   % tbl = readtable('data.csv');
    % ydatavar = 'Value';
    % xgroupvar = 'CategoryX';
    % cgroupvar = 'CategoryC';
    % xgroupuse = {'Cat1', 'Cat2', 'Cat3'};
    % cgroupuse = {'Group1', 'Group2'};
    %
-   % h = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, xgroupuse, cgroupuse);
+   % h = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, xgroupuse, cgroupuse);
    %
    % Use optional arguments:
    %
-   % h = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, xgroupuse, cgroupuse,
+   % h = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, xgroupuse, cgroupuse,
    %    'Notch','on','MarkerStyle','none');
    %
    % Matt Cooper, 29-Nov-2022, https://github.com/mgcooper
@@ -92,7 +92,7 @@ function varargout = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    % are made.
 
    arguments
-      T tabular
+      tbl tabular
       ydatavar (1,1) string { mustBeNonempty }
       xgroupvar (1,1) string { mustBeNonempty }
       cgroupvar string = string.empty()
@@ -104,11 +104,11 @@ function varargout = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
       % CustomOpts.RowSelectMembers string = string.empty()
 
       % These were the active options in this function
-      opts.XGroupMembers (:, 1) string = groupmembers(T, xgroupvar)
-      opts.CGroupMembers (:, 1) string = groupmembers(T, cgroupvar)
+      opts.XGroupMembers (:, 1) string = groupmembers(tbl, xgroupvar)
+      opts.CGroupMembers (:, 1) string = groupmembers(tbl, cgroupvar)
       opts.RowSelectVar string = string.empty()
       opts.RowSelectMembers (:, 1) string = string.empty()
-      %opts.RowSelectMembers (:, 1) string = groupmembers(T, RowSelectVar)
+      %opts.RowSelectMembers (:, 1) string = groupmembers(tbl, RowSelectVar)
 
       opts.XGroupOrder (:,1) string = "none"
       opts.CGroupOrder (:,1) string = "none"
@@ -138,15 +138,15 @@ function varargout = boxchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    varargs = namedargs2cell(props);
 
    % validate inputs
-   T = prepareTableGroups(T, ydatavar, string.empty(), xgroupvar, cgroupvar, ...
+   tbl = prepareTableGroups(tbl, ydatavar, string.empty(), xgroupvar, cgroupvar, ...
       opts.XGroupMembers, opts.CGroupMembers, ...
       opts.RowSelectVar, opts.RowSelectMembers);
 
    % Assign the data to plot
-   XData = T.(xgroupvar);
-   YData = T.(ydatavar);
+   XData = tbl.(xgroupvar);
+   YData = tbl.(ydatavar);
    try
-      CData = T.(cgroupvar);
+      CData = tbl.(cgroupvar);
    catch
       CData = true(size(YData));
    end
@@ -383,11 +383,11 @@ end
 
 % % This does the same thing above does, but may be more useful. Note, ismember
 % % works b/w categorical and string iff the string is scalar
-% if any(~ismember(xgroupuse, string(unique(T.(xgroupvar)))))
-%    error('all elements of xgroupuse must be members of the set T.(xgroupvar)')
+% if any(~ismember(xgroupuse, string(unique(tbl.(xgroupvar)))))
+%    error('all elements of xgroupuse must be members of the set tbl.(xgroupvar)')
 % end
-% if any(~ismember(cgroupuse, string(unique(T.(cgroupvar)))))
-%    error('all elements of cgroupuse must be members of the set T.(cgroupvar)')
+% if any(~ismember(cgroupuse, string(unique(tbl.(cgroupvar)))))
+%    error('all elements of cgroupuse must be members of the set tbl.(cgroupvar)')
 % end
 
 % % This should not be necessary b/c I set cgroupuse/x to all values in
@@ -395,15 +395,15 @@ end
 
 % % Subset the rows for the cgroup and xgroup variables
 % if cgroupuse == "none"
-%    incgroup = true(height(T),1);
+%    incgroup = true(height(tbl),1);
 % else
-%    incgroup = ismember(T.(cgroupvar),cgroupuse);
+%    incgroup = ismember(tbl.(cgroupvar),cgroupuse);
 % end
 %
 % if xgroupuse == "none"
-%    inxgroup = true(height(T),1);
+%    inxgroup = true(height(tbl),1);
 % else
-%    inxgroup = ismember(T.(xgroupvar),xgroupuse);
+%    inxgroup = ismember(tbl.(xgroupvar),xgroupuse);
 % end
 %
 % iplot = incgroup | inxgroup;
@@ -413,12 +413,12 @@ end
 % if xgroupvar == "none" && cgroupvar == "none"
 %    error('No xgroupvar or cgroupvar was specified, use boxchart')
 %
-%    % Could call createCategoricalBoxChart, or H = boxchart(T.(ydatavar))
+%    % Could call createCategoricalBoxChart, or H = boxchart(tbl.(ydatavar))
 %    % H = createCategoricalBoxChart(XData,YData,CData,ydatavar,varargs);
 % end
 %
 % if cgroupvar == "none" % use all categorical variables
-%    cgroupvar = string(gettablevarnames(T,'categorical'));
+%    cgroupvar = string(gettablevarnames(tbl,'categorical'));
 % end
 
 
@@ -495,13 +495,13 @@ end
 % end
 
 % Translation between boxchart and groupsummary
-%  boxchart    groupsummary(T,...)     groupsummary(A,...)
+%  boxchart    groupsummary(tbl,...)     groupsummary(A,...)
 % ----------  --------------------     -------------------
 % xgroupdata   groupvars{1} (varname)  groupvars(:,1) (column vector)
 % cgroupdata   groupvars{2} (varname)  groupvars(:,2) (column vector)
 % ydata        datavars     (varname)  A              (column vector)
 % N/A          method
-% N/A          groupbins = actual bin edges or method, for both T and A syntax
+% N/A          groupbins = actual bin edges or method, for both tbl and A syntax
 %
 % For boxchart, I think the bin edges are the xvertex coordinates of each box
 
@@ -511,13 +511,13 @@ end
 
 % % Array format: A and groupvars must have the same number of rows. groupvars can
 % % have multiple columns, to create multiple groups
-% A = T.(ydatavar);
-% groupvars = T.(cgroupvar);
+% A = tbl.(ydatavar);
+% groupvars = tbl.(cgroupvar);
 % [mu, uv] = groupsummary(A, groupvars, "mean");
 %
 % % This produces the data needed for boxchartcats
-% A = T.(ydatavar);
-% groupvars = [T.(cgroupvar) T.(xgroupvar)];
+% A = tbl.(ydatavar);
+% groupvars = [tbl.(cgroupvar) tbl.(xgroupvar)];
 % [mu, uv] = groupsummary(A, groupvars, "mean");
 % uv = horzcat(uv{:});
 %
@@ -529,7 +529,7 @@ end
 %
 % % Table format
 % groupvars = {cgroupvar,xgroupvar};
-% muTbl = groupsummary(T,groupvars, "mean", ydatavar);
+% muTbl = groupsummary(tbl,groupvars, "mean", ydatavar);
 %
 % NOTE: none of these scatter/gscatter options seem to give what I want, because
 % they plot the group means
@@ -547,7 +547,7 @@ end
 % Next ones plot all the data, I think it automatically computes unique values,
 % because it isn't plotting all the FCS values
 %
-% figure; scatter(T,"scenario","FCS",'filled')
+% figure; scatter(tbl,"scenario","FCS",'filled')
 %
 % now we can use gscatter
 % figure; gscatter(XData,double(YData),CData)
@@ -566,7 +566,7 @@ end
 %
 %    % this works, using YData and CData
 %    % [mu, uv] = groupsummary(A, groupvars, method)
-%    % A = T.(ydatavar)
+%    % A = tbl.(ydatavar)
 %    % [mu(:,n), uv] = groupsummary(double(YData(idx)), CData(idx), 'mean');
 %
 %    % this works, using array syntax + indexing into the table

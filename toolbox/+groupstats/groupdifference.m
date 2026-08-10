@@ -1,14 +1,14 @@
-function [stats, samples, result] = groupdifference(T, groupvar, datavar, opts)
+function [stats, samples, result] = groupdifference(tbl, groupvar, datavar, opts)
    %GROUPDIFFERENCE Estimate group differences
    %
-   %  [STATS, SAMPLES, RESULT] = GROUPDIFFERENCE(T, GROUPVAR, DATAVAR, OPTS)
+   %  [STATS, SAMPLES, RESULT] = GROUPDIFFERENCE(tbl, GROUPVAR, DATAVAR, OPTS)
    %
    % Note: pooling is applied across groupars, within the condition var sets, so
    % pay attention to the difference if you want to specify pooled true
    %
    % See also:
    arguments
-      T tabular
+      tbl tabular
       groupvar (1, 1) string
       datavar (1, 1) string
       opts.conditionvar string = string.empty()
@@ -17,9 +17,9 @@ function [stats, samples, result] = groupdifference(T, groupvar, datavar, opts)
    end
 
    if isempty(opts.conditionvar)
-      stats = oneSetDifferences(T, groupvar, datavar, opts);
+      stats = oneSetDifferences(tbl, groupvar, datavar, opts);
    else
-      stats = allSetDifferences(T, groupvar, datavar, opts.conditionvar, opts);
+      stats = allSetDifferences(tbl, groupvar, datavar, opts.conditionvar, opts);
    end
 
    % For now remove samples but need to update code below
@@ -36,13 +36,13 @@ function [stats, samples, result] = groupdifference(T, groupvar, datavar, opts)
 end
 
 %%
-function stats = oneSetDifferences(T, groupvar, datavar, opts)
+function stats = oneSetDifferences(tbl, groupvar, datavar, opts)
 
-   members = unique(T.(groupvar));
+   members = unique(tbl.(groupvar));
 
    % Collect all of the data
    grpdata = arrayfun(@(grpmember) ...
-      T{T.(groupvar) == grpmember, datavar}, members, 'Uniform', 0);
+      tbl{tbl.(groupvar) == grpmember, datavar}, members, 'Uniform', 0);
 
    % Pool all the non-reference data
    if opts.pooled
@@ -83,15 +83,15 @@ function stats = oneSetDifferences(T, groupvar, datavar, opts)
 end
 
 %%
-function stats = allSetDifferences(T, groupvar, datavar, groupsets, opts)
+function stats = allSetDifferences(tbl, groupvar, datavar, groupsets, opts)
 
-   sets = unique(T.(groupsets));
-   members = unique(T.(groupvar));
+   sets = unique(tbl.(groupsets));
+   members = unique(tbl.(groupvar));
    results = cell(numel(sets), 1);
 
    % Demo
-   % refData = T{ T.(groupvar) == members(1) & T.(groupsets) == sets(1), datavar };
-   % pooledData = T{ T.(groupvar) ~= members(1) & T.(groupsets) == sets(1), datavar };
+   % refData = tbl{ tbl.(groupvar) == members(1) & tbl.(groupsets) == sets(1), datavar };
+   % pooledData = tbl{ tbl.(groupvar) ~= members(1) & tbl.(groupsets) == sets(1), datavar };
    % median(refData) - median(pooledData);
    % results = bootdiff({refData, pooledData});
    % Demo
@@ -99,20 +99,20 @@ function stats = allSetDifferences(T, groupvar, datavar, groupsets, opts)
    for m = 1:numel(sets)
 
       % Each iteration of arrayfun is doing a comparison like this:
-      % T1 = T( T.(groupvar) == members(1) & T.(groupsets) == sets(m), : );
-      % T2 = T( T.(groupvar) == members(2) & T.(groupsets) == sets(m), : );
+      % T1 = tbl( tbl.(groupvar) == members(1) & tbl.(groupsets) == sets(m), : );
+      % T2 = tbl( tbl.(groupvar) == members(2) & tbl.(groupsets) == sets(m), : );
 
       % Or, specifically on this data:
-      % d1 = T{ T.(groupvar) == members(1) & T.(groupsets) == sets(m), datavar };
-      % d2 = T{ T.(groupvar) == members(2) & T.(groupsets) == sets(m), datavar };
+      % d1 = tbl{ tbl.(groupvar) == members(1) & tbl.(groupsets) == sets(m), datavar };
+      % d2 = tbl{ tbl.(groupvar) == members(2) & tbl.(groupsets) == sets(m), datavar };
 
       % Collect all of the data for bootdiff
       grpdata = arrayfun(@(grpmember) ...
-         T{T.(groupvar) == grpmember & T.(groupsets) == sets(m), datavar}, ...
+         tbl{tbl.(groupvar) == grpmember & tbl.(groupsets) == sets(m), datavar}, ...
          members, 'Uniform', 0);
 
       % The reference group is the same whethe the data is pooled or not.
-      refgroupidx = T.(groupvar) == members(1) & T.(groupsets) == sets(m);
+      refgroupidx = tbl.(groupvar) == members(1) & tbl.(groupsets) == sets(m);
 
       % Compare member 1 to all other members within this groupset
       % In my test case, it compares ROS (sets(1)) in the historical scenario
@@ -178,8 +178,8 @@ function stats = allSetDifferences(T, groupvar, datavar, groupsets, opts)
       % median(stat2-stat1)
 
       % figure;
-      % histogram(T{groupvar == members(1), datavar}); hold on;
-      % histogram(T{groupvar == members(2), datavar});
+      % histogram(tbl{groupvar == members(1), datavar}); hold on;
+      % histogram(tbl{groupvar == members(2), datavar});
       % boxchart([fcs1 fcs2])
       % boxchart(scenarios([1 5]), [fcs1 fcs2])
    end

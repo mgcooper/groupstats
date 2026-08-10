@@ -10,11 +10,11 @@ function varargout = generateTestData(whichfunction)
       case 'groupbayes'
 
 
-         % Create a table T representing events
+         % Create a table tbl representing events
          groupvar = 'Group';
          groupA = {'A1', 'A2'};
          groupB = {'B1', 'B2'};
-         T = table({'A1'; 'A2'; 'B1'; 'B2'; 'A1'; 'B2'; 'A1'; 'B1'; 'A2'; 'B2'}, ...
+         tbl = table({'A1'; 'A2'; 'B1'; 'B2'; 'A1'; 'B2'; 'A1'; 'B1'; 'A2'; 'B2'}, ...
             [true; false; true; true; true; false; true; false; true; true], ...
             [false; true; true; false; true; true; false; true; false; false], ...
             [true; true; false; false; true; true; false; false; true; true], ...
@@ -22,9 +22,9 @@ function varargout = generateTestData(whichfunction)
             'VariableNames', {groupvar, 'A1', 'A2', 'B1', 'B2'});
 
          % Use the function groupbayes to calculate conditional probabilities
-         % P = groupbayes(T, groupA, groupB, groupvar);
+         % P = groupbayes(tbl, groupA, groupB, groupvar);
 
-         TestData.T = T;
+         TestData.tbl = tbl;
          TestData.groupvar = groupvar;
          TestData.groupA = groupA;
          TestData.groupB = groupB;

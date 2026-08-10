@@ -1,9 +1,9 @@
-function P = groupbayes(T, groupA, groupB, groupvar)
+function P = groupbayes(tbl, groupA, groupB, groupvar)
    %GROUPBAYES Compute group-wise conditional (Bayesian) probabilities.
    %
    % Syntax:
-   % P = groupbayes(T, groupA, groupB)
-   % P = groupbayes(T, groupA, groupB, groupvar)
+   % P = groupbayes(tbl, groupA, groupB)
+   % P = groupbayes(tbl, groupA, groupB, groupvar)
    %
    % Description:
    % This function calculates group-wise Bayesian probabilities based on the
@@ -12,7 +12,7 @@ function P = groupbayes(T, groupA, groupB, groupvar)
    % probabilities between them.
    %
    % Input Arguments:
-   % T - A MATLAB table containing the information about the events.
+   % tbl - A MATLAB table containing the information about the events.
    %
    % groupA - An array containing the group labels for which you want to
    % calculate the Bayesian probabilities in relation to groupB. Can be a cell,
@@ -21,7 +21,7 @@ function P = groupbayes(T, groupA, groupB, groupvar)
    % groupB - An array (like groupA) containing the group labels for which you
    % want to calculate the Bayesian probabilities in relation to groupA.
    %
-   % groupvar - (Optional) The column (i.e., variable) name in table T which
+   % groupvar - (Optional) The column (i.e., variable) name in table tbl which
    % contains the group labels. Can be a string, cellstr, or char. If provided,
    % rows of the table define the event "A" and columns define "and B". If not
    % provided, columns belonging to groupA and groupB define the events "A" and
@@ -40,8 +40,8 @@ function P = groupbayes(T, groupA, groupB, groupvar)
    assertF off
 
    % Cast any table variable of type char or cellstr to string
-   T = convertvars(T, @ischar, "string");
-   T = convertvars(T, @iscellstr, "string");
+   tbl = convertvars(tbl, @ischar, "string");
+   tbl = convertvars(tbl, @iscellstr, "string");
 
    % Ensure groupA and groupB are columns of strings
    try
@@ -62,10 +62,10 @@ function P = groupbayes(T, groupA, groupB, groupvar)
    % Counts of each groupA and groupB, and groupA and groupB happening together
    if nargin == 3
       % Events are defined by variable (column) names
-      N_A = cellfun(@(A) sum(T{:, A}), groupA);
-      N_B = cellfun(@(B) sum(T{:, B}), groupB);
+      N_A = cellfun(@(A) sum(tbl{:, A}), groupA);
+      N_B = cellfun(@(B) sum(tbl{:, B}), groupB);
       N_A_AND_B = cell2mat(arrayfun(@(A) ...
-         cellfun(@(B) sum(T{:, A} & T{:, B}), groupB), groupA, 'Un', 0));
+         cellfun(@(B) sum(tbl{:, A} & tbl{:, B}), groupB), groupA, 'Un', 0));
 
       assertF(@() all(N_A_AND_B <= N_A))
       assertF(@() all(N_A_AND_B <= N_B))
@@ -74,28 +74,28 @@ function P = groupbayes(T, groupA, groupB, groupvar)
       % N = N_A + N_B - N_A_AND_B;
 
    else
-      % Events are defined by rows of column T.(groupvar)
-      if ~iscategorical(T.(groupvar))
+      % Events are defined by rows of column tbl.(groupvar)
+      if ~iscategorical(tbl.(groupvar))
          try
-            % Cast T.(groupvar) to categorical
-            T.(groupvar) = categorical(T.(groupvar));
+            % Cast tbl.(groupvar) to categorical
+            tbl.(groupvar) = categorical(tbl.(groupvar));
          catch e
-            warning("T.(groupvar) must be convertible to categorical")
+            warning("tbl.(groupvar) must be convertible to categorical")
             rethrow(e)
          end
       end
 
-      N_A = cellfun(@(A) sum(T.(groupvar) == A), groupA); % N(A,C), or N(A)
-      N_B = cellfun(@(B) sum(T.(groupvar) == B), groupB); % N(B), or N(B,D)
+      N_A = cellfun(@(A) sum(tbl.(groupvar) == A), groupA); % N(A,C), or N(A)
+      N_B = cellfun(@(B) sum(tbl.(groupvar) == B), groupB); % N(B), or N(B,D)
 
       % Subset groupB rows, count groupA columns
       N_B_AND_A = cell2mat(arrayfun(@(A) ...
-         arrayfun(@(B) sum(T.(groupvar) == B & T{:, A}), groupB), ...
+         arrayfun(@(B) sum(tbl.(groupvar) == B & tbl{:, A}), groupB), ...
          groupA, 'Uniform', 0)); % N(A and B)
 
       % Subset groupA rows, count groupB columns
       N_A_AND_B = cell2mat(arrayfun(@(A) ...
-         arrayfun(@(B) sum(T.(groupvar) == A & T{:, B}), groupB), ...
+         arrayfun(@(B) sum(tbl.(groupvar) == A & tbl{:, B}), groupB), ...
          groupA, 'Uniform', 0)); % N(A,C and B) or N(A and B,D)
 
       if ~isequal(N_A_AND_B, N_B_AND_A)
@@ -200,28 +200,28 @@ end
 % Should be
 
 
-%    sum(T.basin == "Outlet") % 205
-%    sum(T.basin == "Outlet" & T.UpperDelaware) % 105
-%    sum(T.basin == "Outlet" & ~T.UpperDelaware) % 100
+%    sum(tbl.basin == "Outlet") % 205
+%    sum(tbl.basin == "Outlet" & tbl.UpperDelaware) % 105
+%    sum(tbl.basin == "Outlet" & ~tbl.UpperDelaware) % 100
 %
-%    sum(T.basin == "UpperDelaware") % 198
-%    sum(T.basin == "UpperDelaware" & T.Outlet) % 106
-%    sum(T.basin == "UpperDelaware" & ~T.Outlet) % 92
+%    sum(tbl.basin == "UpperDelaware") % 198
+%    sum(tbl.basin == "UpperDelaware" & tbl.Outlet) % 106
+%    sum(tbl.basin == "UpperDelaware" & ~tbl.Outlet) % 92
 %
-%    sum(T.basin ~= "Outlet" & T.basin ~= "UpperDelaware") % 1372
+%    sum(tbl.basin ~= "Outlet" & tbl.basin ~= "UpperDelaware") % 1372
 %
 %    % These are the wrong ones
-%    sum(T.basin ~= "Outlet" & T.UpperDelaware) % 941
-%    sum(T.basin ~= "UpperDelaware" & T.Outlet) % 1117
+%    sum(tbl.basin ~= "Outlet" & tbl.UpperDelaware) % 941
+%    sum(tbl.basin ~= "UpperDelaware" & tbl.Outlet) % 1117
 
 % % Keep these for now b/c they show how to get the sum of all the columns
 % % Counts of each groupA and groupB
-% countA = sum(T{:, groupA}, 1);
-% countB = sum(T{:, groupB}, 1);
+% countA = sum(tbl{:, groupA}, 1);
+% countB = sum(tbl{:, groupB}, 1);
 %
 % % Counts of each groupA and groupB happening together
 % count_B_AND_A = cell2mat(arrayfun(@(A) arrayfun(@(B) ...
-%    sum(T{:, A} & T{:, B}), groupB), groupA, 'UniformOutput', false));
+%    sum(tbl{:, A} & tbl{:, B}), groupB), groupA, 'UniformOutput', false));
 
 % To confirm count_A_AND_B
 % test_A_AND_B = nan(numel(groupA)*numel(groupB),1);
@@ -231,40 +231,40 @@ end
 %    for m = 1:numel(groupB)
 %       i = i+1;
 %       B = groupB(m);
-%       test_A_AND_B(i) = sum(T.(groupvar) == A & T.(B));
+%       test_A_AND_B(i) = sum(tbl.(groupvar) == A & tbl.(B));
 %    end
 % end
 
 % count_B_AND_A = nan(numel(groupA),1);
 % for n = 1:numel(groupA)
-%    count_B_AND_A(n) = sum(T.(groupvar) == groupA{n} & T.(groupB));
+%    count_B_AND_A(n) = sum(tbl.(groupvar) == groupA{n} & tbl.(groupB));
 % end
 
 %
 % Inputs:
-% T - table, each row represents an event
+% tbl - table, each row represents an event
 % groupvar - string, cellstr, or char, indicating the column (variable) name in
-% T containing the group names for each event
+% tbl containing the group names for each event
 % groupA - string, cellstr, or char, indicating the members of all unique values
-% in T.(groupvar) for which the conditional probability of A given B should be
+% in tbl.(groupvar) for which the conditional probability of A given B should be
 % computed
 % groupB - string, cellstr, or char, indicating the members of all unique values
-% in T.(groupvar) for which the conditional probability of A given B should be
+% in tbl.(groupvar) for which the conditional probability of A given B should be
 % computed
 % datavar - the
 %
-% T must contain the column T.(groupvar), each element of which is a member of
+% tbl must contain the column tbl.(groupvar), each element of which is a member of
 % either groupA or groupB, and one column for each member of groupA and groupB
-% e.g. T.(groupA(i)) must exist, where i goes from 1:numel(groupA), same for
-% T.(groupB(j)), with j from 1:numel(groupB). Each element of T.(groupA(i)) and
-% T.(groupB(j)) columns must be true or false indicating if the event
+% e.g. tbl.(groupA(i)) must exist, where i goes from 1:numel(groupA), same for
+% tbl.(groupB(j)), with j from 1:numel(groupB). Each element of tbl.(groupA(i)) and
+% tbl.(groupB(j)) columns must be true or false indicating if the event
 % Assumptions:
-% 1. groupA and groupB are both cell arrays containing column names in T.
-% 2. T.(groupA{i}) and T.(groupB{j}) contain boolean (true/false) data.
+% 1. groupA and groupB are both cell arrays containing column names in tbl.
+% 2. tbl.(groupA{i}) and tbl.(groupB{j}) contain boolean (true/false) data.
 
 % % % % % % % % % %
 % for testing with floodFrequency variables:
-% T = Info;
+% tbl = Info;
 % groupvar = "basin";
 % allBasins = unique(Info.basin); % including the outlet
 % groupA = allBasins(1:3);
@@ -275,19 +275,19 @@ end
 % Between here was in peakflows but not here
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
-function J = groupjaccard(T, groupvar, groupA, groupB)
+function J = groupjaccard(tbl, groupvar, groupA, groupB)
 
    % Counts of each groupA and groupB
-   N_A = cellfun(@(group) sum(T.(groupvar) == group), groupA);
-   N_B = cellfun(@(group) sum(T.(groupvar) == group), groupB);
+   N_A = cellfun(@(group) sum(tbl.(groupvar) == group), groupA);
+   N_B = cellfun(@(group) sum(tbl.(groupvar) == group), groupB);
 
    % Counts of each groupA and groupB happening together
-   N_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(T.(groupvar) == A & ...
-      T{:, B}), groupB), groupA, 'UniformOutput', false));
+   N_A_AND_B = cell2mat(arrayfun(@(A) arrayfun(@(B) sum(tbl.(groupvar) == A & ...
+      tbl{:, B}), groupB), groupA, 'UniformOutput', false));
 
    % To compute Jaccard similarity
    N_B_AND_A = cell2mat(arrayfun(@(B) arrayfun(@(A) ...
-      sum(T{T.(groupvar) == B, A}), groupA), groupB, 'UniformOutput', false));
+      sum(tbl{tbl.(groupvar) == B, A}), groupA), groupB, 'UniformOutput', false));
 
    % These should be symmetric
    J_A_AND_B = N_A_AND_B ./ (N_A + N_B - N_A_AND_B)
@@ -302,33 +302,33 @@ function J = groupjaccard(T, groupvar, groupA, groupB)
    [J_A_AND_B J_B_AND_A] % not
 end
 
-function phi = groupphicoeff(T, groupvar, groupA, groupB, ...
+function phi = groupphicoeff(tbl, groupvar, groupA, groupB, ...
       N_A, N_B, N_A_AND_B)
 
    % Counts of each group not A and not B
-   N_NOT_A = cellfun(@(A) sum(T.(groupvar) ~= A), groupA);
-   N_NOT_B = cellfun(@(B) sum(T.(groupvar) ~= B), groupB);
+   N_NOT_A = cellfun(@(A) sum(tbl.(groupvar) ~= A), groupA);
+   N_NOT_B = cellfun(@(B) sum(tbl.(groupvar) ~= B), groupB);
 
    % Counts of A and not B, and not A and B
    N_A_AND_NOT_B = cell2mat( ...
       arrayfun(@(A) ...
-      arrayfun(@(B) sum(T.(groupvar) == A & T{:, B}==false), groupB), groupA, ...
+      arrayfun(@(B) sum(tbl.(groupvar) == A & tbl{:, B}==false), groupB), groupA, ...
       'UniformOutput', false));
 
    N_NOT_A_AND_B = cell2mat( ...
       arrayfun(@(A) ...
-      arrayfun(@(B) sum(T.(groupvar) == B & T{:, A}), groupA), groupB, ...
+      arrayfun(@(B) sum(tbl.(groupvar) == B & tbl{:, A}), groupA), groupB, ...
       'UniformOutput', false));
 
    % N_NOT_A_AND_B = cell2mat( ...
    %    arrayfun(@(A) ...
-   %    arrayfun(@(B) sum(T.(groupvar) ~= A & T{:, B}), groupB), groupA, ...
+   %    arrayfun(@(B) sum(tbl.(groupvar) ~= A & tbl{:, B}), groupB), groupA, ...
    %    'UniformOutput', false));
 
    % Counts of each group not A and not B happening together
    N_NOT_A_AND_NOT_B = cell2mat( ...
       arrayfun(@(A) arrayfun(@(B) ...
-      sum(T.(groupvar) ~= A & T{:, B}==false), groupB), groupA, ...
+      sum(tbl.(groupvar) ~= A & tbl{:, B}==false), groupB), groupA, ...
       'UniformOutput', false));
 
    % phi coeff
@@ -337,56 +337,56 @@ function phi = groupphicoeff(T, groupvar, groupA, groupB, ...
 
 end
 
-function dummy(T, groupvar, groupA, groupB)
+function dummy(tbl, groupvar, groupA, groupB)
 
    % N_A_AND_B should equal N_B_AND_A, but it does not. The test below demonstrates
    % why, and clarified why we need to subset rows by groupA (subbasins) not groupB
    % (outlet) (when computing bayes? Or when diagnosing FCS? I think bayes)
 
    % This shows that it changes when groupA sets are chosen based on rows where
-   % T.(groupvar) == groupA(n) and then N_A_AND_B is computed using the columns
-   % T.(groupB) == true, versus the other way around. It might be specific to my
+   % tbl.(groupvar) == groupA(n) and then N_A_AND_B is computed using the columns
+   % tbl.(groupB) == true, versus the other way around. It might be specific to my
    % flood data and how I removed non-unique events.
 
    % Counts of each groupA and groupB happening together. This is how it's done in
    % the main function above.
    N_A_AND_B = cell2mat( ...
       arrayfun(@(A) arrayfun(@(B) ...
-      sum(T.(groupvar) == A & T{:, B}), groupB), groupA, ...
+      sum(tbl.(groupvar) == A & tbl{:, B}), groupB), groupA, ...
       'UniformOutput', false));
 
    % This replicates N_A_AND_B above for clarity. It uses groupA rows and then sums
    % down groupB columns for those rows.
    N_A_AND_B = nan(numel(groupA), 1);
    for n = 1:numel(groupA)
-      N_A_AND_B(n) = sum(T.(groupvar) == groupA(n) & T{:, groupB});
+      N_A_AND_B(n) = sum(tbl.(groupvar) == groupA(n) & tbl{:, groupB});
    end
 
    % This uses events where groupB is true, to test if it provides the same result
    % as the percentOfdFCS
    N_B_AND_A = cell2mat(arrayfun(@(B) arrayfun(@(A) ...
-      sum(T{T.(groupvar) == B, A}), groupA), groupB, 'UniformOutput', false));
+      sum(tbl{tbl.(groupvar) == B, A}), groupA), groupB, 'UniformOutput', false));
 
    % This replicates N_B_AND_A above for clarity. It uses the groupB rows and then
    % sums down groupA columns for those rows.
    N_B_AND_A = nan(numel(groupA), 1);
    for n = 1:numel(groupA)
-      N_B_AND_A(n) = sum(T.(groupvar) == groupB & T{:, groupA(n)});
+      N_B_AND_A(n) = sum(tbl.(groupvar) == groupB & tbl{:, groupA(n)});
    end
 
    % These are equivalent to above, but only work b/c groupB is scalar. They were
    % helpful for clarifying how the methods used in precentDeltaFCS relate to the
    % methods used in groupbayes.
-   N_B_AND_A = arrayfun(@(A) sum(T.(groupvar) == groupB & T{:, A}), groupA);
-   N_A_AND_B = arrayfun(@(A) sum(T{T.(groupvar) == A, groupB}), groupA);
+   N_B_AND_A = arrayfun(@(A) sum(tbl.(groupvar) == groupB & tbl{:, A}), groupA);
+   N_A_AND_B = arrayfun(@(A) sum(tbl{tbl.(groupvar) == A, groupB}), groupA);
 
    % This is how I compute the contribution of each sub-basin to outlet dFCS,
    % Counts == N_B_AND_A
-   Fcount = @(a) sum(T{T.(groupvar) == groupB, a});
+   Fcount = @(a) sum(tbl{tbl.(groupvar) == groupB, a});
    Counts_B_AND_A = arrayfun(@(a) Fcount(a), groupA);
 
    % This replicates N_A_AND_B:
-   Fcount = @(a) sum(T{T.(groupvar) == a, groupB});
+   Fcount = @(a) sum(tbl{tbl.(groupvar) == a, groupB});
    Counts_A_AND_B = arrayfun(@(a) Fcount(a), groupA)
 
    % Compare them:
@@ -395,12 +395,12 @@ end
 
 % % Keep these for now b/c they show how to get the sum of all the columns
 % % Counts of each groupA and groupB
-% countA = sum(T{:, groupA}, 1);
-% countB = sum(T{:, groupB}, 1);
+% countA = sum(tbl{:, groupA}, 1);
+% countB = sum(tbl{:, groupB}, 1);
 %
 % % Counts of each groupA and groupB happening together
 % count_B_AND_A = cell2mat(arrayfun(@(A) arrayfun(@(B) ...
-%    sum(T{:, A} & T{:, B}), groupB), groupA, 'UniformOutput', false));
+%    sum(tbl{:, A} & tbl{:, B}), groupB), groupA, 'UniformOutput', false));
 
 % To confirm count_A_AND_B
 % test_A_AND_B = nan(numel(groupA)*numel(groupB),1);
@@ -410,40 +410,40 @@ end
 %    for m = 1:numel(groupB)
 %       i = i+1;
 %       B = groupB(m);
-%       test_A_AND_B(i) = sum(T.(groupvar) == A & T.(B));
+%       test_A_AND_B(i) = sum(tbl.(groupvar) == A & tbl.(B));
 %    end
 % end
 
 % count_B_AND_A = nan(numel(groupA),1);
 % for n = 1:numel(groupA)
-%    count_B_AND_A(n) = sum(T.(groupvar) == groupA{n} & T.(groupB));
+%    count_B_AND_A(n) = sum(tbl.(groupvar) == groupA{n} & tbl.(groupB));
 % end
 
 %
 % Inputs:
-% T - table, each row represents an event
+% tbl - table, each row represents an event
 % groupvar - string, cellstr, or char, indicating the column (variable) name in
-% T containing the group names for each event
+% tbl containing the group names for each event
 % groupA - string, cellstr, or char, indicating the members of all unique values
-% in T.(groupvar) for which the conditional probability of A given B should be
+% in tbl.(groupvar) for which the conditional probability of A given B should be
 % computed
 % groupB - string, cellstr, or char, indicating the members of all unique values
-% in T.(groupvar) for which the conditional probability of A given B should be
+% in tbl.(groupvar) for which the conditional probability of A given B should be
 % computed
 % datavar - the
 %
-% T must contain the column T.(groupvar), each element of which is a member of
+% tbl must contain the column tbl.(groupvar), each element of which is a member of
 % either groupA or groupB, and one column for each member of groupA and groupB
-% e.g. T.(groupA(i)) must exist, where i goes from 1:numel(groupA), same for
-% T.(groupB(j)), with j from 1:numel(groupB). Each element of T.(groupA(i)) and
-% T.(groupB(j)) columns must be true or false indicating if the event
+% e.g. tbl.(groupA(i)) must exist, where i goes from 1:numel(groupA), same for
+% tbl.(groupB(j)), with j from 1:numel(groupB). Each element of tbl.(groupA(i)) and
+% tbl.(groupB(j)) columns must be true or false indicating if the event
 % Assumptions:
-% 1. groupA and groupB are both cell arrays containing column names in T.
-% 2. T.(groupA{i}) and T.(groupB{j}) contain boolean (true/false) data.
+% 1. groupA and groupB are both cell arrays containing column names in tbl.
+% 2. tbl.(groupA{i}) and tbl.(groupB{j}) contain boolean (true/false) data.
 
 % % % % % % % % % %
 % for testing with floodFrequency variables:
-% T = Info;
+% tbl = Info;
 % groupvar = "basin";
 % allBasins = unique(Info.basin); % including the outlet
 % groupA = allBasins(1:3);
@@ -454,7 +454,7 @@ end
 
 %%
 % % Keep this b/c it is more explicit w/ the loop
-% function P = groupbayes2(T,groupvar,groupA,groupB)
+% function P = groupbayes2(tbl,groupvar,groupA,groupB)
 %
 % % Initialize cell arrays to store probabilities for each group pair
 % P_A = cell(numel(groupB), numel(groupA));
@@ -464,17 +464,17 @@ end
 % P_A_GIVEN_B = cell(numel(groupB), numel(groupA));
 %
 % % Total counts
-% countTotal = height(T);
+% countTotal = height(tbl);
 %
 % % Iterate over all pairs of groups
 % for n = 1:numel(groupB)
 %    for m = 1:numel(groupA)
 %       % Counts of each groupA and groupB
-%       countA = sum(T.(groupvar) == groupA{m});
-%       countB = sum(T.(groupvar) == groupB{n});
+%       countA = sum(tbl.(groupvar) == groupA{m});
+%       countB = sum(tbl.(groupvar) == groupB{n});
 %
 %       % Counts of each groupA and groupB happening together
-%       count_B_AND_A = sum(T.(groupvar) == groupA{m} & T{:, groupB{n}});
+%       count_B_AND_A = sum(tbl.(groupvar) == groupA{m} & tbl{:, groupB{n}});
 %
 %       % Compute marginal probabilities of A and B
 %       P_A{n, m} = countA / countTotal;

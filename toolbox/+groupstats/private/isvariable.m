@@ -1,17 +1,17 @@
-function [tf,vi] = isvariable(varname,T)
-   %ISVARIABLE determine if VARNAME is a variable in table T
+function [tf,vi] = isvariable(varname,tbl)
+   %ISVARIABLE determine if VARNAME is a variable in table tbl
    %
-   %  [TF, VI] = isvariable(VARNAME,T) returns TF = true if VARNAME is a variable
-   %  in table T, and the variable (column) index VI.
+   %  [TF, VI] = isvariable(VARNAME,tbl) returns TF = true if VARNAME is a variable
+   %  in table tbl, and the variable (column) index VI.
    %
    % See also
 
    arguments
       varname (:,1) string
-      T (:,:) table
+      tbl (:,:) table
    end
-   tf = any(strcmp(varname,T.Properties.VariableNames));
-   vi = find(strcmp(varname,T.Properties.VariableNames));
+   tf = any(strcmp(varname,tbl.Properties.VariableNames));
+   vi = find(strcmp(varname,tbl.Properties.VariableNames));
 
-   % tf = any(varname == string(T.Properties.VariableNames))
+   % tf = any(varname == string(tbl.Properties.VariableNames))
 end

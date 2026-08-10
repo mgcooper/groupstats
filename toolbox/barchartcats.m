@@ -1,4 +1,4 @@
-function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props)
+function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)
    %BARCHARTCATS Bar chart by groups along x-axis and by color within groups.
    %
    % Description
@@ -8,18 +8,18 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    %
    % Syntax
    %
-   % h = barchartcats(T, ydatavar) creates a bar chart, for column ydatavar in
-   % table T. If T.(ydatavar) is a vector, then barchart creates a single bar
+   % h = barchartcats(tbl, ydatavar) creates a bar chart, for column ydatavar in
+   % table tbl. If tbl.(ydatavar) is a vector, then barchart creates a single bar
    % chart. In this mode, BARCHARTCATS behaves exactly like BOXCHART(ydata)
-   % where ydata = T.(ydatavar).
+   % where ydata = tbl.(ydatavar).
    %
-   % h = barchartcats(T, ydatavar, xgroupvar) groups the data in the vector
-   % T.(ydatavar) according to the unique values in T.(xgroupvar) and plots each
+   % h = barchartcats(tbl, ydatavar, xgroupvar) groups the data in the vector
+   % tbl.(ydatavar) according to the unique values in tbl.(xgroupvar) and plots each
    % group of data as a separate bar chart. xgroupdata determines the position
    % of each bar chart along the x-axis. ydata must be a vector, and xgroupdata
    % must have the same length as ydata.
    %
-   % h = barchartcats(T, ydatavar, xgroupvar, cgroupvar, "XGroupMembers",
+   % h = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, "XGroupMembers",
    %  xgroupmembers, "CGroupMembers", cgroupmembers) uses color to differentiate
    % between bar charts. The software groups the data in the vector ydata
    % according to the unique value combinations in xgroupdata (if specified) and
@@ -35,15 +35,15 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    %
    % Input Arguments:
    %
-   % T - A table containing the data to be plotted.
+   % tbl - A table containing the data to be plotted.
    %
-   % ydatavar - The name of the variable in the table T that contains the data
+   % ydatavar - The name of the variable in the table tbl that contains the data
    % values for the bar chart.
    %
-   % xgroupvar - The name of the categorical variable in the table T used to
+   % xgroupvar - The name of the categorical variable in the table tbl used to
    % define groups along the x-axis.
    %
-   % cgroupvar - The name of the categorical variable in the table T used to
+   % cgroupvar - The name of the categorical variable in the table tbl used to
    % define groups for the colors of the bars.
    %
    % method - the method used in the call to groupsummary to compute the values
@@ -63,23 +63,23 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    %
    % Example
    %
-   % This example reads data from a CSV file into a table T, and plots a bar
+   % This example reads data from a CSV file into a table tbl, and plots a bar
    % chart of the Value variable, grouped by the CategoryX and CategoryC
    % variables. The x-axis grouping includes categories 'Cat1', 'Cat2', and
    % 'Cat3', while the color grouping includes categories 'Group1' and 'Group2'.
    %
-   % T = readtable('data.csv');
+   % tbl = readtable('data.csv');
    % ydatavar = 'Value';
    % xgroupvar = 'CategoryX';
    % cgroupvar = 'CategoryC';
    % xgroupuse = {'Cat1', 'Cat2', 'Cat3'};
    % cgroupuse = {'Group1', 'Group2'};
    %
-   % h = barchartcats(T, ydatavar, xgroupvar, cgroupvar, xgroupuse, cgroupuse);
+   % h = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, xgroupuse, cgroupuse);
    %
    % Use optional arguments:
    %
-   % h = barchartcats(T, ydatavar, xgroupvar, cgroupvar, xgroupuse, ...
+   % h = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, xgroupuse, ...
    %    cgroupuse, 'Notch','on','MarkerStyle','none');
    %
    % Matt Cooper, 29-Nov-2022, https://github.com/mgcooper
@@ -114,7 +114,7 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    % Check groupstats.histogram first, it uses MergeGroupVar/Members.
 
    arguments
-      T table
+      tbl table
       ydatavar (1,1) string {mustBeNonempty}
       xgroupvar (1,1) string {mustBeNonempty}
       cgroupvar string = string.empty()
@@ -128,8 +128,8 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
          ["ascend","descend","order","none"]) } = "none"
       % SortGroupMembers are members of cgroupvar to be used for computing the
       % sorting order of the xgroups. For example, if there are five xgroup
-      % members i.e., five unique values of T.(xgroupvar), and three cgroup
-      % members, i.e., three unique values of T.(cgroupvar), teh default
+      % members i.e., five unique values of tbl.(xgroupvar), and three cgroup
+      % members, i.e., three unique values of tbl.(cgroupvar), teh default
       % behavior of "ascend" is to compute the average value of the three cgroup
       % bars in each xgroup and sort by those average values. If instead you
       % want to sort by a particular cgroup member, specify them using
@@ -154,17 +154,17 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
    varargs = namedargs2cell(props);
 
    % validate inputs
-   T = prepareTableGroups(T, ydatavar, string.empty(), xgroupvar, cgroupvar, ...
+   tbl = prepareTableGroups(tbl, ydatavar, string.empty(), xgroupvar, cgroupvar, ...
       opts.XGroupMembers, opts.CGroupMembers, ...
       opts.RowSelectVar, opts.RowSelectMembers);
 
    % barchartcats requires summarizing the data, unlike boxchart
-   if istable(T)
+   if istable(tbl)
       [XData, YData, CData, ~] = summarizeTableGroups( ...
-         T, ydatavar, xgroupvar, cgroupvar, opts.method);
+         tbl, ydatavar, xgroupvar, cgroupvar, opts.method);
    else
       [XData, YData, CData, ~] = summarizeMatrixGroups( ...
-         T, ydatavar, xgroupvar, cgroupvar, opts.method);
+         tbl, ydatavar, xgroupvar, cgroupvar, opts.method);
    end
 
    % main function
@@ -211,7 +211,7 @@ function varargout = barchartcats(T, ydatavar, xgroupvar, cgroupvar, opts, props
 end
 
 
-function [XData, YData, CData, EData] = summarizeTableGroups(T, ydatavar, ...
+function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
       xgroupvar, cgroupvar, method)
    %SUMMARIZETABLEGROUPS
 
@@ -233,12 +233,12 @@ function [XData, YData, CData, EData] = summarizeTableGroups(T, ydatavar, ...
    % the groups which then implicitly gets bar to act right
 
    if strcmp(method,'mean')
-      G = groupsummary(T,[cgroupvar xgroupvar], ["mean", "std"], ydatavar);
+      G = groupsummary(tbl,[cgroupvar xgroupvar], ["mean", "std"], ydatavar);
       XData = G.(xgroupvar);
       YData = G.("mean_" + ydatavar);
       EData = G.("std_" + ydatavar);
    elseif strcmp(method,'median')
-      G = groupsummary(T,[cgroupvar xgroupvar], ["median", @iqr], ydatavar);
+      G = groupsummary(tbl,[cgroupvar xgroupvar], ["median", @iqr], ydatavar);
       XData = G.(xgroupvar);
       YData = G.("median_" + ydatavar);
       EData = G.("std_" + ydatavar);
@@ -253,26 +253,26 @@ function [XData, YData, CData, EData] = summarizeTableGroups(T, ydatavar, ...
 
    % Aug 18, 2023, Moved this from the main function when prepareTableGroups
    try
-      CData = T.(cgroupvar);
+      CData = tbl.(cgroupvar);
    catch
       CData = true(size(YData));
    end
 end
 
 
-function [XData, YData, EData] = summarizeMatrixGroups(T, YData, XData, ...
+function [XData, YData, EData] = summarizeMatrixGroups(tbl, YData, XData, ...
       CData, method)
    %SUMMARIZEMATRIXGROUPS
 
    % NOTE: Not functional, I don't think the calling syntax to groupsummary is
-   % right, I think YData is not needed or needs to take the place of T.
+   % right, I think YData is not needed or needs to take the place of tbl.
 
    if strcmp(method, 'mean')
       % [mu, uv, uc] = groupsummary(YData, [XData CData], ["mean", "std"]);
-      G = groupsummary(T, [XData CData], ["mean", "std"], YData);
+      G = groupsummary(tbl, [XData CData], ["mean", "std"], YData);
    elseif strcmp(method, 'median')
       % [mu, uv, uc] = groupsummary(YData, [XData CData], {"median", @iqr});
-      G = groupsummary(T, [XData CData], {"median", @iqr}, YData);
+      G = groupsummary(tbl, [XData CData], {"median", @iqr}, YData);
    end
 end
 
@@ -480,8 +480,8 @@ end
 
 % % I moved anything out of here that was immediately applicable to above, whats
 % left could be helpful for adding the mean +/- std idea
-% function H = barchartcats(T,XData,YData,CData,ydatavar,method,varargs)
-% % barchartcats(T,ydatavar,xgroupvar,cgroupvar, ...
+% function H = barchartcats(tbl,XData,YData,CData,ydatavar,method,varargs)
+% % barchartcats(tbl,ydatavar,xgroupvar,cgroupvar, ...
 % %    xgroupuse,cgroupuse,BoxChartOpts,opts)
 %
 % % Default method is 'mean'
@@ -492,14 +492,14 @@ end
 % % Summarize the data
 % if strcmp(method,'mean')
 %    % [mu, uv, uc] = groupsummary(YData, [XData CData], ["mean", "std"]);
-%    if istable(T)
-%       G = groupsummary(T,{XData CData}, ["mean", "std"], YData);
+%    if istable(tbl)
+%       G = groupsummary(tbl,{XData CData}, ["mean", "std"], YData);
 %    else
-%       G = groupsummary(T, [XData CData], ["mean", "std"], YData);
+%       G = groupsummary(tbl, [XData CData], ["mean", "std"], YData);
 %    end
 % elseif strcmp(method,'median')
 %    % [mu, uv, uc] = groupsummary(YData, [XData CData], {"median", @iqr});
-%    G = groupsummary(T, [XData CData], {"median", @iqr}, YData);
+%    G = groupsummary(tbl, [XData CData], {"median", @iqr}, YData);
 % end
 %
 % % % % % % % % % % % % % % % % % % % % % % % % % % %

@@ -1,4 +1,4 @@
-function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
+function tbl = prepareTableGroups(tbl, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
       XGroupMembers, CGroupMembers, RowSelectVar, RowSelectMembers)
    %PREPARETABLEGROUPS Prepare group data in table.
    %
@@ -11,7 +11,7 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
    % Case 1 example using boxchartcats. If cgroupvar is not passed to the
    % calling function, it is assigned string.empty, which means groupmembers
    % returns string.empty for CGroupMembers, so CGroupMembers goes to
-   % prepareTableGroups empty, but the if-else check sets it true(height(T), 1),
+   % prepareTableGroups empty, but the if-else check sets it true(height(tbl), 1),
    % which is the desired behavior.
    %
    % The reason CGroupMembers cannot default to all groupmembers is because in
@@ -23,15 +23,15 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
    % desired behavior.
 
    arguments
-      T tabular
+      tbl tabular
       YDataVar string {mustBeNonempty}
       XDataVar string = string.empty()
       XGroupVar string = string.empty()
       CGroupVar string = string.empty()
-      XGroupMembers (:, 1) string = groupmembers(T, XGroupVar)
-      CGroupMembers (:, 1) string = groupmembers(T, CGroupVar)
+      XGroupMembers (:, 1) string = groupmembers(tbl, XGroupVar)
+      CGroupMembers (:, 1) string = groupmembers(tbl, CGroupVar)
       RowSelectVar string = string.empty()
-      RowSelectMembers (:, 1) string = groupmembers(T, RowSelectVar)
+      RowSelectMembers (:, 1) string = groupmembers(tbl, RowSelectVar)
    end
 
    Caller = upper(mcallername());
@@ -48,16 +48,16 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
    % Exit if at least one grouping variable was not provided.
    % if isempty(CGroupVar) && isempty(XGroupVar) && isempty(RowSelectVar)
    %    eid = sprintf('groupstats:%s:noGroupingVarProvided', Caller);
-   %    msg = 'No XGroupVar or CGroupVar provided, try %s(T.(ydatavar))';
+   %    msg = 'No XGroupVar or CGroupVar provided, try %s(tbl.(ydatavar))';
    %    error(eid, msg, Caller);
    % end
 
-   % Validate variable names by confirming that they are column names of T.
-   VarNames = T.Properties.VariableNames;
+   % Validate variable names by confirming that they are column names of tbl.
+   VarNames = tbl.Properties.VariableNames;
 
    % If a timetable is passed in, append the Time dimension
-   if istimetable(T)
-      VarNames = [T.Properties.DimensionNames(1) VarNames];
+   if istimetable(tbl)
+      VarNames = [tbl.Properties.DimensionNames(1) VarNames];
    end
 
    % other than YDataVar, we need ~isempty, then validatestr, then
@@ -74,89 +74,89 @@ function T = prepareTableGroups(T, YDataVar, XDataVar, XGroupVar, CGroupVar, ...
    % Downselect the table by rows if requested
    if ~isempty(RowSelectVar)
       validatestring(RowSelectVar, VarNames, Caller, 'RowSelectVar');
-      T = groupstats.groupselect(T, RowSelectVar, RowSelectMembers);
+      tbl = groupstats.groupselect(tbl, RowSelectVar, RowSelectMembers);
       % Dec 2023 - replaced VarNames with RowSelectVar, otherwise if
       % RowSelectMembers are present in more than one of VarNames, groupselect
       % errors b/c it only allows one variable to select rows by. Not sure why
       % VarNames was ever used.
-      % T = groupstats.groupselect(T, VarNames, RowSelectMembers);
+      % tbl = groupstats.groupselect(tbl, VarNames, RowSelectMembers);
    end
 
-   % Confirm each XGroupMember is a member of T.(XGroupVar)
+   % Confirm each XGroupMember is a member of tbl.(XGroupVar)
    if ~isempty(XGroupVar)
       validatestring(XGroupVar, VarNames, Caller, 'XGroupVar');
    end
    if ~isempty(XGroupMembers)
-      % 18 Nov 2023 - I reversed XGroupMembers and T.(XGroupVar). I think this
+      % 18 Nov 2023 - I reversed XGroupMembers and tbl.(XGroupVar). I think this
       % is the desired behavior - XGroupMembers defines the "ValidMembers"
-      % provided by the user, T.(XGroupVar) defines the actual members.
+      % provided by the user, tbl.(XGroupVar) defines the actual members.
       % UPDATE: reversing them fixes the situation where the data does not
       % contain one of the expected group members e.g. in my application, I sent
       % in all months from Jan-Dec which were previously defined, but the table
       % did not contain any Feb data points. If instead I used
-      % unique(T.(XGroupVar)) to define XGroupMembers, it would work. So I
+      % unique(tbl.(XGroupVar)) to define XGroupMembers, it would work. So I
       % commented out the "fix" and re-activated the old behavior, otherwise the
       % expected behavior where a specific group member is designated by
       % XGroupMembers leads to failure in validatemember.
-      % validatemember(T.(XGroupVar), XGroupMembers, Caller, 'XGroupMembers')
-      validatemember(XGroupMembers, T.(XGroupVar), Caller, 'XGroupMembers')
-      inxgroup = ismember(string(T.(XGroupVar)), XGroupMembers);
+      % validatemember(tbl.(XGroupVar), XGroupMembers, Caller, 'XGroupMembers')
+      validatemember(XGroupMembers, tbl.(XGroupVar), Caller, 'XGroupMembers')
+      inxgroup = ismember(string(tbl.(XGroupVar)), XGroupMembers);
    else
-      inxgroup = true(height(T), 1);
+      inxgroup = true(height(tbl), 1);
    end
 
-   % Confirm each CGroupMember is a member of T.(CGroupVar)
+   % Confirm each CGroupMember is a member of tbl.(CGroupVar)
    if ~isempty(CGroupVar)
       validatestring(CGroupVar, VarNames, Caller, 'CGroupVar');
    end
    if ~isempty(CGroupMembers)
-      validatemember(CGroupMembers, T.(CGroupVar), Caller, 'CGroupMembers')
-      incgroup = ismember(string(T.(CGroupVar)), CGroupMembers);
+      validatemember(CGroupMembers, tbl.(CGroupVar), Caller, 'CGroupMembers')
+      incgroup = ismember(string(tbl.(CGroupVar)), CGroupMembers);
    else
-      incgroup = true(height(T), 1);
+      incgroup = true(height(tbl), 1);
    end
 
    % I think I can replace everything below regarding badcats with a call to
    % dropcats, and combine the try-catch cast to / from categorical for clarity
 
    % If xgroupvar/cgroupvar are not categorical, try to convert them
-   try T.(XGroupVar) = categorical(T.(XGroupVar)); catch; end
-   try T.(CGroupVar) = categorical(T.(CGroupVar)); catch; end
+   try tbl.(XGroupVar) = categorical(tbl.(XGroupVar)); catch; end
+   try tbl.(CGroupVar) = categorical(tbl.(CGroupVar)); catch; end
 
    %--------------------------------------
 
    % Subset rows that are in both xgroupuse and cgroupuse
-   T = T(incgroup & inxgroup, :);
+   tbl = tbl(incgroup & inxgroup, :);
 
    % Remove cats that are not in xgroupuse
    if ~isempty(XGroupVar)
-      T = groupstats.dropcats(T, XGroupVar);
+      tbl = groupstats.dropcats(tbl, XGroupVar);
    end
 
    % Remove cats that are not in cgroupuse
    if ~isempty(CGroupVar)
-      T = groupstats.dropcats(T, CGroupVar);
+      tbl = groupstats.dropcats(tbl, CGroupVar);
    end
 
    % Check if YDataVar is categorical, and try to convert it if so
-   if iscategorical(T.(YDataVar))
+   if iscategorical(tbl.(YDataVar))
       try
-         T.(YDataVar) = cat2double(T.(YDataVar));
+         tbl.(YDataVar) = cat2double(tbl.(YDataVar));
       catch
          % let the built-in error catching do the work.
       end
    end
 
    % Check if xdatavar is categorical, and try to convert it if provided
-   if ~isempty(XDataVar) && ~isnumeric(T.(XDataVar))
+   if ~isempty(XDataVar) && ~isnumeric(tbl.(XDataVar))
 
       % Try to convert categorical to double
       try
-         T.(XDataVar) = cat2double(T.(XDataVar));
+         tbl.(XDataVar) = cat2double(tbl.(XDataVar));
       catch
          % Try to convert string to double
          try
-            T.(XDataVar) = str2double(T.(XDataVar));
+            tbl.(XDataVar) = str2double(tbl.(XDataVar));
          catch
             % let the built-in error catching do the work.
          end
@@ -170,27 +170,27 @@ end
 % assignment is almost worthless, but it does allow for calling this function
 % wihtout those variables at all, so there is still non-zero purpose
 
-% % Confirm each XGroupMember is a member of T.(XGroupVar)
+% % Confirm each XGroupMember is a member of tbl.(XGroupVar)
 % if isempty(XGroupVar)
-%    inxgroup = true(height(T), 1);
+%    inxgroup = true(height(tbl), 1);
 % else
 %    validatestring(XGroupVar, VarNames, Caller, 'XGroupVar');
-%    validatemember(XGroupMembers, T.(XGroupVar), Caller, 'XGroupMembers')
-%    inxgroup = ismember(string(T.(XGroupVar)), XGroupMembers);
+%    validatemember(XGroupMembers, tbl.(XGroupVar), Caller, 'XGroupMembers')
+%    inxgroup = ismember(string(tbl.(XGroupVar)), XGroupMembers);
 % end
 %
-% % Confirm each CGroupMember is a member of T.(CGroupVar)
+% % Confirm each CGroupMember is a member of tbl.(CGroupVar)
 % if isempty(CGroupVar)
-%    incgroup = true(height(T), 1);
+%    incgroup = true(height(tbl), 1);
 % else
 %    validatestring(CGroupVar, VarNames, Caller, 'CGroupVar');
-%    validatemember(CGroupMembers, T.(CGroupVar), Caller, 'CGroupMembers')
-%    incgroup = ismember(string(T.(CGroupVar)), CGroupMembers);
+%    validatemember(CGroupMembers, tbl.(CGroupVar), Caller, 'CGroupMembers')
+%    incgroup = ismember(string(tbl.(CGroupVar)), CGroupMembers);
 % end
 
-% function T = prepareTableGroups(T, varargin)
+% function tbl = prepareTableGroups(tbl, varargin)
 %     arguments
-%         T tabular
+%         tbl tabular
 %         opts.YDataVar (1,1) string {mustBeNonempty}
 %         opts.XDataVar (1,1) string = "none"
 %         opts.XGroupVar (1,1) string = "none"
@@ -210,18 +210,18 @@ end
 %
 %     funcname = mfilename; % Use the current function name for error messages
 %
-%     % Confirm ydatavar is valid variable of table T
-%     validatestring(ydatavar, T.Properties.VariableNames, funcname, 'ydatavar', 2);
+%     % Confirm ydatavar is valid variable of table tbl
+%     validatestring(ydatavar, tbl.Properties.VariableNames, funcname, 'ydatavar', 2);
 %
 %     % Check if xdatavar is provided and validate
 %     if xdatavar ~= "none"
-%         validatestring(xdatavar, T.Properties.VariableNames, funcname, 'xdatavar', 3);
+%         validatestring(xdatavar, tbl.Properties.VariableNames, funcname, 'xdatavar', 3);
 %     end
 %
 %     % Require at least one grouping variable
 %     if cgroupvar == "none" && xgroupvar == "none"
 %         eid = 'groupstats:prepareGroups:badGroupingVar';
-%         msg = 'No xgroupvar or cgroupvar provided, try %s(T.(ydatavar))';
+%         msg = 'No xgroupvar or cgroupvar provided, try %s(tbl.(ydatavar))';
 %         error(eid, msg, funcname);
 %     end
 %
@@ -229,9 +229,9 @@ end
 %     % ...
 %
 %     % Check if xdatavar is categorical, and try to convert it if provided
-%     if xdatavar ~= "none" && iscategorical(T.(xdatavar))
+%     if xdatavar ~= "none" && iscategorical(tbl.(xdatavar))
 %         try
-%             T.(xdatavar) = cat2double(T.(xdatavar));
+%             tbl.(xdatavar) = cat2double(tbl.(xdatavar));
 %         catch
 %             % let the built-in error catching do the work.
 %         end

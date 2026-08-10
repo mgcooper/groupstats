@@ -47,7 +47,7 @@
 %   groupstats/permutest.permutest                 - Permutation test for dependent or independent measures of 1-D or 2-D data
 %   
 %   +GROUPSTATS/PRIVATE
-%   groupstats/private.isvariable                  - Determine if VARNAME is a variable in table T
+%   groupstats/private.isvariable                  - Determine if VARNAME is a variable in table tbl
 %   groupstats/private.settablevarnames            - Set table variable names
 %   groupstats/private.withwarnoff                 - Temporarily disable warnings
 %    

@@ -1,24 +1,24 @@
-function tbl = groupmap(T, groupvar, fcn, varargin)
+function out = groupmap(tbl, groupvar, fcn, varargin)
    %GROUPMAP Apply a function to groups within a table and recombine results
    %
-   %   TBL = GROUPMAP(T, GROUPVAR, FCN, ...) applies the function FCN to subsets
-   %   of table T, grouped by the variable GROUPVAR, and combines the results.
+   %   OUT = GROUPMAP(TBL, GROUPVAR, FCN, ...) applies the function FCN to subsets
+   %   of table TBL, grouped by the variable GROUPVAR, and combines the results.
    %
    %   Inputs:
-   %       T        - Input table
-   %       GROUPVAR - Name of the grouping variable in T (string or char)
+   %       TBL      - Input table
+   %       GROUPVAR - Name of the grouping variable in TBL (string or char)
    %       FCN      - Function handle to apply to each group. Should accept a
    %                  table as its first argument and return a table or array.
    %       ...      - Additional arguments passed to FCN
    %
    %   Outputs:
-   %       TBL      - A table containing the combined results of applying FCN
+   %       OUT      - A table containing the combined results of applying FCN
    %                  to each group, with GROUPVAR added as a categorical column
    %
    %   The function performs the following steps:
-   %   1. Identifies unique groups in T based on GROUPVAR
+   %   1. Identifies unique groups in TBL based on GROUPVAR
    %   2. For each group:
-   %      a. Extracts the subset of T corresponding to the group
+   %      a. Extracts the subset of TBL corresponding to the group
    %      b. Applies FCN to this subset, passing varargin{:} to FCN
    %      c. Ensures the result is a table
    %      d. Adds GROUPVAR as a categorical column to the result
@@ -29,9 +29,9 @@ function tbl = groupmap(T, groupvar, fcn, varargin)
    %
    %   Example:
    %       % Group by 'Category' and calculate mean of 'Value' for each group
-   %       T = table({'A';'B';'A';'C'}, [1;2;3;4], 'VariableNames', {'Category', 'Value'});
+   %       tbl = table({'A';'B';'A';'C'}, [1;2;3;4], 'VariableNames', {'Category', 'Value'});
    %       fcn = @(t) mean(t.Value);
-   %       result = groupmap(T, 'Category', fcn);
+   %       result = groupmap(tbl, 'Category', fcn);
    %
    %   See also: GROUPBY, SPLITAPPLY, STACKTABLES
 
@@ -39,19 +39,19 @@ function tbl = groupmap(T, groupvar, fcn, varargin)
    %    fcn = str2func(strrep(func2str(fcn), 'tbl', 'tt'));
    % end
 
-   members = unique(T.(groupvar));
-   tbl = cell(numel(members), 1);
+   members = unique(tbl.(groupvar));
+   out = cell(numel(members), 1);
 
    for n = 1:numel(members)
-      t = T(ismember(T.(groupvar), members(n)), :);
-      tbl{n} = fcn(t, varargin{:});
+      t = tbl(ismember(tbl.(groupvar), members(n)), :);
+      out{n} = fcn(t, varargin{:});
 
-      if ~istable(tbl{n})
-         tbl{n} = array2table(tbl{n});
+      if ~istable(out{n})
+         out{n} = array2table(out{n});
       end
 
-      tbl{n}.(groupvar) = categorical(repmat(members(n), height(tbl{n}), 1));
+      out{n}.(groupvar) = categorical(repmat(members(n), height(out{n}), 1));
    end
 
-   tbl = stacktables(tbl{:});
+   out = stacktables(out{:});
 end
