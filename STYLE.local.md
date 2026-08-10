@@ -6,19 +6,49 @@ overwrites it.
 
 ## Naming
 
-TODO: function/file name casing (e.g. camelCase vs snake_case vs lowercase), package
-or namespace layout, variable casing, and any semantic variable prefixes.
+- Function-name casing follows canonical `STYLE.md` (MATLAB conventions).
+- Public functions belong in `toolbox/+groupstats/`. Build and maintenance
+  utilities belong in `toolbox/+groupstats/+internal/`. Helpers used by a
+  single folder belong in that folder's `private/` directory.
+- Table arguments must be named `tbl`, never `T`. Rename any remaining or
+  reintroduced `T` table variable to `tbl` on contact. Positional arguments
+  are lowercase (`ydatavar`, `xgroupvar`, `cgroupvar`). Name-value option
+  fields are PascalCase (`XGroupMembers`, `PlotMeans`, `LegendOrientation`);
+  the `arguments`-block structs that hold them are named `opts` (options) and
+  `props` (graphics pass-through properties).
+- New test files must be named `test_<subject>.m`, matching `test_dropcats.m`
+  and `test_groupmap.m` (`testGroupBayes.m` is a legacy exception).
 
 ## Formatting
 
-TODO: indentation width, line length, how functions are closed, continuation style.
+- Indent with 3 spaces (canonical `STYLE.md` delegates indent width to this
+  file). Never use tabs (`getCases.m` is a legacy exception).
+- Indent `...` continuation lines by 6 spaces (double indent).
+- Preserve the commented BSD 3-Clause footer blocks in files that carry them.
+  Do not add license footers to new files.
 
 ## Idioms and patterns
 
-TODO: preferred patterns (vectorization, input parsing, optional outputs), key
-libraries/toolboxes, and how new or risky code is staged.
+- Use `arguments` blocks for input validation in all new code, including
+  `props.?matlab.graphics.chart.primitive.BoxChart`-style declarations for
+  graphics property pass-through. `inputParser` survives only in two legacy
+  internals (`getRequiredFiles.m`, `replacePackagePrefix.m`); it must not
+  appear in new code.
+- Import namespace functions at the top of a function body
+  (`import groupstats.groupselect`) instead of fully qualifying every call.
+- Route grouped-table preprocessing through `groupstats.prepareTableGroups`;
+  do not re-implement group/member validation inside individual functions.
+- Use the cleanup-object helpers `withwarnoff` and `withcd` for temporary
+  warning-state and directory changes.
 
 ## Other project conventions
 
-TODO: anything else specific to this project — kernel conventions, argument-ordering
-schemas, domain prefixes, etc. Delete this section if unused.
+- MATLAB launchers on this machine: `matlab` on `PATH` is a symlink to
+  `/Applications/MATLAB_R2025b.app/bin/matlab`; R2024b is also installed at
+  `/Applications/MATLAB_R2024b.app/bin/matlab`. Develop and test against
+  these releases.
+- Language-feature floor already in use: `arguments` blocks (R2019b+),
+  `props.?Class` validation (R2021a+), `buildtool` (R2022b+), and
+  `codeIssues` (R2023a+).
+- `toolbox/+groupstats/permutest/` is vendored third-party code with its own
+  `license.txt`; never edit, restyle, or lint it to project conventions.
