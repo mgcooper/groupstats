@@ -52,3 +52,18 @@ overwrites it.
   `codeIssues` (R2023a+).
 - `toolbox/+groupstats/permutest/` is vendored third-party code with its own
   `license.txt`; never edit, restyle, or lint it to project conventions.
+
+## Prose examples
+
+Rewrite this:
+
+> and somehow I overlooked this simple solution to simply loop over the
+> groupsets members. But note that the main part below loops over groupsets, so
+> maybe this won't work when multiple groupsets are provided, but that seems
+> like something I wont support
+
+as this:
+
+> This branch loops over the groupset members. The main branch below also
+> loops over groupsets. Note: multiple groupsets are untested here and are not
+> supported.
