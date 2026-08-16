@@ -1,13 +1,33 @@
-function G = grouppercent(G, groupvars, groupbins, groupsets)
+function G = grouppercent(tbl, groupvars, groupbins, groupsets)
    %GROUPPERCENT Compute group-wise frequencies (percents) including groupsets.
    %
-   % G = grouppercent(G, groupvars, groupbins, groupsets)
+   %  G = GROUPPERCENT(TBL, GROUPVARS)
+   %  G = GROUPPERCENT(TBL, GROUPVARS, GROUPBINS)
+   %  G = GROUPPERCENT(TBL, GROUPVARS, GROUPBINS, GROUPSETS)
    %
-   % This addresses the fact that groupsummary returns the counts for each group
-   % but not the frequencies. It also adds the "groupsets" concept from
-   % groupstats, so frequencies (and counts) are computed for "ingroups".
+   % Description
+   %  This addresses the fact that groupsummary returns the counts for each
+   %  group but not the frequencies. It also adds the "groupsets" concept from
+   %  groupstats, so frequencies (and counts) are computed for "ingroups".
    %
-   % See also: groupsummary
+   %  TBL is either a raw data table, one row per observation, or a table that
+   %  a previous groupsummary or groupcounts call already summarized, one row
+   %  per group. A GroupCount variable is what tells the two apart: a raw
+   %  table has none, so this function calls groupcounts first.
+   %
+   %  G gains one Percent_<groupvar> variable per member of GROUPSETS. Each
+   %  one holds a within-group percent: for every member of that group
+   %  variable, the rows belonging to that member sum to 100.
+   %
+   %  Percent, which groupcounts produces, is a different quantity. It is each
+   %  row's share of every observation in the table, so the whole column sums
+   %  to 100.
+   %
+   % Example
+   %  tbl = table(["a";"a";"b"], [1;2;3], 'VariableNames', {'Group', 'Value'});
+   %  G = groupstats.grouppercent(tbl, "Group");
+   %
+   % See also: groupsummary, groupcounts, groupstats.groupsummary
 
    % Update: I did this see the else block below
    % It might be helpful to remove "disc_" from binned variables, since the
@@ -17,21 +37,26 @@ function G = grouppercent(G, groupvars, groupbins, groupsets)
    % statements to use FCS if groupbins is "none", or disc_FCS otherwise
 
    arguments
-      G (:,:) tabular
+      tbl (:,:) tabular
       groupvars (1,:) string
       groupbins (1,:) = "none"
-      groupsets (1,:) string = "none"
+      groupsets (1,:) string = string.empty()
    end
+
+   % "none" is the sentinel groupstats.groupsummary passes down. Accept it and
+   % convert to the empty sentinel the rest of the family uses.
+   if isscalar(groupsets) && groupsets == "none"
+      groupsets = string.empty();
+   end
+   if isempty(groupsets)
+      groupsets = groupvars;
+   end
+
+   G = tbl;
 
    % I do not specify type for groupbins b/c ot needs to support various types e.g.
    % "none" as well as numeric bin edges, but default is "none" which will be
    % applied to all groupvars when passed to groupsummary.
-
-   debug = false;
-
-   if groupsets == "none"
-      groupsets = groupvars;
-   end
 
    bySet = false;
 
@@ -86,12 +111,26 @@ function G = grouppercent(G, groupvars, groupbins, groupsets)
       % support
       if bySet
 
-         sets = unique(G.(groupsets));
+         % Count within each set separately, then stack. groupcounts cannot
+         % group by a variable that is not in groupvars, so each set's rows go
+         % through it on their own and carry the set label back afterward.
+         %
+         % One set variable at a time. Two would need a grid over their
+         % members, and no caller has asked for that.
+         setvar = groupsets(1);
+         if ~isscalar(groupsets)
+            error('groupstats:grouppercent:multipleGroupSets', ...
+               ['grouppercent counts by one groupsets variable at a time. ' ...
+               'Received %d: %s.'], numel(groupsets), ...
+               strjoin(groupsets, ', '))
+         end
+
+         sets = unique(G.(setvar));
          tmpG = cell(numel(sets), 1);
          for n = 1:numel(sets)
-            idx = ismember(G.(groupsets), sets(n));
+            idx = ismember(G.(setvar), sets(n));
             Gn = groupcounts(G(idx, :), groupvars, groupbins);
-            Gn.(groupsets) = repmat(sets(n), height(Gn), 1);
+            Gn.(setvar) = repmat(sets(n), height(Gn), 1);
             tmpG{n} = Gn;
          end
          G = stacktables(tmpG{:});
@@ -99,11 +138,17 @@ function G = grouppercent(G, groupvars, groupbins, groupsets)
       else
 
          G = groupcounts(G, groupvars, groupbins);
-
-         % Remove disc_ appended to variable
-         G.Properties.VariableNames = replace( ...
-            G.Properties.VariableNames, "disc_", "");
       end
+
+      % Restore each binned group variable's original name, so a caller reads
+      % the same name whether or not groupbins was used. Only a name built
+      % from one of groupvars is renamed; a blanket substring replace would
+      % also rewrite a variable the caller named disc_something.
+      names = string(G.Properties.VariableNames);
+      binned = "disc_" + groupvars;
+      [isbinned, loc] = ismember(names, binned);
+      names(isbinned) = groupvars(loc(isbinned));
+      G.Properties.VariableNames = names;
 
       % warning(['Input 1, G, does not contain GroupCount variable. ' ...
       %    'This function assumes G is a groupsummary or groupcounts table.'])
@@ -123,15 +168,15 @@ function G = grouppercent(G, groupvars, groupbins, groupsets)
          end
       end
 
-      % Compute the within group percentages
-      if numel(grps) == height(G)
-         G.("Percent_" + groupvar) = 100.*G.GroupCount./sum(G.GroupCount);
-      else
-         G.("Percent_" + groupvar) = nan(height(G),1);
-         for n = 1:numel(grps)
-            idx = G.(groupvar) == grps(n);
-            G.("Percent_" + groupvar)(idx) = 100.*G.GroupCount(idx)./sum(G.GroupCount(idx));
-         end
+      % Compute the within group percentages. Every member's rows sum to 100,
+      % including a member holding one row, which is then 100 percent of
+      % itself. Normalizing over the whole table instead would produce
+      % Percent, which is a different quantity groupcounts already returns.
+      G.("Percent_" + groupvar) = nan(height(G), 1);
+      for n = 1:numel(grps)
+         idx = G.(groupvar) == grps(n);
+         G.("Percent_" + groupvar)(idx) = ...
+            100 .* G.GroupCount(idx) ./ sum(G.GroupCount(idx));
       end
    end
 
@@ -146,44 +191,19 @@ function G = grouppercent(G, groupvars, groupbins, groupsets)
    end
 
 
-   if debug == true
-      checkPercent = checkWholeGroups(G, groupsets);
-   end
 end
 
-function checkPercent = checkWholeGroups(G, groupsets)
-
-   % Confirm:
-   for n = 1:numel(groupsets)
-
-      checkPercent = varfun(@sum, G, ...
-         "InputVariables","Percent", ...
-         "GroupingVariables",groupsets(n));
-
-      checkPercent = varfun(@sum, G, ...
-         "InputVariables",strcat("Percent_",groupsets(n)), ...
-         "GroupingVariables",groupsets(n));
-   end
-end
-
-function validategroupbins(groupbins)
-
-   % Note: not sure what 'f' is in the last call, maybe G? It was uncommented but
-   % the undefined variable created a dependency issue with Project dependency
-   % analyszer so I commented this out
-   % isok = @(groupbins) ischarlike(groupbins);
-   % assert(isok(groupbins) || (iscell(groupbins) && all(cellfun(isok, f))));
-
-
-   % checkPercent = varfun(@sum, G, ...
-   %    "InputVariables","Percent_scenario", ...
-   %    "GroupingVariables",'basin');
-   %
-   % % This shows how it doesn't work b/c we get the sum across scenarios
-   % checkPercent = varfun(@sum, G, ...
-   %    "InputVariables","Percent_basin", ...
-   %    "GroupingVariables","basin");
-end
+% To confirm each Percent_<groupset> sums to 100 within its own group:
+%
+%   varfun(@sum, G, "InputVariables", "Percent_" + groupset, ...
+%      "GroupingVariables", groupset)
+%
+% Grouping that sum by a different variable does not check anything: it sums
+% across the sets rather than within them.
+%
+%   % This shows how it doesn't work b/c we get the sum across scenarios
+%   varfun(@sum, G, "InputVariables", "Percent_scenario", ...
+%      "GroupingVariables", 'basin')
 
 
 % This shows why groupsummary nomenclature is confusing ... "GroupCount" is

@@ -13,7 +13,8 @@ function out = groupmap(tbl, groupvar, fcn, varargin)
    %
    %   Outputs:
    %       OUT      - A table containing the combined results of applying FCN
-   %                  to each group, with GROUPVAR added as a categorical column
+   %                  to each group, with GROUPVAR as the first column,
+   %                  converted to categorical
    %
    %   The function performs the following steps:
    %   1. Identifies unique groups in TBL based on GROUPVAR
@@ -21,11 +22,23 @@ function out = groupmap(tbl, groupvar, fcn, varargin)
    %      a. Extracts the subset of TBL corresponding to the group
    %      b. Applies FCN to this subset, passing varargin{:} to FCN
    %      c. Ensures the result is a table
-   %      d. Adds GROUPVAR as a categorical column to the result
+   %      d. Inserts GROUPVAR as the first column of the result, as categorical
    %   3. Vertically concatenates all group results into a single table
+   %
+   %   GROUPVAR comes first to match MATLAB's groupsummary and groupcounts.
+   %   It is categorical in OUT whatever its type in TBL. The conversion keeps
+   %   a numeric group variable out of a downstream vartype("numeric") sweep.
+   %   A GROUPVAR that is already categorical passes through unconverted. An
+   %   ordinal one keeps its Ordinal flag and its category list, so a
+   %   relational comparison on the returned column still works.
    %
    %   The function checks if FCN returns a table, and if not, converts the
    %   result to a table. This allows FCN to return either a table or an array.
+   %
+   %   Errors:
+   %       groupstats:groupmap:groupVariableNameConflict - FCN returned a
+   %       variable whose name matches GROUPVAR. Inserting the group column
+   %       would drop that variable's data.
    %
    %   Example:
    %       % Group by 'Category' and calculate mean of 'Value' for each group
@@ -50,7 +63,27 @@ function out = groupmap(tbl, groupvar, fcn, varargin)
          out{n} = array2table(out{n});
       end
 
-      out{n}.(groupvar) = categorical(repmat(members(n), height(out{n}), 1));
+      % Refuse to insert over a variable the applied function returned.
+      % Assigning onto that name would drop the variable's data.
+      if ismember(string(groupvar), string(out{n}.Properties.VariableNames))
+         error('groupstats:groupmap:groupVariableNameConflict', ...
+            ['The applied function returned a variable named "%s", which ' ...
+            'is the group variable name. Rename that variable in the ' ...
+            'function, or group by a different variable.'], groupvar)
+      end
+
+      % Build the group column. Convert only a group variable that is not
+      % already categorical. Rewrapping a categorical in categorical() resets
+      % its Ordinal flag and drops the categories no row uses. That costs the
+      % ordinal sorting this conversion exists to enable.
+      groupcolumn = repmat(members(n), height(out{n}), 1);
+      if ~iscategorical(groupcolumn)
+         groupcolumn = categorical(groupcolumn);
+      end
+
+      % Insert the group column first, matching groupsummary and groupcounts.
+      out{n} = addvars(out{n}, groupcolumn, ...
+         'NewVariableNames', groupvar, 'Before', 1);
    end
 
    out = stacktables(out{:});

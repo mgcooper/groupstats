@@ -1,5 +1,5 @@
 function tbl = dropcats(tbl, varnames)
-   % DROPCATS Remove categories that are not present in a table variable.
+   %DROPCATS Remove categories that are not present in a table variable.
    %
    %  TBL = DROPCATS(TBL, VARNAME) takes a table TBL and the name of a
    %  categorical variable VARNAME. It removes any categories in VARNAME that
