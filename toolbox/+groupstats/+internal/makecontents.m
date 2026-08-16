@@ -1,13 +1,19 @@
 function makecontents(varargin)
    %MAKECONTENTS Make contents.m for each folder including package folders.
    %
+   %  Run this after adding, renaming, or removing a function.
+   %
    %  makecontents() Makes a Contents.m file for each folder in the
    %  projectpath/toolbox directory. This usage assumes this file is saved in:
-   %  projectpath/toolbox/+tbx/+internal.
+   %  projectpath/toolbox/+groupstats/+internal.
    %
    %  makecontents('-backup') Makes a backup of the current Contents.m file, if
-   %  one exists, before updating it. The backup file is saved in the same
-   %  directory with the date appended to the filename.
+   %  one exists, before updating it. The backup goes to a temporary folder,
+   %  with the date appended to the filename, and the path is printed. Backups
+   %  are off by default because every Contents.m is tracked by git, so
+   %  git diff reviews a change better than a dated copy does. Note: a backup
+   %  written beside the original would be a callable member of that package
+   %  and would ship inside the .mltbx.
    %
    % See also: updatecontents
 
@@ -18,7 +24,7 @@ function makecontents(varargin)
    if nargin == 1
       option = validatestring(varargin{1}, {'-backup', '-nobackup'});
    else
-      option = '-backup';
+      option = '-nobackup';
    end
    dobackup = strcmp(option, '-backup');
 
@@ -49,12 +55,14 @@ function processOnePackage(thispkg, dobackup)
       return
    end
 
-   % If there is no existing Contents file, try to make one
-   if ~any(strncmp(reverse(filelist), reverse('Contents.m'), 10))
-      try
-         makecontentsfile(char(thispkg))
-      catch
-      end
+   % The update below runs only for a folder that already holds a Contents
+   % file, so write a placeholder for a folder that does not. updatecontents
+   % writes its own header and list, and discards these two lines.
+   contentsfile = fullfile(thispkg, 'Contents.m');
+   if ~isfile(contentsfile)
+      [~, pkgname] = fileparts(thispkg);
+      writelines(["% " + upper(pkgname); "% "], contentsfile);
+      filelist = [filelist; string(contentsfile)];
    end
 
    % If an existing Contents file is found, update it.
@@ -79,6 +87,14 @@ function processOnePackage(thispkg, dobackup)
       if success == true
          if dobackup
             cleanupfun(tmpfile, bkfile)
+
+            % The backup is outside the toolbox, so print where it went.
+            fprintf('Backed up %s to %s\n', ogfile, bkfile);
+         else
+            % backupContentsFile moved the original here. Without a backup
+            % it has no destination, so delete it rather than leave a copy
+            % of the source in the temporary folder on every run.
+            delete(tmpfile)
          end
       else
          % If not successful, restore the original file.
@@ -99,7 +115,14 @@ function [bkfile, ogfile, tmpfile] = backupContentsFile(filelist)
    tmpfile = tempfile('fullpath');
    bkfile = backupfile('Contents.m');
    ogfile = filelist(ifile);
-   bkfile = fullfile(fileparts(ogfile), bkfile);
+
+   % Keep the backup out of the package folder. A .m file written beside the
+   % original is a callable member of that package, which fails the tests that
+   % enumerate a package, and the packaging fileset covers the folder, so the
+   % backup would ship. Name the package in the backup so several are telling
+   % apart.
+   [~, pkgname] = fileparts(fileparts(ogfile));
+   bkfile = fullfile(tempdir, pkgname + "_" + bkfile);
    movefile(ogfile, tmpfile)
 end
 

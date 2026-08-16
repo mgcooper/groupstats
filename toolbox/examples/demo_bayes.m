@@ -43,8 +43,10 @@ fprintf('P(A|B) using Bayes = %.3f\n', P_A_GIVEN_B_Bayes);
 % by all possible states, whereas the latter is normalized by the number of B
 % states:
 
-P_B_GIVEN_A = N_A_AND_B / N_A
-P_A_GIVEN_B = N_A_AND_B / N_B
+P_B_GIVEN_A = N_A_AND_B / N_A;
+P_A_GIVEN_B = N_A_AND_B / N_B;
+
+fprintf('P(B|A) = %g, P(A|B) = %g\n', P_B_GIVEN_A, P_A_GIVEN_B);
 
 % Now imagine we don't have the counts, but we have the probabilities, possibly
 % from some prior experiment that did have the counts, or otherwise, then Bayes

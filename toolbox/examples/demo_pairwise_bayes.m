@@ -2,6 +2,10 @@ clearvars
 close
 clc
 
+% Compare floating point results. The checks below allow for round off in
+% probabilities computed two ways.
+isequaltol = @(a, b) all(abs(a - b) < 1e-10, 'all');
+
 % Generate random events for 8 components
 N = 10000;
 
@@ -152,100 +156,108 @@ end
 %    tbl{:, component(n)} = failures;
 % end
 
-%% prep for gpt system-component example
+%% Unfinished: the system and component example
+%
+% TODO: the code below reads a table with basin, tpeaks, and Outlet
+% variables, and a T_unique table, none of which this demo builds. Build
+% that table, or read one from groupstats.test.generateTestData, then
+% uncomment. Until then this section is kept as written.
 
-components = basins;
-tbl.Component = tbl.basin;
-tbl.Component(tbl.basin == "Outlet") = "System";
-tbl.system = tbl.Outlet;
-tbl.Event = tbl.tpeaks;
-
-%% Compute system-compoenet example using my methods
-
-% components = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "System"];
-N_A = sum(tbl.Component == "System");
-N_B_AND_A = arrayfun(@(b) sum(tbl{tbl.Component == "System", b}), components);
-P_B_GIVEN_A = N_B_AND_A ./ N_A;
-
-% To compute P_A_GIVEN_B, need P(A) and P(B). However, the math can be
-% simplified to use just the counts:
-N_B = arrayfun(@(b) sum(tbl.Component == b), components);
-P_A_GIVEN_B = N_B_AND_A ./ N_B;
-[P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
-
-% Repeat, this time compute the individual probabilities
-N = N_A + sum(N_B)
-P_A = N_A / N
-P_B = N_B / N
-sum(P_B)+P_A
-[P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
-
-%% This is the final outcome of gpt where it finally got bayes right
-
-% This verifies my methods, but i had to coach it so much it somewhat defeated
-% the purpose
-
-% Number of unique failure events where the system failed
-NA = sum(tbl.Component == "System");
-
-% Total number of unique failure events
-N = height(tbl);
-
-% Probability that the system fails
-PA = NA / N;
-
-% Probability that each component i fails
-PB = arrayfun(@(b) sum(tbl.Component == b), components) / N;
-
-% Conditional probabilities
-P_A_GIVEN_Bi = arrayfun(@(b) sum(tbl.Component == "System" & tbl{:, b}) / ...
-   sum(tbl.Component == b), components);
-
-P_Bi_GIVEN_A = arrayfun(@(b) sum(tbl.Component == "System" & tbl{:, b}) / ...
-   sum(tbl.Component == "System"), components);
-
-assert(isequaltol(PA, P_A))
-assert(isequaltol(PB, P_B))
-assert(isequaltol(sum(PB) + PA, 1))
-
-assert(isequaltol(P_A_GIVEN_Bi, P_A_GIVEN_B))
-assert(isequaltol(P_Bi_GIVEN_A, P_B_GIVEN_A))
-
-
-%%
-
-% Jul 2024 - added dummy definition of basins to address codeissues
-basins = ["basinA", "basinB", "basinC"];
-
-% Below here is where I was going to try to summarize the different methods in
-% PeakFlows.mlx and present them to gpt but now I have to move on.
-
-% The goal of this was to collate the differet ways and see if gpt can identify
-% whats wrong /right with them
-
-N_A = sum(tbl.basin == "Outlet");
-N_B_AND_A = arrayfun(@(b) sum(tbl{tbl.basin == "Outlet", b}), basins);
-P_B_GIVEN_A = N_B_AND_A ./ N_A;
-N_B = arrayfun(@(b) sum(tbl.basin == b), basins);
-P_A_GIVEN_B = N_B_AND_A ./ N_B;
-
-% Confirm it using this method:
-N = N_A + sum(N_B);
-P_A = N_A / N;
-P_B = N_B / N;
-sum(P_B)+P_A
-[P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
-
-%% Use column sums
-
-% these provide the total number of times each subbasin has a peak within the
-% window of another peak, not the unique events. BUT, check if they yield
-% similar and/or identical probabilities.
-N_A = sum(T_unique.Outlet)
-N_B = arrayfun(@(b) sum(T_unique{:, b}), basins)
-N = N_A + sum(N_B)
-P_A = N_A / N
-P_B = N_B / N
-sum(P_B)+P_A
-[basins P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
-
+% %% prep for gpt system-component example
+%
+% components = basins;
+% tbl.Component = tbl.basin;
+% tbl.Component(tbl.basin == "Outlet") = "System";
+% tbl.system = tbl.Outlet;
+% tbl.Event = tbl.tpeaks;
+%
+% %% Compute system-compoenet example using my methods
+%
+% % components = ["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "System"];
+% N_A = sum(tbl.Component == "System");
+% N_B_AND_A = arrayfun(@(b) sum(tbl{tbl.Component == "System", b}), components);
+% P_B_GIVEN_A = N_B_AND_A ./ N_A;
+%
+% % To compute P_A_GIVEN_B, need P(A) and P(B). However, the math can be
+% % simplified to use just the counts:
+% N_B = arrayfun(@(b) sum(tbl.Component == b), components);
+% P_A_GIVEN_B = N_B_AND_A ./ N_B;
+% [P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
+%
+% % Repeat, this time compute the individual probabilities
+% N = N_A + sum(N_B)
+% P_A = N_A / N
+% P_B = N_B / N
+% sum(P_B)+P_A
+% [P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
+%
+% %% This is the final outcome of gpt where it finally got bayes right
+%
+% % This verifies my methods, but i had to coach it so much it somewhat defeated
+% % the purpose
+%
+% % Number of unique failure events where the system failed
+% NA = sum(tbl.Component == "System");
+%
+% % Total number of unique failure events
+% N = height(tbl);
+%
+% % Probability that the system fails
+% PA = NA / N;
+%
+% % Probability that each component i fails
+% PB = arrayfun(@(b) sum(tbl.Component == b), components) / N;
+%
+% % Conditional probabilities
+% P_A_GIVEN_Bi = arrayfun(@(b) sum(tbl.Component == "System" & tbl{:, b}) / ...
+%    sum(tbl.Component == b), components);
+%
+% P_Bi_GIVEN_A = arrayfun(@(b) sum(tbl.Component == "System" & tbl{:, b}) / ...
+%    sum(tbl.Component == "System"), components);
+%
+% assert(isequaltol(PA, P_A))
+% assert(isequaltol(PB, P_B))
+% assert(isequaltol(sum(PB) + PA, 1))
+%
+% assert(isequaltol(P_A_GIVEN_Bi, P_A_GIVEN_B))
+% assert(isequaltol(P_Bi_GIVEN_A, P_B_GIVEN_A))
+%
+%
+% %%
+%
+% % Jul 2024 - added dummy definition of basins to address codeissues
+% basins = ["basinA", "basinB", "basinC"];
+%
+% % Below here is where I was going to try to summarize the different methods in
+% % PeakFlows.mlx and present them to gpt but now I have to move on.
+%
+% % The goal of this was to collate the differet ways and see if gpt can identify
+% % whats wrong /right with them
+%
+% N_A = sum(tbl.basin == "Outlet");
+% N_B_AND_A = arrayfun(@(b) sum(tbl{tbl.basin == "Outlet", b}), basins);
+% P_B_GIVEN_A = N_B_AND_A ./ N_A;
+% N_B = arrayfun(@(b) sum(tbl.basin == b), basins);
+% P_A_GIVEN_B = N_B_AND_A ./ N_B;
+%
+% % Confirm it using this method:
+% N = N_A + sum(N_B);
+% P_A = N_A / N;
+% P_B = N_B / N;
+% sum(P_B)+P_A
+% [P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
+%
+% %% Use column sums
+%
+% % these provide the total number of times each subbasin has a peak within the
+% % window of another peak, not the unique events. BUT, check if they yield
+% % similar and/or identical probabilities.
+% N_A = sum(T_unique.Outlet)
+% N_B = arrayfun(@(b) sum(T_unique{:, b}), basins)
+% N = N_A + sum(N_B)
+% P_A = N_A / N
+% P_B = N_B / N
+% sum(P_B)+P_A
+% [basins P_A_GIVEN_B, P_B_GIVEN_A .* P_A ./ P_B]
+%
+%

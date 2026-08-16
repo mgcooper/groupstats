@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Group Stats Toolbox</title>
+<style>
+body { font-family: Helvetica, Arial, sans-serif; margin: 2em; max-width: 50em; }
+code { background: #f4f4f4; padding: 0.1em 0.3em; }
+h2 { margin-top: 1.5em; }
+</style>
+</head>
+<body>
+
+<h1>Group Stats Toolbox</h1>
+
+<p>A MATLAB toolbox for grouped statistics on tables.</p>
+
+<h2>Getting started</h2>
+
+<ul>
+  <li>Open <code>gettingStarted.mlx</code> for installation instructions.</li>
+  <li>Work through <code>toolbox/examples/usingGroupStats.mlx</code>.</li>
+  <li>Run the demos in <code>toolbox/examples/</code>.</li>
+</ul>
+
+<h2>Grouped statistics</h2>
+
+<ul>
+  <li><code>groupstats.groupsummary</code> - group-wise summary statistics.</li>
+  <li><code>groupstats.grouppercent</code> - group-wise frequencies and percentages.</li>
+  <li><code>groupstats.groupbayes</code> - conditional probabilities between two sets of group labels.</li>
+  <li><code>groupstats.groupdifference</code> - differences between groups, including permutation tests.</li>
+  <li><code>groupstats.groupselect</code> - select the rows matching group members.</li>
+  <li><code>groupstats.groupmap</code> - apply a function to each group and recombine the results.</li>
+  <li><code>groupstats.dropcats</code> - drop unused categories from a table.</li>
+</ul>
+
+<h2>Charts for grouped data</h2>
+
+<ul>
+  <li><code>groupstats.barchartcats</code> - bar chart grouped along x and colored within groups.</li>
+  <li><code>groupstats.boxchartcats</code> - box chart grouped along x and colored within groups.</li>
+  <li><code>groupstats.scatter</code> - scatter chart colored and sized by group.</li>
+  <li><code>groupstats.histogram</code> - histogram of a categorical variable, with grouping.</li>
+</ul>
+
+<h2>Option values</h2>
+
+<p>Every option that takes a fixed set of values reads that set from
+<code>groupstats.namelists</code>. To see the values an option accepts:</p>
+
+<pre>groupstats.namelists.populationoption()
+groupstats.namelists.sortorder()</pre>
+
+<h2>Help for one function</h2>
+
+<pre>help groupstats.groupbayes
+groupstats.help('groupbayes')</pre>
+
+<h2>Dependencies</h2>
+
+<p>Some functions call helpers the toolbox does not ship. To list the ones
+that are missing:</p>
+
+<pre>groupstats.internal.checkdependencies()</pre>
+
+</body>
+</html>

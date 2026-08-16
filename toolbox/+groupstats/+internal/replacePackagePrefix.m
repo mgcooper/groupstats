@@ -1,6 +1,10 @@
 function replacePackagePrefix(pathname, old_prefix, new_prefix, varargin)
    %REPLACEPACKAGEPREFIX Replace namespace package prefix in function files.
    %
+   %  Dry-run first. This replaces the prefix everywhere it appears in a file,
+   %  including comment and license text that happens to contain the same
+   %  letters.
+   %
    %  REPLACEPACKAGEPREFIX(PATHNAME, OLD_PREFIX, NEW_PREFIX, DRYRUN)
    %
    % Description:
