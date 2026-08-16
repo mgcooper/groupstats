@@ -69,6 +69,12 @@ function Requirements = getRequiredFiles(targetList, kwargs)
    %  Requirements = getRequiredFiles(_, requirementsFileName='requirements');
    %  Requirements = getRequiredFiles(_, saveRequirementsFile=true);
    %
+   % REQUIREMENTSFILENAME
+   %  Full path of the .mat file written when SAVEREQUIREMENTSFILE is true.
+   %  When omitted, it defaults to fullfile(toolboxpath(), "dependencies",
+   %  "requirements.mat"), and toolboxpath() is only consulted when a file is
+   %  actually written (so non-saving calls never require it).
+   %
    % Matt Cooper, 23-Dec-2022, https://github.com/mgcooper
    %
    % See also: installRequiredFiles, getFunctionConflicts
@@ -77,8 +83,7 @@ function Requirements = getRequiredFiles(targetList, kwargs)
       targetList (1, :) string
       kwargs.ignoreList (1, :) string = []
       kwargs.referenceList (1, :) string {mustBeFolder} = projectpath()
-      % The "" sentinel defers the toolboxpath() lookup to parseinputs so it
-      % only runs when a requirements file is actually written.
+      % "" defers the default; see REQUIREMENTSFILENAME in the header.
       kwargs.requirementsFileName (1, 1) string {mustBeTextScalar} = ""
       kwargs.saveRequirementsFile (1, 1) logical = false
    end
