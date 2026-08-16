@@ -1,6 +1,9 @@
 function convertlivescripts(varargin)
    %CONVERTLIVESCRIPTS convert live script to m-files.
    %
+   %  The demos/ folder below is hard-coded. This toolbox keeps its live
+   %  scripts in examples/.
+   %
    %  convertlivescripts() Converts the .mlx live scripts in demos/ to mfiles
    %  in demos/mfiles. The mfiles can run in Octave, the .mlx files cannot. The
    %  existing mfiles are backed up to a folder and zipped.
