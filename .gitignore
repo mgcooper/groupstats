@@ -57,8 +57,13 @@ submodules/
 # ----------------
 # ---- MATLAB ----
 # ----------------
-# note: put .prj under source control but not resources/ or mltbx
-resources/*
+# note: put .prj under source control, and the part of resources/ that defines
+# the MATLAB Project, but not mltbx. resources/project/root holds the Package
+# Toolbox task the release reads; a clone without it cannot package. The
+# hashed sibling folders hold one label record per project file, which
+# packaging never reads, so they stay out.
+resources/project/*/
+!resources/project/root/
 *.mltbx
 *.mlappinstall
 pathdef.m
@@ -617,3 +622,8 @@ TSWLatexianTemp*
 # Dolt database files (added by bd init)
 .dolt/
 *.db
+
+# A global gitignore rule excludes any folder named html. These are the
+# toolbox help pages, which groupstats.help() opens, so they must ship.
+!toolbox/docs/html/
+!toolbox/docs/html/**
