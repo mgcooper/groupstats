@@ -16,8 +16,12 @@ overwrites it.
   fields are PascalCase (`XGroupMembers`, `PlotMeans`, `LegendOrientation`);
   the `arguments`-block structs that hold them are named `opts` (options) and
   `props` (graphics pass-through properties).
-- New test files must be named `test_<subject>.m`, matching `test_dropcats.m`
-  and `test_groupmap.m` (`testGroupBayes.m` is a legacy exception).
+- Test classes must be named `test_<subject>.m` and live in `tests/`,
+  matching `test_dropcats.m`, `test_groupbayes.m`, and `test_groupmap.m`.
+  There are no exceptions.
+- `toolbox/+groupstats/+test/` holds test runners, helpers, and fixtures that
+  ship with the toolbox, not test classes. `generateTestData.m` lives there
+  because demos and scripts call it.
 
 ## Formatting
 
@@ -49,7 +53,8 @@ overwrites it.
   these releases.
 - Language-feature floor already in use: `arguments` blocks (R2019b+),
   `props.?Class` validation (R2021a+), `buildtool` (R2022b+), and
-  `codeIssues` (R2023a+).
+  `codeIssues` (R2023a+). Releasing needs R2025a, for the Package Toolbox
+  task, but that is a maintainer step and not a floor for using the toolbox.
 - `toolbox/+groupstats/permutest/` is vendored third-party code with its own
   `license.txt`; never edit, restyle, or lint it to project conventions.
 
