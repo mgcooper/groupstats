@@ -48,6 +48,12 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
    %                marginal. Read the Limitations section before combining
    %                P_A_AND_B with P_A or P_B under this value.
    %
+   % Pairwise - (Optional) Logical, default false. True declares that groupA
+   % and groupB intentionally overlap, as in a pairwise call where the same
+   % label set is passed as both groups. It suppresses the
+   % marginalsDoNotPartition warning, which is only checked under
+   % Population="union". It changes no computed value.
+   %
    % Output Arguments:
    % P - A MATLAB table that contains the calculated probabilities, including
    %     marginal probabilities, joint probabilities, and conditional
@@ -78,6 +84,7 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
    % Errors and warnings
    % groupstats:groupbayes:marginalsDoNotPartition - a warning. The marginals
    % do not sum to one, so the two label sets overlap or leave events out.
+   % Pairwise=true suppresses it for a declared, intentional overlap.
    % groupstats:groupbayes:jointProbabilityOutOfRange - a joint probability
    % fell outside 0 to 1. A probability with no denominator is NaN, and this
    % check passes over those.
@@ -93,6 +100,7 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
       opts.Population (1, 1) string ...
          {groupstats.namelists.mustBeMemberOf(opts.Population, ...
          "populationoption")} = "union"
+      opts.Pairwise (1, 1) logical = false
    end
 
    % Events are defined by variable (column) names when no group variable
@@ -194,8 +202,10 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
    % The marginals partition the population only when the two label sets
    % together account for every event and share no member. A pairwise call
    % with groupA equal to groupB breaks both conditions on purpose, so this
-   % reports rather than stops.
-   if opts.Population == "union" && abs(sum(P_B) + sum(P_A) - 1) > 1e-3
+   % reports rather than stops. Pairwise=true declares that intent and
+   % suppresses the report.
+   if opts.Population == "union" && ~opts.Pairwise ...
+         && abs(sum(P_B) + sum(P_A) - 1) > 1e-3
       warning('groupstats:groupbayes:marginalsDoNotPartition', ...
          ['The marginals sum to %.4f, not 1. groupA and groupB do not ' ...
          'partition the population: they overlap, or some events belong ' ...
@@ -251,7 +261,7 @@ end
 
 % The scratch work that established why this function subsets rows by
 % groupA and counts groupB columns is in
-% toolbox/examples/demo_groupbayes_counts.m, with the count comparison,
+% sandbox/demo_groupbayes_counts.m, with the count comparison,
 % the Jaccard and phi attempts, and the explicit-loop version.
 
 % An open question from the column-syntax branch, kept verbatim:

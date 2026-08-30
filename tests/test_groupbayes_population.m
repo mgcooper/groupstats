@@ -135,6 +135,21 @@ classdef test_groupbayes_population < matlab.unittest.TestCase
             'groupstats:groupbayes:marginalsDoNotPartition');
       end
 
+      function testPairwiseDeclarationSuppressesWarning(testCase)
+         % Pairwise=true declares the intentional overlap, so the same call
+         % that warns above runs quietly and computes the same values.
+
+         labels = testCase.ExhaustiveLabels;
+
+         returned = testCase.verifyWarningFree(@() groupstats.groupbayes( ...
+            testCase.Info, labels, labels, "basin", Pairwise = true));
+
+         expected = withwarningsoff(testCase, @() groupstats.groupbayes( ...
+            testCase.Info, labels, labels, "basin"));
+
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testNonExhaustiveLabelsWarn(testCase)
          % Some rows belong to neither set, so the marginals do not sum to
          % one. That is a report, not a stop: a pairwise call breaks the same

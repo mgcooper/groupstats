@@ -17,9 +17,13 @@ scenarios = data.scenarios;
 
 %% Call groupmap with an anonymous function
 %
-% The function receives one scenario's rows and returns a table.
+% The function receives one scenario's rows and returns a table. "Outlet"
+% and the subbasins partition the basin column: every row belongs to
+% exactly one of the two label sets. The marginals therefore sum to one,
+% and groupbayes raises no warning. The result reads as P(subbasin floods)
+% against P(the outlet floods) within each scenario.
 
-fcn = @(tbl) groupstats.groupbayes(tbl, basins, basins, "basin");
+fcn = @(tbl) groupstats.groupbayes(tbl, "Outlet", basins, "basin");
 
 P = groupstats.groupmap(Info, "scenario", fcn);
 
@@ -31,7 +35,7 @@ disp(head(P, 4));
 % This is the same computation as above.
 
 P = groupstats.groupmap(Info, "scenario", @groupstats.groupbayes, ...
-   basins, basins, "basin");
+   "Outlet", basins, "basin");
 
 %% The equivalent loop
 %
@@ -40,7 +44,7 @@ P = groupstats.groupmap(Info, "scenario", @groupstats.groupbayes, ...
 byscenario = cell(numel(scenarios), 1);
 for n = 1:numel(scenarios)
    tbl = Info(Info.scenario == scenarios(n), :);
-   byscenario{n} = groupstats.groupbayes(tbl, basins, basins, "basin");
+   byscenario{n} = groupstats.groupbayes(tbl, "Outlet", basins, "basin");
    byscenario{n}.scenario = categorical( ...
       repmat(scenarios(n), height(byscenario{n}), 1));
 end

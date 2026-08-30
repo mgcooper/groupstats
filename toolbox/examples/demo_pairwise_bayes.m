@@ -57,7 +57,11 @@ P_Cond = P_A_AND_B ./ P_A_B;
 
 v = {'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8'};
 tbl = array2table(events', 'VariableNames', v);
-P = groupstats.groupbayes(tbl, v, v);
+
+% Passing the same label set as both groups is the point of a pairwise
+% call, so every event belongs to both sets. Pairwise=true declares that
+% intent and keeps the marginals warning quiet.
+P = groupstats.groupbayes(tbl, v, v, Pairwise = true);
 
 % Reshape the P_Cond matrix for comparison with P from groupbayes
 P.P2 = reshape(P_Cond, [], 1);
