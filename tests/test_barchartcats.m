@@ -3,7 +3,7 @@ classdef test_barchartcats < matlab.unittest.TestCase
    %
    % These cases pin the defects the audit named:
    %
-   %  1. method="median" errored, because it read a std_ column the
+   %  1. Method="median" errored, because it read a std_ column the
    %     groupsummary call never created.
    %  2. The matrix path hard-errored and could not be reached.
    %  3. SortBy accepted "order", which nothing implemented.
@@ -29,9 +29,10 @@ classdef test_barchartcats < matlab.unittest.TestCase
 
    methods (Test)
 
-      function testShadeGroupsAddsAPatchBehindTheBars(testCase)
-         % boxchartcats shades alternate x-tick groups. barchartcats declared
-         % the option without drawing anything.
+      function testShadeGroupsOnDrawsThePatches(testCase)
+         % Turning the option on draws the alternating band patches. The
+         % test passes ShadeGroups explicitly so it exercises the option,
+         % not the current default.
 
          groupstats.barchartcats(testCase.Tbl, "Value", "Grp", "Sub", ...
             ShadeGroups = true);
@@ -40,10 +41,11 @@ classdef test_barchartcats < matlab.unittest.TestCase
          testCase.verifyNotEmpty(returned);
       end
 
-      function testShadeGroupsIsOffByDefault(testCase)
-         % ShadeGroups was declared and never read, so turning it on by
-         % default would change every existing chart.
-         groupstats.barchartcats(testCase.Tbl, "Value", "Grp", "Sub");
+      function testShadeGroupsOffDrawsNoPatch(testCase)
+         % Turning the option off removes the bands.
+
+         groupstats.barchartcats(testCase.Tbl, "Value", "Grp", "Sub", ...
+            ShadeGroups = false);
 
          returned = findobj(gca, 'Type', 'patch');
          testCase.verifyEmpty(returned);
@@ -146,6 +148,26 @@ classdef test_barchartcats < matlab.unittest.TestCase
             'groupstats:barchartcats:badCGroupOrder');
       end
 
+      function testThreeOutputsOnTheNoColorGroupPath(testCase)
+         % The no-color-group path turns the legend off. All three outputs
+         % must still return: the legend catch must assign an empty
+         % placeholder so L exists on every path.
+
+         [H, L, ax] = groupstats.barchartcats(testCase.Tbl, "Value", "Grp");
+
+         testCase.verifyNotEmpty(H);
+         testCase.verifyTrue(isempty(L) || isgraphics(L));
+         testCase.verifyTrue(isgraphics(ax, 'axes'));
+      end
+
+      function testFourOutputsAreRejected(testCase)
+         % H, L, and the axes are the only outputs.
+
+         testCase.verifyError( ...
+            @() fourBarOutputs(testCase.Tbl), ...
+            'MATLAB:nargoutchk:tooManyOutputs');
+      end
+
       function testReturnsOneBarPerColorGroup(testCase)
          % One Bar object per member of the color group variable.
 
@@ -170,12 +192,12 @@ classdef test_barchartcats < matlab.unittest.TestCase
       end
 
       function testMedianMethodRuns(testCase)
-         % method="median" errored while it read a std_ column that the
+         % Method="median" errored while it read a std_ column that the
          % median call never created. The spread it pairs with is the
          % interquartile range.
 
          H = groupstats.barchartcats(testCase.Tbl, "Value", "Grp", "Sub", ...
-            method = "median");
+            Method = "median");
 
          testCase.verifyClass(H, 'matlab.graphics.chart.primitive.Bar');
       end
@@ -184,7 +206,7 @@ classdef test_barchartcats < matlab.unittest.TestCase
          % The bars carry the group medians, not the means.
 
          H = groupstats.barchartcats(testCase.Tbl, "Value", "Grp", "Sub", ...
-            method = "median");
+            Method = "median");
 
          G = groupsummary(testCase.Tbl, {'Sub', 'Grp'}, "median", "Value");
          heights = [H.YData];
@@ -242,10 +264,10 @@ classdef test_barchartcats < matlab.unittest.TestCase
       end
 
       function testSortGroupMembersSurvivesCGroupOrder(testCase)
-         % SortColumns marks which columns of YData the sort reads. Building
-         % it from unique(...,"stable") gave first-appearance order, which
-         % does not follow the column permutation CGroupOrder applies, so
-         % the sort read another color group's column.
+         % The sort mask marks which columns of YData the sort reads. It
+         % must follow the column permutation CGroupOrder applies, so it
+         % is built from the category order, not first-appearance order.
+         % A first-appearance mask reads another color group's column.
 
          xg = categorical(["p"; "p"; "q"; "q"]);
          cg = categorical(["Alpha"; "Zeta"; "Alpha"; "Zeta"]);
@@ -263,10 +285,11 @@ classdef test_barchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
-      function testMergeGroupsCombinesTheNamedMembers(testCase)
-         % MergeGroups holds YData column indices, not member names. Merging
-         % two of the three color groups draws one series fewer, and the
-         % merged bar carries the mean of the two it replaces.
+      function testMergeGroupMembersCombinesTheNamedMembers(testCase)
+         % MergeGroupMembers names the color-group members to pool. Merging
+         % two of the three color groups draws one series fewer. Each
+         % (x, c) cell here holds one row, so the pooled statistic equals
+         % the mean of the merged bars.
 
          xg = categorical(["p"; "p"; "p"; "q"; "q"; "q"]);
          cg = categorical(["a"; "b"; "c"; "a"; "b"; "c"]);
@@ -274,7 +297,7 @@ classdef test_barchartcats < matlab.unittest.TestCase
          tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
 
          H = groupstats.barchartcats(tbl, "val", "xg", "cg", ...
-            MergeGroups = {[1, 2]});
+            MergeGroupMembers = {["a", "b"]});
 
          returned = numel(H);
          expected = 2;
@@ -285,19 +308,16 @@ classdef test_barchartcats < matlab.unittest.TestCase
          expected = [2; 6];
          testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
 
-         % The legend read the unmerged names, so the merged bar carried the
-         % name of one part and the last group vanished from the legend.
+         % The merged bar joins the member names and sits at the first
+         % member's category position, before the unmerged group.
          returned = string({H.DisplayName})';
-         expected = ["a b"; "c"];
+         expected = ["a and b"; "c"];
          testCase.verifyEqual(returned, expected);
       end
 
-      function testMergingThreeColumnsClearsAllOfThem(testCase)
-         % The loop cleared the largest merged index only, so a merge of
-         % three or more columns left the middle name behind. That gave
-         % NewCGroups more entries than NewYData has columns. The surviving
-         % bar took the name of a column the merge had consumed, and the
-         % sort columns ran past the end of YData.
+      function testMergingThreeMembers(testCase)
+         % A three-member merge pools all three into one bar, the case
+         % Bead groupstats-20i names in its acceptance criteria.
 
          xg = categorical(repmat(["p"; "q"], 4, 1));
          cg = categorical([ ...
@@ -306,10 +326,10 @@ classdef test_barchartcats < matlab.unittest.TestCase
          tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
 
          H = groupstats.barchartcats(tbl, "val", "xg", "cg", ...
-            MergeGroups = {[1, 2, 3]});
+            MergeGroupMembers = {["a", "b", "c"]});
 
          returned = string({H.DisplayName})';
-         expected = ["a b c"; "d"];
+         expected = ["a and b and c"; "d"];
          testCase.verifyEqual(returned, expected);
 
          % p merges a = 1, b = 3, c = 5; q merges a = 2, b = 4, c = 6.
@@ -318,10 +338,9 @@ classdef test_barchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
       end
 
-      function testMergingThreeColumnsSurvivesANamedSort(testCase)
-         % NewCGroups being longer than NewYData has columns made
-         % opts.SortColumns index past the end of YData, so sorting on a
-         % named member raised MATLAB:badsubscript from reorderXGroups.
+      function testMergingThreeMembersSurvivesANamedSort(testCase)
+         % SortGroupMembers reads post-merge names, so a named unmerged
+         % member still drives the x-group sort after a merge.
 
          xg = categorical(repmat(["p"; "q"], 4, 1));
          cg = categorical([ ...
@@ -331,17 +350,53 @@ classdef test_barchartcats < matlab.unittest.TestCase
 
          % d is 20 for p and 10 for q, so ascending on d puts q first.
          H = groupstats.barchartcats(tbl, "val", "xg", "cg", ...
-            MergeGroups = {[1, 2, 3]}, SortGroupMembers = "d", ...
-            SortBy = "ascend");
+            MergeGroupMembers = {["a", "b", "c"]}, ...
+            SortGroupMembers = "d", SortBy = "ascend");
 
          returned = string(categories(removecats(H(1).XData)));
          expected = ["q"; "p"];
          testCase.verifyEqual(returned, expected);
       end
 
-      function testPlotErrorRejectsMergedGroups(testCase)
-         % Merging drops the spread, so PlotError had nothing to draw and
-         % returned a chart with no whiskers and no word about why.
+      function testPooledDiffersFromMembermeanOnUnequalGroups(testCase)
+         % The pooled statistic weights every row equally; membermean
+         % weights every member group equally. With unequal member sizes
+         % the two differ: pooled mean of a = [0 6] and b = 12 is 6, and
+         % membermean is (3 + 12) / 2 = 7.5.
+
+         xg = categorical(["p"; "p"; "p"]);
+         cg = categorical(["a"; "a"; "b"]);
+         val = [0; 6; 12];
+         tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
+
+         Hp = groupstats.barchartcats(tbl, "val", "xg", "cg", ...
+            MergeGroupMembers = {["a", "b"]});
+         returned = Hp.YData;
+         expected = 6;
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+
+         Hm = groupstats.barchartcats(tbl, "val", "xg", "cg", ...
+            MergeGroupMembers = {["a", "b"]}, MergeMethod = "membermean");
+         returned = Hm.YData;
+         expected = 7.5;
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
+      function testUnknownMergeMemberErrors(testCase)
+         % A merge member must be a member of the color-group variable.
+
+         xg = categorical(["p"; "q"]);
+         cg = categorical(["a"; "b"]);
+         val = [1; 2];
+         tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
+
+         testCase.verifyError(@() groupstats.barchartcats(tbl, "val", ...
+            "xg", "cg", MergeGroupMembers = {["a", "zzz"]}), ...
+            'groupstats:mergegroupmembers:unknownMergeMember');
+      end
+
+      function testOverlappingMergeGroupsErrors(testCase)
+         % A member named in two merge groups has no single destination.
 
          xg = categorical(repmat(["p"; "q"], 3, 1));
          cg = categorical(["a"; "a"; "b"; "b"; "c"; "c"]);
@@ -349,7 +404,53 @@ classdef test_barchartcats < matlab.unittest.TestCase
          tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
 
          testCase.verifyError(@() groupstats.barchartcats(tbl, "val", ...
-            "xg", "cg", MergeGroups = {[1, 2, 3]}, PlotError = true), ...
+            "xg", "cg", MergeGroupMembers = {["a", "b"], ["b", "c"]}), ...
+            'groupstats:mergegroupmembers:overlappingMergeGroups');
+      end
+
+      function testMergeWithoutCGroupVarErrors(testCase)
+         % Merging pools members of the color-group variable, so without
+         % one there is nothing to pool.
+
+         xg = categorical(["p"; "q"]);
+         val = [1; 2];
+         tbl = table(xg, val, 'VariableNames', {'xg', 'val'});
+
+         testCase.verifyError(@() groupstats.barchartcats(tbl, "val", ...
+            "xg", MergeGroupMembers = {["p", "q"]}), ...
+            'groupstats:barchartcats:mergeWithoutGroupVar');
+      end
+
+      function testPlotErrorWorksWithPooledMergeToOneSeries(testCase)
+         % Pooled merging keeps the rows, so the merged series has a real
+         % spread and PlotError draws whiskers. PlotError needs one bar per
+         % x-tick, so merge every member into one series.
+
+         xg = categorical(repmat(["p"; "q"], 3, 1));
+         cg = categorical(["a"; "a"; "b"; "b"; "c"; "c"]);
+         val = [1; 2; 3; 4; 5; 6];
+         tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
+
+         H = groupstats.barchartcats(tbl, "val", "xg", "cg", ...
+            MergeGroupMembers = {["a", "b", "c"]}, PlotError = true);
+
+         returned = numel(H);
+         expected = 1;
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testPlotErrorRejectsMembermeanMerge(testCase)
+         % The membermean merge drops the spread, so PlotError has nothing
+         % to draw with it.
+
+         xg = categorical(repmat(["p"; "q"], 3, 1));
+         cg = categorical(["a"; "a"; "b"; "b"; "c"; "c"]);
+         val = [1; 2; 3; 4; 5; 6];
+         tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
+
+         testCase.verifyError(@() groupstats.barchartcats(tbl, "val", ...
+            "xg", "cg", MergeGroupMembers = {["a", "b", "c"]}, ...
+            MergeMethod = "membermean", PlotError = true), ...
             'groupstats:barchartcats:plotErrorNeedsUnmergedGroups');
       end
 
@@ -419,4 +520,13 @@ classdef test_barchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
    end
+end
+
+function fourBarOutputs(tbl)
+   %FOURBAROUTPUTS Ask barchartcats for a fourth output.
+   %
+   % Written as a function so the call is a statement, which is the only
+   % place a four-output request is syntactically valid.
+
+   [~, ~, ~, ~] = groupstats.barchartcats(tbl, "Value", "Grp", "Sub");
 end

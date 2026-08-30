@@ -1,10 +1,10 @@
 function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
-      sgroupvar, Opts, Props)
+      sgroupvar, opts, props)
    %SCATTER Scatter chart categorical table data.
    %
    %  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR)
    %  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR, SGROUPVAR)
-   %  [H, L] = SCATTER(_)
+   %  [H, L, AX] = SCATTER(_)
    %  [___] = SCATTER(_, Name = Value)
    %
    % Description
@@ -14,20 +14,34 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    %  H = SCATTER(_, SGROUPVAR) also varies the marker symbol and size by
    %  SGROUPVAR member, so one chart shows two groupings at once.
    %
-   %  [H, L] = SCATTER(_) also returns the legend. H is a matrix with one row
-   %  per color group and one column per size group.
+   %  [H, L, AX] = SCATTER(_) also returns the legend and the axes. H is a
+   %  matrix with one row per color group and one column per size group.
    %
    % Name-value arguments
    %  CGroupMembers    Members of CGROUPVAR to keep. Rows outside them go.
    %  SGroupMembers    Members of SGROUPVAR to keep.
    %  RowSelectVar     Name of a variable used only to select rows.
    %  RowSelectMembers Members of RowSelectVar to keep.
+   %  MergeGroupMembers A cell array of string vectors. Each cell names the
+   %                   CGROUPVAR members to pool into one color group,
+   %                   matching groupstats.histogram. A bare string vector
+   %                   is one merge group. The merged group's label joins
+   %                   the member names with " and ", and it takes the
+   %                   position of its first member in the current category
+   %                   order. CGroupMembers reads original names; the
+   %                   legend reads post-merge names.
    %  SortGroup        Which grouping the legend order follows, "cgroupvar"
-   %                   or "sgroupvar".
+   %                   or "sgroupvar". Inert until SortBy is set.
    %  SortVar          Which data variable the legend order sorts on,
-   %                   "xdatavar" or "ydatavar".
-   %  SortBy           "ascend" or "descend". Choosing SortVar="ydatavar"
-   %                   forces "descend".
+   %                   "xdatavar" or "ydatavar". Inert until SortBy is set.
+   %  SortBy           "ascend", "descend", or "none" (default). "none"
+   %                   keeps the legend in the group order. The direction
+   %                   sorts the legend by the group mean of SortVar within
+   %                   the SortGroup groups.
+   %  CGroupOrder      A partial order of CGROUPVAR members. Named members
+   %                   come first; the rest keep their order. Reorders the
+   %                   draw and legend order and overrides SortBy.
+   %  SGroupOrder      A partial order of SGROUPVAR members, the same way.
    %  Parent           Axes to plot into. The default is gca, so repeated
    %                   calls reuse the current axes rather than opening a
    %                   figure each time.
@@ -45,15 +59,23 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    %  tbl = readtable('data.csv');
    %  h = groupstats.scatter(tbl, "X", "Y", "Category");
    %  h = groupstats.scatter(tbl, "X", "Y", "Category", "Site", ...
-   %     SortVar = "ydatavar", Legend = "off");
+   %     SortVar = "ydatavar", SortBy = "descend", Legend = "off");
+   %
+   % Positional order
+   %  scatter charts two continuous data variables in the built-in
+   %  scatter(x, y) order, so xdatavar comes before ydatavar. The cats
+   %  charts put ydatavar second because their second axis is a grouping,
+   %  not a data variable; there is no xgroupvar here to reconcile to.
+   %  cgroupvar is required. This order is deliberate.
    %
    % Dependencies
    %  These come from matfunclib and must be on the path:
    %
    %   distinguishable_colors, defaultcolors, defaultmarkers (libplot)
+   %   dealout (functools)
    %
    % See also: boxchartcats, barchartcats, gscatter,
-   % groupstats.namelists.sortdirection
+   % groupstats.namelists.sortorder
 
    % see scatterplot in:
    % fullfile(matlabroot, ...
@@ -66,39 +88,39 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
       ydatavar (1, 1) string { mustBeNonempty(ydatavar) }
       cgroupvar (1, 1) string { mustBeNonempty(cgroupvar) }
       sgroupvar string = string.empty()
-      Opts.CGroupMembers string = string.empty()
-      Opts.SGroupMembers string = string.empty()
-      Opts.RowSelectVar string = string.empty()
-      Opts.RowSelectMembers string = string.empty()
-      Opts.SortGroup (1, 1) string ...
-         {groupstats.namelists.mustBeMemberOf(Opts.SortGroup, ...
+      opts.CGroupMembers string = string.empty()
+      opts.SGroupMembers string = string.empty()
+      opts.RowSelectVar string = string.empty()
+      opts.RowSelectMembers string = string.empty()
+      % Untyped because a cell array of string vectors is one valid shape.
+      opts.MergeGroupMembers (:, 1) = string.empty()
+      opts.SortGroup (1, 1) string ...
+         {groupstats.namelists.mustBeMemberOf(opts.SortGroup, ...
          "sortgroupvar")} = "cgroupvar"
-      Opts.SortVar (1, 1) string ...
-         {groupstats.namelists.mustBeMemberOf(Opts.SortVar, ...
+      opts.SortVar (1, 1) string ...
+         {groupstats.namelists.mustBeMemberOf(opts.SortVar, ...
          "sortdatavar")} = "xdatavar"
-      Opts.SortBy (1, 1) string ...
-         {groupstats.namelists.mustBeMemberOf(Opts.SortBy, ...
-         "sortdirection")} = "ascend"
-      Opts.Parent (1,1) { mustBeA(Opts.Parent, ...
+      opts.SortBy (1, 1) string ...
+         {groupstats.namelists.mustBeMemberOf(opts.SortBy, ...
+         "sortorder")} = "none"
+      opts.CGroupOrder (:, 1) string = "none"
+      opts.SGroupOrder (:, 1) string = "none"
+      opts.Parent (1,1) { mustBeA(opts.Parent, ...
          "matlab.graphics.axis.AbstractAxes") } = gca
-      Opts.Legend (1, 1) string ...
-         {groupstats.namelists.mustBeMemberOf(Opts.Legend, ...
+      opts.Legend (1, 1) string ...
+         {groupstats.namelists.mustBeMemberOf(opts.Legend, ...
          "legendvisibility")} = "on"
-      Opts.LegendString (:, 1) string = string.empty()
-      Opts.LegendOrientation (1, 1) string ...
-         {groupstats.namelists.mustBeMemberOf(Opts.LegendOrientation, ...
+      opts.LegendString (:, 1) string = string.empty()
+      opts.LegendOrientation (1, 1) string ...
+         {groupstats.namelists.mustBeMemberOf(opts.LegendOrientation, ...
          "legendorientation")} = "vertical"
       % gscatter returns Line objects, not Scatter objects, so a Line
       % property is what a caller can set here.
-      Props.?matlab.graphics.primitive.Line
+      props.?matlab.graphics.primitive.Line
    end
 
-   % H and L are the only outputs.
-   nargoutchk(0, 2)
-
-   if Opts.SortVar == "ydatavar"
-      Opts.SortBy = "descend";
-   end
+   % H, L, and the axes are the outputs.
+   nargoutchk(0, 3)
 
    %    ScatterChartDefaults = metaclassDefaults( ...
    %       ScatterChartOpts, ?matlab.graphics.chart.primitive.Scatter);
@@ -125,11 +147,20 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    tbl = prepareTableGroups(tbl, ydatavar, ...
       XDataVar = xdatavar, ...
       XGroupVar = sgroupvar, ...
-      XGroupMembers = Opts.SGroupMembers, ...
+      XGroupMembers = opts.SGroupMembers, ...
       CGroupVar = cgroupvar, ...
-      CGroupMembers = Opts.CGroupMembers, ...
-      RowSelectVar = Opts.RowSelectVar, ...
-      RowSelectMembers = Opts.RowSelectMembers);
+      CGroupMembers = opts.CGroupMembers, ...
+      RowSelectVar = opts.RowSelectVar, ...
+      RowSelectMembers = opts.RowSelectMembers);
+
+   % Merge after member filtering, so CGroupMembers reads original names
+   % and the legend below reads post-merge names. The shared helper
+   % validates the member names and relabels the rows. cgroupvar is a
+   % required argument, so no merge-without-group guard is needed here.
+   if ~isempty(opts.MergeGroupMembers)
+      tbl.(cgroupvar) = mergegroupmembers( ...
+         tbl.(cgroupvar), opts.MergeGroupMembers);
+   end
 
    % Assign the data to plot
    XData = tbl.(xdatavar);
@@ -142,45 +173,63 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
       SData = tbl.(sgroupvar);
    end
 
+   % Explicit member orders beat SortBy, the same rule the cats charts
+   % apply. Reordering the categories reorders the draw and legend order,
+   % and the colors and symbols follow the new positions. SData is logical
+   % when no sgroupvar was given, so there is nothing to order. The cats
+   % charts skip a group-less order the same way, with no error.
+   if iscategorical(CData) ...
+         && ~(isscalar(opts.CGroupOrder) && opts.CGroupOrder == "none")
+      members = string(categories(removecats(CData)));
+      idx = reordergroupmembers(opts.CGroupOrder, members, ...
+         "scatter", "CGroupOrder");
+      CData = reordercats(CData, cellstr(members(idx)));
+   end
+   if iscategorical(SData) ...
+         && ~(isscalar(opts.SGroupOrder) && opts.SGroupOrder == "none")
+      members = string(categories(removecats(SData)));
+      idx = reordergroupmembers(opts.SGroupOrder, members, ...
+         "scatter", "SGroupOrder");
+      SData = reordercats(SData, cellstr(members(idx)));
+   end
+
    SGrps = unique(SData);
    CGrps = unique(CData);
 
    % Make the figure using gscatter
    [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
-      SGrps, Opts);
+      SGrps, opts);
 
    % Apply any Line property the caller named. gscatter takes positional
    % arguments only, so the properties go on the returned objects.
-   varargs = namedargs2cell(Props);
+   varargs = namedargs2cell(props);
    if ~isempty(varargs)
       set(H(isgraphics(H)), varargs{:});
    end
 
    %    % Make the figure using plot
    %    [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
-   %       SGrps, Opts);
+   %       SGrps, opts);
 
    % replace underscores with spaces
 
    % Name the axes. createGScatterPlot1 restores the caller's current axes
    % as it returns, so an unqualified call here labels whichever axes was
-   % current before, and leaves Opts.Parent held.
-   xlabel(Opts.Parent, strrep(xdatavar, '_', ' '));
-   ylabel(Opts.Parent, strrep(ydatavar, '_', ' '));
+   % current before, and leaves opts.Parent held.
+   xlabel(opts.Parent, strrep(xdatavar, '_', ' '));
+   ylabel(opts.Parent, strrep(ydatavar, '_', ' '));
 
-   hold(Opts.Parent, 'off')
-   switch nargout
-      case 1
-         varargout{1} = H;
-      case 2
-         varargout{1} = H;
-         varargout{2} = L;
-   end
+   hold(opts.Parent, 'off')
+
+   % The third output is the axes the chart was drawn into, matching the
+   % other charts' (H, L, ax) signature.
+   ax = opts.Parent;
+   [varargout{1:nargout}] = dealout(H, L, ax);
 end
 
 %%
 function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
-      SGrps, Opts)
+      SGrps, opts)
 
    [colors, symbols, sizes] = getPlotDecorators(CGrps);
 
@@ -190,14 +239,14 @@ function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
    % Parent argument, and opening a figure here would ignore Parent and make
    % every call a new window. Put the caller's current figure and axes back
    % afterward, so a later unguarded plot lands where the caller expects.
-   fig = ancestor(Opts.Parent, 'figure');
+   fig = ancestor(opts.Parent, 'figure');
    previousfigure = get(groot, 'CurrentFigure');
    previousaxes = get(fig, 'CurrentAxes');
    restore = onCleanup(@() restoreCurrent(previousfigure, fig, previousaxes));
 
    set(groot, 'CurrentFigure', fig);
-   set(fig, 'CurrentAxes', Opts.Parent);
-   hold(Opts.Parent, 'on');
+   set(fig, 'CurrentAxes', opts.Parent);
+   hold(opts.Parent, 'on');
    for m = 1:numel(SGrps)
       I = ismember(SData, SGrps(m));
 
@@ -207,13 +256,13 @@ function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
       if numel(h) == numel(CGrps)
          H(:, m) = h;
       else
-         % gscatter groups a categorical by its categories and anything else
-         % by the values present, so a subset that misses a color group
-         % returns fewer handles. Place each one in its own group's row.
-         % Assigning a single handle to the whole column would broadcast it,
-         % leaving every row pointing at the same object.
-         present = ismember(string(CGrps), string(unique(CData(I))));
-         H(present, m) = h;
+         % gscatter returns one handle per category code, from code 1 up
+         % to the highest code the subset holds, with a data-less
+         % placeholder line for each unused lower code. Handle k is
+         % therefore category k, so align by code. A present-value mask
+         % here miscounted whenever an unused code sat below a used one.
+         % The remaining rows keep their preallocated placeholders.
+         H(1:numel(h), m) = h;
       end
    end
 
@@ -225,13 +274,13 @@ function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ...
       SGrps = [];
    end
 
-   order = legendOrder(XData, YData, CData, SData, Opts);
+   order = legendOrder(XData, YData, CData, SData, opts);
 
-   if Opts.SortGroup == "cgroupvar"
-      L = groupLegend(cleg(order), sleg, CGrps(order), SGrps, Opts);
+   if opts.SortGroup == "cgroupvar"
+      L = groupLegend(cleg(order), sleg, CGrps(order), SGrps, opts);
       % L = groupLegend(cleg, sleg, CGrps, SGrps);
-   elseif Opts.SortGroup == "sgroupvar"
-      L = groupLegend(cleg, sleg(order), CGrps, SGrps(order), Opts);
+   elseif opts.SortGroup == "sgroupvar"
+      L = groupLegend(cleg, sleg(order), CGrps, SGrps(order), opts);
    end
 end
 
@@ -244,7 +293,7 @@ end
 % site above to it.
 %
 % function [H, L] = createGScatterPlot2(XData, YData, CData, SData, CGrps, ...
-%       SGrps, Opts)
+%       SGrps, opts)
 %
 %    [colors, symbols, sizes] = getPlotDecorators(CGrps);
 %
@@ -281,7 +330,7 @@ end
 %    end
 %    hold off
 %
-%    order = legendOrder(XData, YData, CData, SData, Opts);
+%    order = legendOrder(XData, YData, CData, SData, opts);
 %
 %    L = legend([cleg(order); sleg], [CGrps(order); SGrps], 'Location', 'eastoutside');
 %
@@ -290,16 +339,16 @@ end
 % end
 
 %%
-function order = legendOrder(XData, YData, CData, SData, Opts)
+function order = legendOrder(XData, YData, CData, SData, opts)
 
    % This appears to assume that whatever is assigned to sortdata is numeric or
    % otherwise compatible with a group mean, specifically with "mean", so I
    % added a default dummy order ... but its creating problems
 
-   if Opts.SortVar == "ydatavar"
+   if opts.SortVar == "ydatavar"
       % order the legend from high to low along the y axis
       sortdata = YData;
-   elseif Opts.SortVar == "xdatavar"
+   elseif opts.SortVar == "xdatavar"
       % order the legend from low to high along the x axis
       sortdata = XData;
    end
@@ -307,16 +356,27 @@ function order = legendOrder(XData, YData, CData, SData, Opts)
    % Default order (appears it needs to be sortgroups not sortdata)
    % order = 1:numel(unique(sortdata));
 
-   if Opts.SortGroup == "cgroupvar"
+   if opts.SortGroup == "cgroupvar"
       % order the legend according to the mean within CData groups
       sortgroup = CData;
-   elseif Opts.SortGroup == "sgroupvar"
+   elseif opts.SortGroup == "sgroupvar"
       % order the legend according to the mean within SData groups
       sortgroup = SData;
    end
 
    % Default order
    order = 1:numel(unique(sortgroup));
+
+   % SortBy "none", the default, keeps the groups in the order they have.
+   % An explicit member order on the sorted grouping also wins over
+   % SortBy, the same rule the cats charts apply.
+   orderedc = ~(isscalar(opts.CGroupOrder) && opts.CGroupOrder == "none");
+   ordereds = ~(isscalar(opts.SGroupOrder) && opts.SGroupOrder == "none");
+   if opts.SortBy == "none" ...
+         || (opts.SortGroup == "cgroupvar" && orderedc) ...
+         || (opts.SortGroup == "sgroupvar" && ordereds)
+      return
+   end
 
    % Check if sortdata is sortable (numeric or categorical/ordinal)
    issortable = isordinal(sortdata) || isnumeric(sortdata);
@@ -326,7 +386,7 @@ function order = legendOrder(XData, YData, CData, SData, Opts)
       % needs a Statistics Toolbox license, which left this the only path a
       % caller without that license could take.
       mu = groupsummary(sortdata, sortgroup, "mean");
-      [~, order] = sort(mu, Opts.SortBy);
+      [~, order] = sort(mu, opts.SortBy);
    catch
       % A group mean needs numeric or ordinal data. Keep the default order,
       % which is the order unique() returns, when the sort variable is
@@ -339,19 +399,19 @@ function order = legendOrder(XData, YData, CData, SData, Opts)
       end
    end
 
-   %    switch Opts.SortVar
+   %    switch opts.SortVar
    %       case "ydatavar"
    %          % order the legend from high to low along the y axis
-   %          if Opts.SortGroup == "cgroupvar"
+   %          if opts.SortGroup == "cgroupvar"
    %             mu = grpstats(YData, CData, 'mean');
-   %          elseif Opts.SortGroup == "sgroupvar"
+   %          elseif opts.SortGroup == "sgroupvar"
    %             mu = grpstats(YData, SData, 'mean');
    %          end
    %       case "xdatavar"
    %          % order the legend from low to high along the x axis
    %          mu = grpstats(XData, CData, 'mean');
    %    end
-   %    [~, order] = sort(mu, Opts.SortBy);
+   %    [~, order] = sort(mu, opts.SortBy);
 end
 
 %%
@@ -449,11 +509,11 @@ function [cleg, sleg] = legendhandles(CGrps, SGrps, colors, symbols, sizes)
 end
 
 %%
-function L = groupLegend(cleg, sleg, CGrps, SGrps, Opts)
+function L = groupLegend(cleg, sleg, CGrps, SGrps, opts)
 
    % Return an empty handle rather than no value, so a caller that asks for
    % the legend output gets something it can test.
-   if Opts.Legend == "off"
+   if opts.Legend == "off"
       L = gobjects(0);
       return
    end
@@ -461,14 +521,14 @@ function L = groupLegend(cleg, sleg, CGrps, SGrps, Opts)
    % LegendString replaces the group member names. It must cover every entry,
    % so a short list falls back to the names rather than mislabeling them.
    entries = [string(CGrps(:)); string(SGrps(:))];
-   if numel(Opts.LegendString) == numel(entries)
-      entries = Opts.LegendString(:);
+   if numel(opts.LegendString) == numel(entries)
+      entries = opts.LegendString(:);
    end
 
    % This creates one legend
-   L = legend(Opts.Parent, [cleg(:); sleg(:)], entries, ...
+   L = legend(opts.Parent, [cleg(:); sleg(:)], entries, ...
       'Location', 'eastoutside', ...
-      'Orientation', Opts.LegendOrientation);
+      'Orientation', opts.LegendOrientation);
 
    % % This creates two legends
    % ax1 = gca;
@@ -484,7 +544,7 @@ function L = groupLegend(cleg, sleg, CGrps, SGrps, Opts)
 
    %    % Add the legend
    %    withwarnoff('MATLAB:legend:IgnoringExtraEntries');
-   %    legendtxt = Opts.LegendString;
+   %    legendtxt = opts.LegendString;
    %    if isempty(legendtxt)
    %       legendtxt = CGrps;
    %    end

@@ -46,9 +46,24 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % cgroupuse: A cell array of categories to be used for the color grouping.
    % varargin: Additional optional arguments for the boxchart function.
    %
-   % Output Argument
+   % MergeGroupMembers: A cell array of string vectors. Each cell names the
+   % color-group members to pool into one box group, matching
+   % groupstats.histogram. A bare string vector is one merge group. The
+   % merged group's label joins the member names with " and ", and it takes
+   % the position of its first member in the current category order.
+   % CGroupMembers reads original names; CGroupOrder and the legend read
+   % post-merge names.
+   %
+   % Note: a box holding one observation collapses to a zero-height box
+   % with zero-length whiskers, so the mean symbol is its only visible
+   % mark. The chart warns when every box is like that.
+   %
+   % Output Arguments
    %
    % H: A handle to the created box chart.
+   % L: The legend, or an empty graphics placeholder when the legend could
+   %    not be created.
+   % AX: The axes the chart was drawn into.
    %
    % Example
    %
@@ -119,6 +134,9 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       opts.RowSelectVar string = string.empty()
       opts.RowSelectMembers (:, 1) string = string.empty()
 
+      % Untyped because a cell array of string vectors is one valid shape.
+      opts.MergeGroupMembers (:, 1) = string.empty()
+
       % Empty means no row selection. prepareTableGroups raises
       % rowSelectVarWithoutMembers when RowSelectVar is named and this is
       % empty, because selecting no rows leaves an empty chart.
@@ -136,14 +154,17 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
          {groupstats.namelists.mustBeMemberOf(opts.Legend, ...
          "legendvisibility")} = "on"
       opts.LegendString string = string.empty()
-      % The legend sits above the axes, where a row of entries reads best.
-      % barchartcats puts its legend inside the axes at northwest and
-      % defaults to vertical for the same reason.
+      % Every chart in the family defaults to a vertical legend. The
+      % legend still sits above the axes; horizontal remains available for
+      % a wide row of entries.
       opts.LegendOrientation (1, 1) string ...
          { groupstats.namelists.mustBeMemberOf(opts.LegendOrientation, ...
-         "legendorientation") } = "horizontal"
+         "legendorientation") } = "vertical"
       props.?matlab.graphics.chart.primitive.BoxChart
    end
+
+   % H, L, and the axes are the outputs.
+   nargoutchk(0, 3)
 
    % Import groupstats package
    import groupstats.groupselect
@@ -160,6 +181,14 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    end
    varargs = namedargs2cell(props);
 
+   % Merging pools members of the color-group variable, so without one
+   % there is nothing to pool.
+   if isempty(cgroupvar) && ~isempty(opts.MergeGroupMembers)
+      error('groupstats:boxchartcats:mergeWithoutGroupVar', ...
+         ['MergeGroupMembers was given without cgroupvar. Name the color ' ...
+         'group variable whose members are pooled.'])
+   end
+
    % validate inputs
    tbl = prepareTableGroups(tbl, ydatavar, ...
       XGroupVar = xgroupvar, ...
@@ -169,6 +198,14 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       RowSelectVar = opts.RowSelectVar, ...
       RowSelectMembers = opts.RowSelectMembers);
 
+   % Merge after member filtering, so CGroupMembers reads original names
+   % and the ordering below reads post-merge names. The shared helper
+   % validates the member names and relabels the rows.
+   if ~isempty(opts.MergeGroupMembers)
+      tbl.(cgroupvar) = mergegroupmembers( ...
+         tbl.(cgroupvar), opts.MergeGroupMembers);
+   end
+
    % Assign the data to plot
    XData = tbl.(xgroupvar);
    YData = tbl.(ydatavar);
@@ -176,6 +213,23 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       CData = tbl.(cgroupvar);
    catch
       CData = true(size(YData));
+   end
+
+   % A box holding one observation collapses to a zero-height box with
+   % zero-length whiskers, so the mean symbol is its only visible mark.
+   % When every box is like that, the selection was almost surely a
+   % mistake, so report it. Any box with two or more rows means the shape
+   % was chosen, so no report then. boxchart omits missing YData, so count
+   % only the rows a box renders.
+   plotted = ~ismissing(YData);
+   boxcounts = groupcounts( ...
+      table(XData(plotted), CData(plotted), ...
+      'VariableNames', ["xgroup", "cgroup"]), ["xgroup", "cgroup"]);
+   if ~isempty(boxcounts.GroupCount) && all(boxcounts.GroupCount == 1)
+      warning('groupstats:boxchartcats:allBoxesSingleObservation', ...
+         ['Every (x-group, color-group) box holds exactly one ' ...
+         'observation, so the boxes collapse to points. Pool more rows ' ...
+         'per box, or use groupstats.scatter.'])
    end
 
    % main function
@@ -207,7 +261,13 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    end
    hold off
 
-   [varargout{1:nargout}] = dealout(H, L);
+   % The third output is the axes the chart was drawn into, matching the
+   % other charts' (H, L, ax) signature. Derive it from the chart, because
+   % a caller can pass the BoxChart Parent property and draw into an axes
+   % that is not current. Bead groupstats-50y covers routing the legend
+   % and formatting to that axes too.
+   ax = ancestor(H(1), 'axes');
+   [varargout{1:nargout}] = dealout(H, L, ax);
 end
 
 %% Local Functions
@@ -237,7 +297,9 @@ function [H, L] = categoricalBoxChart(XData, YData, CData, YDataVar, CustomOpts,
          'AutoUpdate', 'off', ...
          'numcolumns', numcolumns );
    catch
-      L = [];
+      % A legend failure must still assign L. An empty graphics
+      % placeholder matches the other charts' legend-failure value.
+      L = gobjects(0);
    end
 
    % Add a ylabel

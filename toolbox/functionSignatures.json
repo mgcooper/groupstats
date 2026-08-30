@@ -73,7 +73,7 @@
             "purpose":"the group members to down-select rows of input table"
          },
          {
-            "name":"method", 
+            "name":"Method",
             "kind":"namevalue", 
             "type":
             [
@@ -101,10 +101,27 @@
             "purpose":"the cgroup members to compute sortby order"
          },
          {
+            "name":"MergeGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "purpose":"the color-group members to pool, one cell per merge group"
+         },
+         {
+            "name":"MergeMethod",
+            "kind":"namevalue",
+            "type":
+            [
+               "char", "string", "scalar",
+               "choices=groupstats.namelists.mergemethod()"
+            ],
+            "default":"'pooled'",
+            "purpose":"how the merged bar is computed"
+         },
+         {
             "name":"ShadeGroups",
             "kind":"namevalue",
             "type":["logical", "scalar"],
-            "default":"false",
+            "default":"true",
             "purpose":"shade alternate x-tick groups"
          },
          {
@@ -184,6 +201,11 @@
             "name":"L",
             "type":"matlab.graphics.illustration.Legend",
             "purpose":"the legend handle"
+         },
+         {
+            "name":"ax",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes the chart was drawn into"
          }
       ],
       "description":"Create bar chart of grouped data"
@@ -193,7 +215,7 @@
       "inputs":
       [
          {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table to select rows from"},
-         {"name":"varnames", "kind":"required", "type":[["cellstr","char","string"],["choices=tablecompletions(tbl)"]], "purpose":"the grouping variables"},
+         {"name":"groupvars", "kind":"required", "type":[["cellstr","char","string"],["choices=tablecompletions(tbl)"]], "purpose":"the grouping variables"},
          {"name":"groupmembers", "kind":"required", "type":[["cellstr","char","string"]], "purpose":"the members to keep"}
       ]
    },
@@ -319,6 +341,12 @@
             "purpose":"the group members to down-select rows of input table"
          },
          {
+            "name":"MergeGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "purpose":"the color-group members to pool, one cell per merge group"
+         },
+         {
             "name":"SortBy",
             "kind":"namevalue",
             "type":
@@ -424,6 +452,11 @@
             "name":"L",
             "type":"matlab.graphics.illustration.Legend",
             "purpose":"the legend handle"
+         },
+         {
+            "name":"ax",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes the chart was drawn into"
          }
       ],
       "description":"Create boxchart of grouped data"
@@ -485,10 +518,16 @@
             "purpose":"the grouping sets"
          },
          {
-            "name":"rowselectmembers", 
-            "kind":"ordered", 
-            "type":["char","string"], 
-            "purpose":"the group members to down-select rows of input table"
+            "name":"RowSelectVar",
+            "kind":"namevalue",
+            "type":[["char","string"],["choices=tablecompletions(tbl)"]],
+            "purpose":"the row-selection variable; give it together with RowSelectMembers"
+         },
+         {
+            "name":"RowSelectMembers",
+            "kind":"namevalue",
+            "type":["char","string"],
+            "purpose":"the members to keep; give it together with RowSelectVar"
          }
       ],
       "outputs":
@@ -579,6 +618,29 @@
             "purpose":"the group members to merge"
          },
          {
+            "name":"GroupOrder",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char","string"],
+               ["choices=tablecompletions(tbl, 'selectby', GroupVar)"]
+            ],
+            "default":"'none'",
+            "purpose":"a partial order of the group members"
+         },
+         {
+            "name":"SortBy",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices=groupstats.namelists.sortorder()"]
+            ],
+            "default":"'none'",
+            "purpose":"order the groups by their group mean or counts"
+         },
+         {
             "name":"RowSelectVar",
             "kind":"namevalue",
             "type":
@@ -634,7 +696,7 @@
             ],
             "purpose":"the legend orientation"},
          {
-            "name":"Props",
+            "name":"props",
             "kind":"properties",
             "type":"matlab.graphics.chart.primitive.Histogram"}
       ],
@@ -649,6 +711,11 @@
             "name":"L",
             "type":"matlab.graphics.illustration.Legend",
             "purpose":"the legend handle"
+         },
+         {
+            "name":"ax",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes the chart was drawn into"
          }
       ],
       "description":"Create histogram of grouped data"
@@ -737,6 +804,12 @@
             "purpose":"the group members to down-select rows of input table"
          },
          {
+            "name":"MergeGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "purpose":"the color-group members to pool, one cell per merge group"
+         },
+         {
             "name":"SortVar",
             "kind":"namevalue",
             "type":
@@ -757,6 +830,28 @@
             ],
             "purpose":"order the legend from high to low mean value of the SortGroup data"},
          {
+            "name":"CGroupOrder",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char","string"],
+               ["choices=tablecompletions(tbl, 'selectby', cgroupvar)"]
+            ],
+            "default":"'none'",
+            "purpose":"a partial order of the color-group members"
+         },
+         {
+            "name":"SGroupOrder",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char","string"],
+               ["choices=tablecompletions(tbl, 'selectby', sgroupvar)"]
+            ],
+            "default":"'none'",
+            "purpose":"a partial order of the symbol-group members"
+         },
+         {
             "name":"Parent",
             "kind":"namevalue",
             "type":"matlab.graphics.axis.AbstractAxes",
@@ -769,9 +864,10 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices=groupstats.namelists.sortdirection()"]
+               ["choices=groupstats.namelists.sortorder()"]
             ],
-            "purpose":"which direction to sort by"},
+            "default":"'none'",
+            "purpose":"order the legend by the SortGroup group means of SortVar; 'none' keeps the group order"},
          {
             "name":"Legend",
             "kind":"namevalue",
@@ -803,7 +899,7 @@
             ],
             "purpose":"the legend orientation"},
          {
-            "name":"Props",
+            "name":"props",
             "kind":"properties",
             "type":"matlab.graphics.chart.primitive.Scatter"}
       ],
@@ -818,6 +914,11 @@
             "name":"L",
             "type":"matlab.graphics.illustration.Legend",
             "purpose":"the legend handle"
+         },
+         {
+            "name":"ax",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes the chart was drawn into"
          }
       ],
       "description":"Create scatter chart of grouped data"

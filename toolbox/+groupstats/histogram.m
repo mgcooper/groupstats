@@ -10,11 +10,13 @@ function varargout = histogram(tbl, datavar, opts, props)
    % h = groupstats.histogram(_, RowSelectVar = varname)
    % h = groupstats.histogram(_, RowSelectMembers = members)
    % h = groupstats.histogram(_, MergeGroupMembers = members)
+   % h = groupstats.histogram(_, GroupOrder = members)
+   % h = groupstats.histogram(_, SortBy = order)
    % h = groupstats.histogram(_, Parent = axes_handle)
    % h = groupstats.histogram(_, Legend = "on" or "off")
    % h = groupstats.histogram(_, LegendString = legend_text)
    % h = groupstats.histogram(_, LegendOrientation = orientation)
-   % [h, l] = groupstats.histogram(_)
+   % [h, l, ax] = groupstats.histogram(_)
    %
    % The Name-Value pairs can be any accepted by HISTOGRAM
    % h = groupstats.histogram(_, NumBins = numbins)
@@ -42,10 +44,14 @@ function varargout = histogram(tbl, datavar, opts, props)
    %
    % h = groupstats.histogram(_, MergeGroupMembers = members) pools the named
    % members into one group. MEMBERS is a cell array, one cell per merge
-   % group. The merged group's legend entry is the joined member names.
+   % group; a bare string vector is one merge group. The merged group's
+   % label joins the member names with " and ", and it takes the position
+   % of its first member in the current category order. In categorical mode
+   % the named categories of the data variable pool into one bar.
    %
-   % [h, l] = groupstats.histogram(_) also returns the legend. In categorical
-   % mode there is no legend, so l is an empty graphics placeholder.
+   % [h, l, ax] = groupstats.histogram(_) also returns the legend and the
+   % axes. In categorical mode there is no legend, so l is an empty
+   % graphics placeholder.
    %
    % h = groupstats.histogram(_, Name, Value) specifies additional chart options
    % using one or more name-value pair arguments. For a list of properties, see
@@ -65,16 +71,28 @@ function varargout = histogram(tbl, datavar, opts, props)
    %
    % Parent: The axes to plot into. The default is gca.
    %
+   % GroupOrder: A partial order of the group members. Named members come
+   % first; the rest keep their order. It overrides SortBy. After a merge, name
+   % the merged labels.
+   %
+   % SortBy: "ascend", "descend", or "none" (default). Orders the groups
+   % by the group mean of the data variable, or by the category counts in
+   % categorical mode. "none" keeps the order the groups already have.
+   %
    % Legend: "on" or "off". The default is "on", except with no GroupVar and
-   % no LegendString, where the built-in shows no legend either.
+   % no LegendString, where the built-in shows no legend either. That
+   % unset-by-default state is deliberate: an ungrouped histogram has one
+   % series and needs no legend.
    %
    % data, categories: the call shape the built-in takes. HISTOGRAM(data) and
    % HISTOGRAM(data, categories) work here, so a caller does not have to
    % build a table for the simple case.
    %
-   % Output Argument
+   % Output Arguments
    %
-   % H: A handle to the created histogram.
+   % H: A handle to the created histogram, one per group.
+   % L: The legend, or an empty graphics placeholder when there is none.
+   % AX: The axes the chart was drawn into.
    %
    % Example
    %
@@ -124,6 +142,10 @@ function varargout = histogram(tbl, datavar, opts, props)
       opts.Parent (1,1) { mustBeA(opts.Parent, ...
          "matlab.graphics.axis.AbstractAxes") } = gca
       opts.MergeGroupMembers (:,1) = string.empty()
+      opts.GroupOrder (:, 1) string = "none"
+      opts.SortBy (1, 1) string ...
+         {groupstats.namelists.mustBeMemberOf(opts.SortBy, ...
+         "sortorder")} = "none"
       opts.Legend (:, 1) string ...
          {groupstats.namelists.mustBeMemberOf(opts.Legend, ...
          "legendvisibility")} = string.empty()
@@ -159,6 +181,9 @@ function varargout = histogram(tbl, datavar, opts, props)
 
    mustBeNonempty(datavar)
    datavar = string(datavar);
+
+   % H, L, and the axes are the outputs.
+   nargoutchk(0, 3)
 
    % A categorical data variable with no GroupVar is the categorical
    % histogram, where GroupMembers names the categories to keep. Anywhere
@@ -208,8 +233,20 @@ function varargout = histogram(tbl, datavar, opts, props)
 
    % Create a categorical histogram
    if makeCategoricalHistogram
-      % prepareTableGroups removes the rows that are not in GroupMembers, so all
-      % that's needed is a call to histogram.
+      % prepareTableGroups removes the rows that are not in GroupMembers.
+      % Relabeling the data variable pools any merged categories into one
+      % bar, so a merge works on this call shape too. Then all that's
+      % needed is a call to histogram.
+      if ~isempty(opts.MergeGroupMembers)
+         tbl.(datavar) = mergegroupmembers( ...
+            tbl.(datavar), opts.MergeGroupMembers);
+      end
+
+      % Order the categories: an explicit GroupOrder first, otherwise
+      % SortBy orders them by their counts.
+      tbl.(datavar) = orderGroups(tbl.(datavar), opts.GroupOrder, ...
+         opts.SortBy, []);
+
       H = histogram(tbl.(datavar), props{:}, 'Parent', opts.Parent);
    else
 
@@ -230,9 +267,18 @@ function varargout = histogram(tbl, datavar, opts, props)
       % Assign the data to plot
       YData = tbl.(datavar);
 
-      % Custom group merging
+      % Custom group merging. The shared helper validates the member names
+      % and relabels the rows, so every chart merges the same way.
       if ~isempty(opts.MergeGroupMembers)
-         [XData, opts] = mergeGroups(opts, XData);
+         XData = mergegroupmembers(XData, opts.MergeGroupMembers);
+      end
+
+      % Order the groups after any merge, so GroupOrder and SortBy read
+      % post-merge names, and before the legend default below reads the
+      % order. SortBy orders the groups by the group mean of the data.
+      % With no GroupVar, XData is logical and there is nothing to order.
+      if iscategorical(XData)
+         XData = orderGroups(XData, opts.GroupOrder, opts.SortBy, YData);
       end
 
       % Set the default legend string to the group members, after any merge,
@@ -252,12 +298,10 @@ function varargout = histogram(tbl, datavar, opts, props)
 
    formatHistogram(H, opts.Parent)
 
-   if nargout > 0
-      varargout{1} = H;
-   end
-   if nargout == 2
-      varargout{2} = L;
-   end
+   % The third output is the axes the chart was drawn into, matching the
+   % other charts' (H, L, ax) signature.
+   ax = opts.Parent;
+   [varargout{1:nargout}] = dealout(H, L, ax);
 end
 
 %% Create the histogram
@@ -332,35 +376,40 @@ function L = createLegend(opts)
    end
 end
 
-%% Merge groups
-function [XData, opts] = mergeGroups(opts, XData)
-   %MERGEGROUPS Pool named group members into one group.
+%% Order groups
+function column = orderGroups(column, grouporder, sortby, metric)
+   %ORDERGROUPS Order the group categories by an explicit order or SortBy.
    %
-   % MergeGroupMembers is a cell array. Each cell names the members of the
-   % group variable to pool, and their observations become one histogram.
-   % The merged group takes the joined member names as its label.
-   %
-   % A histogram groups by row, so merging relabels the group column. The bar
-   % and box charts merge columns of a per-group summary matrix instead; this
-   % data is a column of observations, which has no group columns to merge.
+   % An explicit GroupOrder overrides SortBy, the same rule the cats charts
+   % apply. GroupOrder is a partial order: named members come first, and
+   % the rest keep their order. SortBy orders the categories by the group
+   % mean of METRIC, or by the group counts when METRIC is empty, which is
+   % the categorical histogram's case.
 
-   % One cell per merge group. A bare member list is one group, so wrap it
-   % and treat both shapes the same below.
-   members = opts.MergeGroupMembers;
-   if ~iscell(members)
-      members = {members};
+   members = string(categories(removecats(column)));
+
+   if ~(isscalar(grouporder) && grouporder == "none")
+      idx = reordergroupmembers(grouporder, members, ...
+         "histogram", "GroupOrder");
+      column = reordercats(column, cellstr(members(idx)));
+      return
    end
 
-   XData = string(XData);
-   labels = strings(numel(members), 1);
-
-   for n = 1:numel(members)
-      merged = string(members{n});
-      labels(n) = strjoin(merged, " and ");
-      XData(ismember(XData, merged)) = labels(n);
+   if sortby == "none"
+      return
    end
 
-   XData = categorical(XData);
+   % countcats and groupsummary both return one value per category in
+   % category order, so the sorted indices pair with members. The metric
+   % keeps its own type: a mean of datetime or duration data is defined,
+   % and double() is not.
+   if isempty(metric)
+      stat = countcats(removecats(column));
+   else
+      stat = groupsummary(metric, removecats(column), "mean");
+   end
+   [~, idx] = sort(stat, sortby);
+   column = reordercats(column, cellstr(members(idx)));
 end
 
 %% LICENSE

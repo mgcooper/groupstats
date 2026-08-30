@@ -14,10 +14,10 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % where ydata = tbl.(ydatavar).
    %
    % h = barchartcats(tbl, ydatavar, xgroupvar) groups the data in the vector
-   % tbl.(ydatavar) according to the unique values in tbl.(xgroupvar) and plots each
-   % group of data as a separate bar chart. xgroupdata determines the position
-   % of each bar chart along the x-axis. ydata must be a vector, and xgroupdata
-   % must have the same length as ydata.
+   % tbl.(ydatavar) according to the unique values in tbl.(xgroupvar) and plots
+   % each group of data as a separate bar chart. xgroupdata determines the
+   % position of each bar chart along the x-axis. ydata must be a vector, and
+   % xgroupdata must have the same length as ydata.
    %
    % h = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, "XGroupMembers",
    %  xgroupmembers, "CGroupMembers", cgroupmembers) uses color to differentiate
@@ -46,7 +46,7 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % cgroupvar - The name of the categorical variable in the table tbl used to
    % define groups for the colors of the bars.
    %
-   % method - the method used in the call to groupsummary to compute the values
+   % Method - the method used in the call to groupsummary to compute the values
    % plotted as bars. The default method is 'mean'. For 'mean', the standard
    % deviation is also computed in the call to groupsummary to support the
    % addition of whiskers to the bars. If 'median' is passed in as the method,
@@ -57,15 +57,28 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    %
    % cgroupuse - A cell array of categories to be used for the color grouping.
    %
-   % MergeGroups - A cell array of index vectors naming the color-group
-   % columns to combine. Each merged group is drawn as one bar carrying the
-   % mean of its parts. The bar sits at the smallest index of the group. Its
-   % name joins the names it replaces. Merging discards the spread of the
-   % combined groups, so PlotError cannot be set at the same time.
+   % MergeGroupMembers - A cell array of string vectors. Each cell names
+   % the color-group members to pool into one bar, matching
+   % groupstats.histogram. A bare string vector is one merge group. The
+   % merged bar's label joins the member names with " and ", and the bar
+   % takes the position of its first member in the current category order.
    %
-   % Output Argument
+   % MergeMethod - "pooled" (default) or "membermean". "pooled" summarizes
+   % the pooled member rows, so the merged bar is the statistic over every
+   % row of the merged members, and PlotError works. "membermean" is the
+   % unweighted mean of the member bars' summary values, which weights each
+   % member group equally regardless of its row count. With Method="mean"
+   % and equal-sized member groups the two agree. With Method="median"
+   % they can differ even then, because a pooled median is not the mean of
+   % member medians. "membermean" discards the spread of the combined
+   % groups, so PlotError cannot be set with it.
+   %
+   % Output Arguments
    %
    % H: A handle to the created bar chart.
+   % L: The legend, or an empty graphics placeholder when the legend could
+   %    not be created.
+   % AX: The axes the chart was drawn into.
    %
    % Example
    %
@@ -129,10 +142,6 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % accomplish this. Stack the vars into one var, and add a categorical var
    % holding the original varnames.
 
-   % Note: MergeGroups here takes column indices, while
-   % groupstats.histogram takes member names through MergeGroupMembers.
-   % Give the two one spelling.
-
    arguments
       tbl tabular
       ydatavar (1,1) string {mustBeNonempty}
@@ -142,8 +151,8 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       opts.CGroupMembers string = string.empty()
       opts.RowSelectVar string = string.empty()
       opts.RowSelectMembers string = string.empty()
-      opts.method (:,1) string ...
-         { groupstats.namelists.mustBeMemberOf(opts.method, ...
+      opts.Method (:,1) string ...
+         { groupstats.namelists.mustBeMemberOf(opts.Method, ...
          "centralstatistic") } = "mean"
       opts.SortBy (1,1) string ...
          { groupstats.namelists.mustBeMemberOf(opts.SortBy, ...
@@ -157,12 +166,15 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       % want to sort by a particular cgroup member, specify them using
       % opts.SortGroupMembers.
       opts.SortGroupMembers (:,1) string = "all"
-      opts.MergeGroups (:,1) = []
+      opts.MergeGroupMembers (:,1) = string.empty()
+      opts.MergeMethod (1,1) string ...
+         { groupstats.namelists.mustBeMemberOf(opts.MergeMethod, ...
+         "mergemethod") } = "pooled"
       opts.XGroupOrder (:,1) string = "none"
       opts.CGroupOrder (:,1) string = "none"
-      % Both default off. Each was declared and never read, so turning them
-      % on by default would change every existing chart.
-      opts.ShadeGroups (1,1) logical = false
+      % ShadeGroups defaults on in both cats charts, an author decision of
+      % 2026-08-16 that unified the two defaults. PlotError stays off.
+      opts.ShadeGroups (1,1) logical = true
       opts.PlotError (1,1) logical = false
       opts.Legend (:,1) string ...
          {groupstats.namelists.mustBeMemberOf(opts.Legend, ...
@@ -180,6 +192,17 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
 
    varargs = namedargs2cell(props);
 
+   % H, L, and the axes are the outputs.
+   nargoutchk(0, 3)
+
+   % Merging pools members of the color-group variable, so without one
+   % there is nothing to pool.
+   if isempty(cgroupvar) && ~isempty(opts.MergeGroupMembers)
+      error('groupstats:barchartcats:mergeWithoutGroupVar', ...
+         ['MergeGroupMembers was given without cgroupvar. Name the color ' ...
+         'group variable whose members are pooled.'])
+   end
+
    % validate inputs
    tbl = prepareTableGroups(tbl, ydatavar, ...
       XGroupVar = xgroupvar, ...
@@ -189,9 +212,19 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       RowSelectVar = opts.RowSelectVar, ...
       RowSelectMembers = opts.RowSelectMembers);
 
+   % Merge before summarizing, so the merged bar is the statistic over the
+   % pooled member rows and its spread supports PlotError. The membermean
+   % method instead averages the member bars after summarizing, below.
+   % Member filtering above reads original names; ordering and sorting
+   % below read post-merge names.
+   if ~isempty(opts.MergeGroupMembers) && opts.MergeMethod == "pooled"
+      tbl.(cgroupvar) = mergegroupmembers( ...
+         tbl.(cgroupvar), opts.MergeGroupMembers);
+   end
+
    % barchartcats requires summarizing the data, unlike boxchart
    [XData, YData, CData, EData] = summarizeTableGroups( ...
-      tbl, ydatavar, xgroupvar, cgroupvar, opts.method);
+      tbl, ydatavar, xgroupvar, cgroupvar, opts.Method);
 
    % main function
 
@@ -199,56 +232,50 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % than adapting the boxchartxdata method, because bar already computes the
    % center of every bar it draws.
 
-   % Note: merging gives new color groups, so SortGroupMembers has to be
-   % read against the merged names. mergeGroupColumns does that: it maps a
-   % named member onto the merged group that contains it, and for the default
-   % "all" it takes every merged column. The unmerged branch reads the
-   % category order instead.
-
-   % Need to add validation to ensure SortGroupMembers are members of CData
-
    % NOTE: the columns arrive in category order, because "unique" is
    % embedded all over the place e.g. in the call to groupsummary in
-   % summarizeTableGroups. opts.SortColumns is built from that same order
-   % below. Asking for "stable" here does not change the columns, only the
+   % summarizeTableGroups. The sort mask below is built from that same
+   % order. Asking for "stable" here does not change the columns, only the
    % list read against them, which is what made the sort read the wrong one.
 
-   % Order the color groups before merging. Merging combines columns, and
-   % the order is expressed in terms of the unmerged ones.
-   [YData, EData, CData] = reorderCGroups(opts, YData, EData, CData);
-
-   % Custom group merging
-   if isempty(opts.MergeGroups)
-      % Find the columns to use for computing the sort. The columns are in
-      % category order, and CGroupOrder permutes that order, so read the
-      % categories. unique(...,"stable") gives first-appearance order and
-      % marks another color group's column.
-      if iscategorical(CData)
-         cgroups = string(categories(removecats(CData)));
-      else
-         cgroups = string(unique(CData));
-      end
-      if opts.SortGroupMembers == "all"
-         opts.SortGroupMembers = cgroups;
-      end
-      opts.SortColumns = ismember(cgroups, opts.SortGroupMembers);
-   else
-      [YData, opts, cgroups] = mergeGroupColumns(opts, YData, CData);
-
-      % Merging combines columns. The spread of a merged group is not the
-      % spread of its parts, so the merge discards EData. That leaves
-      % PlotError nothing to draw, so the guard below names the conflict.
+   % The membermean merge averages the member bars' summary columns. The
+   % spread of a merged group is not the spread of its parts, so it
+   % discards EData, and the guard names the PlotError conflict. The pooled
+   % method above has no such conflict.
+   if ~isempty(opts.MergeGroupMembers) && opts.MergeMethod == "membermean"
       if opts.PlotError
          error('groupstats:barchartcats:plotErrorNeedsUnmergedGroups', ...
-            ['PlotError needs the spread of each group, and MergeGroups ' ...
-            'combines groups whose spread does not add up. Omit ' ...
-            'MergeGroups, or leave PlotError off.'])
+            ['PlotError needs the spread of each group, and ' ...
+            'MergeMethod="membermean" combines groups whose spread does ' ...
+            'not add up. Use MergeMethod="pooled", omit ' ...
+            'MergeGroupMembers, or leave PlotError off.'])
       end
+      [CData, YData] = mergemembermean(CData, YData, opts.MergeGroupMembers);
       EData = [];
    end
 
+   % Order the color groups. An explicit CGroupOrder names post-merge
+   % labels when a merge happened.
+   [YData, EData, CData] = reorderCGroups(opts, YData, EData, CData);
+
+   % Find the columns to use for computing the sort. The columns are in
+   % category order, and CGroupOrder permutes that order, so read the
+   % categories. unique(...,"stable") gives first-appearance order and
+   % marks another color group's column. SortGroupMembers names post-merge
+   % labels when a merge happened.
+   if iscategorical(CData)
+      cgroups = string(categories(removecats(CData)));
+   else
+      cgroups = string(unique(CData));
+   end
+   if opts.SortGroupMembers == "all"
+      opts.SortGroupMembers = cgroups;
+   end
+   sortcolumns = ismember(cgroups, opts.SortGroupMembers);
+
    % Custom ordering along x-axis
-   [XData, YData, EData] = reorderXGroups(opts, XData, YData, EData);
+   [XData, YData, EData] = reorderXGroups(opts, sortcolumns, ...
+      XData, YData, EData);
 
    % Create the figure
    [H, L, ax] = createCategoricalBarChart(XData, YData, CData, cgroups, ...
@@ -315,61 +342,35 @@ function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
 end
 
 
-function [NewYData, opts, NewCGroups] = mergeGroupColumns(opts, YData, CData)
-   %MERGEGROUPCOLUMNS
+function [CData, YData] = mergemembermean(CData, YData, mergegroups)
+   %MERGEMEMBERMEAN Average member columns of the summary matrix by name.
+   %
+   % The columns of YData arrive in category order of CData. Each merge
+   % group's columns average into the first member's category position.
+   % The shared relabel gives the merged category the same position, so
+   % the columns and the categories stay paired.
 
-   % May 2024 - need a way to enforce the C-Group ordering. This created
-   % difficulty when setting the legend outside of this function. The data is
-   % plotted by sorted order. CGroupMember labels from
-   % unique(tbl.(cgroupvar), 'stable') do not match the legend ordering.
-   % Labels from unique(tbl.(cgroupvar)) do match, because that is sorted
-   % order.
+   % Capture the pre-merge category order, then relabel the rows through
+   % the shared helper, which also validates the member names.
+   members0 = string(categories(removecats(CData)));
+   CData = mergegroupmembers(CData, mergegroups);
 
-   % mergegroups is the YData column indices to merge, so the new YData needs to
-   % contain the unmerged groups and the merged groups. Each merged group
-   % takes the position of its own smallest index. Each unmerged group keeps
-   % its original position relative to those smallest indices.
-   mergegroups = opts.MergeGroups;
-   dontmerge = setdiff(1:size(YData, 2), horzcat(mergegroups{:}));
-   NewYData = nan(size(YData));
-   NewCGroups = string(unique(CData));
-   NewYData(:, dontmerge) = YData(:, dontmerge);
+   % A bare member list is one merge group, the same rule the helper uses.
+   if ~iscell(mergegroups)
+      mergegroups = {mergegroups};
+   end
+
+   keep = true(1, numel(members0));
    for n = 1:numel(mergegroups)
-      NewYData(:, min(mergegroups{n})) = mean(YData(:, mergegroups{n}), 2);
-      NewCGroups(min(mergegroups{n})) = strjoin(NewCGroups(mergegroups{n}));
-
-      % Clear every column the merge consumed, not just the last one. The
-      % merged name sits at the smallest index, and NewYData drops the rest
-      % as all-NaN. A middle name left behind makes NewCGroups longer than
-      % NewYData has columns.
-      NewCGroups(setdiff(mergegroups{n}, min(mergegroups{n}))) = missing;
+      cols = find(ismember(members0, string(mergegroups{n})));
+      YData(:, min(cols)) = mean(YData(:, cols), 2);
+      keep(setdiff(cols, min(cols))) = false;
    end
-   NewYData = NewYData(:, ~all(isnan(NewYData)));
-   NewCGroups = NewCGroups(~ismissing(NewCGroups));
-
-   % Also need to adjust opts.SortGroupMembers
-   % Find the columns to use for computing the sort
-   if opts.SortGroupMembers == "all"
-      % Not sure we need to set the members, but if so, when merging, they lose
-      % their meaning
-      opts.SortGroupMembers = NewCGroups;
-      opts.SortColumns = 1:size(NewYData, 2);
-      % sortgroups = string(unique(CData));
-   else
-      % Find the members of mergegroups that are also in SortGroup?
-      NewSortGroups = NewCGroups;
-      for n = 1:numel(NewCGroups)
-         tf = ~any(ismember(opts.SortGroupMembers,strsplit(NewCGroups(n))));
-         if tf
-            NewSortGroups(n) = missing;
-         end
-      end
-      opts.SortGroupMembers = NewSortGroups;
-      opts.SortColumns = ismember(NewCGroups, opts.SortGroupMembers);
-   end
+   YData = YData(:, keep);
 end
 
-function [XData, YData, EData] = reorderXGroups(opts, XData, YData, EData)
+function [XData, YData, EData] = reorderXGroups(opts, sortcolumns, ...
+      XData, YData, EData)
    %REORDERGROUPS Reorder the x-axis (tick) groups.
    %
    % Use this to order categorical data, or data of any type, other than by
@@ -381,10 +382,10 @@ function [XData, YData, EData] = reorderXGroups(opts, XData, YData, EData)
 
       switch opts.SortBy
          case "ascend"
-            [~, idx] = sort(mean(YData(:, opts.SortColumns), 2), 'ascend');
+            [~, idx] = sort(mean(YData(:, sortcolumns), 2), 'ascend');
             XData = reordercats(XData, string(XData(idx)));
          case "descend"
-            [~, idx] = sort(mean(YData(:, opts.SortColumns),2), 'descend');
+            [~, idx] = sort(mean(YData(:, sortcolumns), 2), 'descend');
             XData = reordercats(XData, string(XData(idx)));
          otherwise
             % "none", the only other value the sortorder namelist allows.
@@ -522,8 +523,8 @@ end
 function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
       cgroups, ydatavar, opts, props)
    % Create the barchart. cgroups names one color group per YData column.
-   % Merging combines columns and renames them, so the caller passes the
-   % names that match the columns rather than the ones CData still holds.
+   % It is read from the categories of CData after any merge relabeled
+   % them, so the names always match the columns.
 
    % Note: "grouped" is the default. Use "BarLayout","stacked" for stacked
    H = bar( XData, YData, 'FaceColor', 'flat', props{:});
@@ -594,6 +595,10 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
 
       set(L, 'Visible', opts.Legend)
    catch
+      % A legend failure must still assign L, or the (H, L, ax) return
+      % throws on an unassigned output. An empty placeholder matches the
+      % other charts' legend-failure value.
+      L = gobjects(0);
    end
 
    % % Note: this might work if table data is passed in with all the group data,
@@ -618,11 +623,11 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
 
 end
 
-% mergecolumns_average, an alternative to mergeGroupColumns above, is in git
-% history. It placed each merged column at the mean position of the columns it
-% merged, rather than at their minimum position. The author's note on it: a
-% mean position can collide with an unmerged column's position. The live code
-% uses the minimum for that reason.
+% mergecolumns_average, an alternative to the member-column merge above, is
+% in git history. It placed each merged column at the mean position of the
+% columns it merged, rather than at their minimum position. The author's
+% note on it: a mean position can collide with an unmerged column's
+% position. The live code uses the minimum for that reason.
 
 
 % % I moved anything out of here that was immediately applicable to above, whats

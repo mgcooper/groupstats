@@ -40,8 +40,9 @@ classdef test_namelists < matlab.unittest.TestCase
    methods (Test)
 
       function testPopulationOptionHoldsTheGroupbayesValues(testCase)
-         % groupbayes documents these three values, so name them here. This
-         % is the one list whose members this test file states outright.
+         % groupbayes documents these three values, so name them here.
+         % sortorder's test below states its members outright too, because
+         % that list is the one SortBy namelist for every chart.
 
          returned = groupstats.namelists.populationoption();
 
@@ -49,13 +50,13 @@ classdef test_namelists < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
-      function testSortorderExtendsSortdirection(testCase)
-         % sortorder adds the no-sort value to the sort directions rather
-         % than repeating them.
+      function testSortorderHoldsTheDirectionsAndNone(testCase)
+         % sortorder is the one SortBy namelist for every chart: the two
+         % sort directions plus the no-sort value.
 
          returned = groupstats.namelists.sortorder();
 
-         expected = [groupstats.namelists.sortdirection(); "none"];
+         expected = ["ascend"; "descend"; "none"];
          testCase.verifyEqual(returned, expected);
       end
 

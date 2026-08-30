@@ -13,6 +13,7 @@ classdef test_privatehelpers < matlab.unittest.TestCase
       validatemember
       isvariable
       settablevarnames
+      mergegroupmembers
    end
 
    methods (TestClassSetup)
@@ -28,10 +29,101 @@ classdef test_privatehelpers < matlab.unittest.TestCase
             groupstats.internal.privatefunction('isvariable');
          testCase.settablevarnames = ...
             groupstats.internal.privatefunction('settablevarnames');
+         testCase.mergegroupmembers = ...
+            groupstats.internal.privatefunction('mergegroupmembers');
       end
    end
 
    methods (Test)
+
+      % ---- mergegroupmembers
+
+      function testMergeBareVectorIsOneGroup(testCase)
+         % A bare string vector, not wrapped in a cell, is one merge group.
+
+         column = categorical(["a"; "b"; "c"]);
+
+         returned = testCase.mergegroupmembers(column, ["a", "b"]);
+
+         expected = categorical( ...
+            ["a and b"; "a and b"; "c"], ["a and b", "c"]);
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testMergeTwoGroupsSequentially(testCase)
+         % Two merge groups in one call each pool their own members, and
+         % each merged category takes its first member's position.
+
+         column = categorical(["a"; "b"; "c"; "d"]);
+
+         returned = testCase.mergegroupmembers(column, ...
+            {["a", "b"]; ["c", "d"]});
+
+         expected = categorical( ...
+            ["a and b"; "a and b"; "c and d"; "c and d"], ...
+            ["a and b", "c and d"]);
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testMergeMemberOrderDoesNotMovePosition(testCase)
+         % The label joins the names in the order given, and the merged
+         % category still takes the lowest old-category position.
+
+         column = categorical(["a"; "b"; "c"]);
+
+         returned = testCase.mergegroupmembers(column, ["b", "a"]);
+
+         expected = categorical( ...
+            ["b and a"; "b and a"; "c"], ["b and a", "c"]);
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testMergeRowlessCategoryByName(testCase)
+         % A category with no rows is still a category, so it merges by
+         % name like any other member.
+
+         column = categorical(["a"; "c"], ["a", "b", "c"]);
+
+         returned = testCase.mergegroupmembers(column, ["a", "b"]);
+
+         expected = categorical(["a and b"; "c"], ["a and b", "c"]);
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testMergeLabelCollisionErrors(testCase)
+         % A generated label that already names a category would pool that
+         % category's rows too, so the helper rejects it.
+
+         column = categorical(["a"; "b"; "a and b"]);
+
+         testCase.verifyError( ...
+            @() testCase.mergegroupmembers(column, ["a", "b"]), ...
+            'groupstats:mergegroupmembers:mergedLabelConflict');
+      end
+
+      function testMergeDuplicateLabelsError(testCase)
+         % Two disjoint merge groups can generate one label when member
+         % names contain " and ". One label for two groups is rejected.
+
+         column = categorical(["a"; "b and c"; "a and b"; "c"]);
+
+         testCase.verifyError( ...
+            @() testCase.mergegroupmembers(column, ...
+            {["a", "b and c"]; ["a and b", "c"]}), ...
+            'groupstats:mergegroupmembers:mergedLabelConflict');
+      end
+
+      function testMergeSingleMemberIsANoOp(testCase)
+         % A single-member group's label is that member, so the merge
+         % changes nothing and raises nothing.
+
+         column = categorical(["a"; "b"]);
+
+         returned = testCase.mergegroupmembers(column, {"a"});
+
+         expected = categorical(["a"; "b"]);
+         testCase.verifyEqual(returned, expected);
+      end
 
       % ---- groupmembers
 

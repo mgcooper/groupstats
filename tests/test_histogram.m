@@ -241,6 +241,144 @@ classdef test_histogram < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+      function testThirdOutputIsTheAxes(testCase)
+         % The family signature is (H, L, ax), and the third output is the
+         % axes the chart was drawn into.
+
+         [~, ~, ax] = groupstats.histogram(testCase.Info, "peak", ...
+            GroupVar = "scenario");
+
+         testCase.verifyTrue(isgraphics(ax, 'axes'));
+      end
+
+      function testFourOutputsAreRejected(testCase)
+         % H, L, and the axes are the only outputs.
+
+         testCase.verifyError( ...
+            @() fourHistOutputs(testCase.Info), ...
+            'MATLAB:nargoutchk:tooManyOutputs');
+      end
+
+      function testMergedGroupOrderNamesTheMergedLabel(testCase)
+         % GroupOrder reads post-merge names, so the merged label moves
+         % its pooled group to the front and the legend follows.
+
+         merged = testCase.Scenarios(2:3);
+         label = strjoin(merged, " and ");
+
+         [~, L] = groupstats.histogram(testCase.Info, "peak", ...
+            GroupVar = "scenario", MergeGroupMembers = {merged}, ...
+            GroupOrder = label);
+
+         returned = string(L.String(1));
+         expected = label;
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testCategoricalMergeSortsByPooledCounts(testCase)
+         % SortBy reads post-merge categories, so the pooled bar sorts by
+         % its combined count.
+
+         H = groupstats.histogram(testCase.Info, "month", ...
+            MergeGroupMembers = {["Jan", "Feb"]}, SortBy = "descend");
+
+         % Every month has equal counts, so the pooled pair leads.
+         cats = string(categories(H.Data));
+         returned = cats(1);
+         expected = "Jan and Feb";
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSortByOrdersTheGroups(testCase)
+         % SortBy orders the groups by the group mean of the data variable,
+         % and the legend follows the draw order.
+
+         [~, L] = groupstats.histogram(testCase.Info, "peak", ...
+            GroupVar = "scenario", SortBy = "descend");
+
+         G = groupsummary(testCase.Info, "scenario", "mean", "peak");
+         [~, order] = sort(G.mean_peak, "descend");
+
+         returned = string(L.String(:));
+         expected = string(G.scenario(order));
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSortByOrdersDatetimeGroups(testCase)
+         % A datetime data variable survives preparation, and SortBy must
+         % order its groups by the group mean without converting the type,
+         % because double() of datetime is not defined.
+
+         g = categorical(["early"; "early"; "late"; "late"]);
+         t = datetime(2020, 1, [1; 3; 20; 22]);
+         tbl = table(g, t, 'VariableNames', {'g', 't'});
+
+         [~, L] = groupstats.histogram(tbl, "t", GroupVar = "g", ...
+            SortBy = "descend");
+
+         returned = string(L.String(:));
+         expected = ["late"; "early"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testCategoricalSortByOrdersByCounts(testCase)
+         % In categorical mode there is no data variable to average, so
+         % SortBy orders the categories by their counts.
+
+         g = categorical([ ...
+            "Rare"; "Common"; "Common"; "Common"; "Common"; ...
+            "Middle"; "Middle"]);
+         tbl = table(g, 'VariableNames', {'g'});
+
+         H = groupstats.histogram(tbl, "g", SortBy = "descend");
+
+         returned = string(categories(H.Data));
+         expected = ["Common"; "Middle"; "Rare"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testGroupOrderBeatsSortBy(testCase)
+         % GroupOrder is a partial order that wins over SortBy: the named
+         % member comes first, and the rest keep their order.
+
+         merged = testCase.Scenarios(3);
+
+         [~, L] = groupstats.histogram(testCase.Info, "peak", ...
+            GroupVar = "scenario", GroupOrder = merged, ...
+            SortBy = "ascend");
+
+         returned = string(L.String(1));
+         expected = merged;
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testCategoricalMergePoolsCategories(testCase)
+         % The categorical call shape merges through the shared helper, so
+         % the named categories pool into one bar at the first member's
+         % category position. Bead groupstats-9gv requires this shape to
+         % pool rather than ignore the request, and the
+         % mergeWithoutGroupVar guard must not raise an error or warning
+         % here.
+
+         H = testCase.verifyWarningFree(@() groupstats.histogram( ...
+            testCase.Info, "month", MergeGroupMembers = {["Jan", "Feb"]}));
+
+         cats = string(categories(H.Data));
+         returned = numel(cats);
+         expected = 11;
+         testCase.verifyEqual(returned, expected);
+
+         returned = cats(1);
+         expected = "Jan and Feb";
+         testCase.verifyEqual(returned, expected);
+
+         % The merged bar holds every Jan and Feb row.
+         returned = sum(H.Data == "Jan and Feb");
+         expected = sum(testCase.Info.month == "Jan") + ...
+            sum(testCase.Info.month == "Feb");
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testMergingKeepsACallerNamedLegendString(testCase)
          % The default legend text is built from the group members. Building
          % it before the merge named the unmerged groups, so the merge path
@@ -313,4 +451,13 @@ classdef test_histogram < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
    end
+end
+
+function fourHistOutputs(Info)
+   %FOURHISTOUTPUTS Ask histogram for a fourth output.
+   %
+   % Written as a function so the call is a statement, which is the only
+   % place a four-output request is syntactically valid.
+
+   [~, ~, ~, ~] = groupstats.histogram(Info, "peak", GroupVar = "scenario");
 end

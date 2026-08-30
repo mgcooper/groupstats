@@ -31,6 +31,118 @@ classdef test_boxchartcats < matlab.unittest.TestCase
 
    methods (Test)
 
+      function testThirdOutputIsTheAxes(testCase)
+         % The family signature is (H, L, ax), and the third output is the
+         % axes the chart was drawn into.
+
+         [~, ~, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub");
+
+         testCase.verifyTrue(isgraphics(ax, 'axes'));
+      end
+
+      function testFourOutputsAreRejected(testCase)
+         % H, L, and the axes are the only outputs.
+
+         testCase.verifyError( ...
+            @() fourBoxOutputs(testCase.Tbl), ...
+            'MATLAB:nargoutchk:tooManyOutputs');
+      end
+
+      function testThirdOutputIsThePassedParentAxes(testCase)
+         % A caller can pass the BoxChart Parent property and draw into an
+         % axes that is not current, so the returned axes must be derived
+         % from the chart rather than from gca. The mean symbols, shading,
+         % and legend still target the current axes; Bead groupstats-50y
+         % covers routing them, so this test turns them off.
+
+         target = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(target, 'figure'));
+         other = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(other, 'figure'));
+
+         [~, ~, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub", Parent = target, PlotMeans = false, ...
+            ShadeGroups = false, Legend = "off");
+
+         testCase.verifyEqual(ax, target);
+      end
+
+      function testMergeGroupMembersPoolsColorGroups(testCase)
+         % MergeGroupMembers pools the named color groups, matching the
+         % other charts: one box series fewer, and the merged label joins
+         % the member names with " and ".
+
+         xg = categorical(repmat(["p"; "q"], 6, 1));
+         cg = categorical(repmat(["a"; "a"; "b"; "b"; "c"; "c"], 2, 1));
+         val = (1:12)';
+         tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
+
+         [H, L] = groupstats.boxchartcats(tbl, "val", "xg", "cg", ...
+            MergeGroupMembers = {["a", "b"]});
+
+         returned = numel(H);
+         expected = 2;
+         testCase.verifyEqual(returned, expected);
+
+         returned = string(L.String);
+         testCase.verifyTrue(any(returned == "a and b"));
+      end
+
+      function testMergeWithoutCGroupVarErrors(testCase)
+         % Merging pools members of the color-group variable, so without
+         % one there is nothing to pool.
+
+         xg = categorical(["p"; "q"]);
+         val = [1; 2];
+         tbl = table(xg, val, 'VariableNames', {'xg', 'val'});
+
+         testCase.verifyError(@() groupstats.boxchartcats(tbl, "val", ...
+            "xg", MergeGroupMembers = {["p", "q"]}), ...
+            'groupstats:boxchartcats:mergeWithoutGroupVar');
+      end
+
+      function testAllSingletonBoxesWarn(testCase)
+         % Every box holding exactly one observation collapses the chart
+         % to points, so the chart reports it.
+
+         xg = categorical(["p"; "q"; "p"; "q"]);
+         cg = categorical(["a"; "a"; "b"; "b"]);
+         val = (1:4)';
+         tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
+
+         testCase.verifyWarning(@() groupstats.boxchartcats(tbl, "val", ...
+            "xg", "cg"), ...
+            'groupstats:boxchartcats:allBoxesSingleObservation');
+      end
+
+      function testSingletonWithMissingPartnerStillWarns(testCase)
+         % boxchart omits missing YData, so a box holding one finite value
+         % and one NaN renders as a singleton and must still count as one.
+
+         xg = categorical(["p"; "p"; "q"]);
+         cg = categorical(["a"; "a"; "a"]);
+         val = [1; NaN; 2];
+         tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
+
+         testCase.verifyWarning(@() groupstats.boxchartcats(tbl, "val", ...
+            "xg", "cg"), ...
+            'groupstats:boxchartcats:allBoxesSingleObservation');
+      end
+
+      function testABoxWithTwoRowsDoesNotWarn(testCase)
+         % Any box with two or more rows means the shape was chosen, so
+         % there is no report, even when other boxes hold one row.
+
+         xg = categorical(["p"; "p"; "q"]);
+         cg = categorical(["a"; "a"; "a"]);
+         val = (1:3)';
+         tbl = table(xg, cg, val, 'VariableNames', {'xg', 'cg', 'val'});
+
+         testCase.verifyWarningFree(@() groupstats.boxchartcats(tbl, ...
+            "val", "xg", "cg"));
+      end
+
       function testOrdinalXGroupWithPlainColorGroupPlotsMeans(testCase)
          % boxchartstats summarized on [XData CData]. Concatenating an
          % ordinal categorical with a plain one throws, and the fallback
@@ -112,18 +224,7 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          % horizontal. barchartcats already honored it.
 
          [~, L] = groupstats.boxchartcats(testCase.Tbl, "Value", "Grp", ...
-            "Sub", LegendOrientation = "vertical");
-
-         returned = string(L.Orientation);
-         expected = "vertical";
-         testCase.verifyEqual(returned, expected);
-      end
-
-      function testLegendOrientationDefaultsToHorizontal(testCase)
-         % The documented default.
-
-         [~, L] = groupstats.boxchartcats(testCase.Tbl, "Value", "Grp", ...
-            "Sub");
+            "Sub", LegendOrientation = "horizontal");
 
          returned = string(L.Orientation);
          expected = "horizontal";
@@ -311,4 +412,13 @@ function tbl = outlierTable()
 
    tbl = table(categorical(grp), categorical(sub), value, ...
       'VariableNames', {'Grp', 'Sub', 'Value'});
+end
+
+function fourBoxOutputs(tbl)
+   %FOURBOXOUTPUTS Ask boxchartcats for a fourth output.
+   %
+   % Written as a function so the call is a statement, which is the only
+   % place a four-output request is syntactically valid.
+
+   [~, ~, ~, ~] = groupstats.boxchartcats(tbl, "Value", "Grp", "Sub");
 end

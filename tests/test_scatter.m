@@ -11,7 +11,7 @@ classdef test_scatter < matlab.unittest.TestCase
    %  4. The unlicensed-grpstats fallback indexed a numeric array with a
    %     categorical.
    %  5. Asking for three or more outputs failed on an unassigned output.
-   %  6. Props was declared and never applied, so a named graphics property
+   %  6. props was declared and never applied, so a named graphics property
    %     was accepted and ignored.
    %
    % See also: groupstats.scatter
@@ -32,6 +32,27 @@ classdef test_scatter < matlab.unittest.TestCase
    end
 
    methods (Test)
+
+      function testMergeGroupMembersPoolsColorGroups(testCase)
+         % MergeGroupMembers pools the named color groups, matching the
+         % other charts: one Line fewer, and the merged legend entry joins
+         % the member names with " and ".
+
+         g = categorical(repmat(["a"; "b"; "c"], 4, 1));
+         x = (1:12)';
+         y = (12:-1:1)';
+         tbl = table(x, y, g, 'VariableNames', {'x', 'y', 'g'});
+
+         [H, L] = groupstats.scatter(tbl, "x", "y", "g", ...
+            MergeGroupMembers = {["a", "b"]});
+
+         returned = numel(H);
+         expected = 2;
+         testCase.verifyEqual(returned, expected);
+
+         returned = string(L.String);
+         testCase.verifyTrue(any(returned == "a and b"));
+      end
 
       function testReturnsOneHandlePerColorGroup(testCase)
          % One Line object per member of the color group variable.
@@ -146,17 +167,25 @@ classdef test_scatter < matlab.unittest.TestCase
          testCase.verifyEqual(sort(returned), sort(expected));
       end
 
-      function testThreeOutputsAreRejected(testCase)
-         % H and L are the only outputs. A third failed on an unassigned
-         % output rather than saying so.
+      function testThirdOutputIsTheAxes(testCase)
+         % The family signature is (H, L, ax), and the third output is the
+         % axes the chart was drawn into.
+
+         [~, ~, ax] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp");
+
+         testCase.verifyTrue(isgraphics(ax, 'axes'));
+      end
+
+      function testFourOutputsAreRejected(testCase)
+         % H, L, and the axes are the only outputs.
 
          testCase.verifyError( ...
-            @() threeOutputs(testCase.Tbl), ...
+            @() fourOutputs(testCase.Tbl), ...
             'MATLAB:nargoutchk:tooManyOutputs');
       end
 
       function testLinePropertiesPassThrough(testCase)
-         % Props was declared and never applied, so a named property was
+         % props was declared and never applied, so a named property was
          % accepted and ignored. gscatter draws Line objects, so a Line
          % property is what applies.
 
@@ -168,22 +197,129 @@ classdef test_scatter < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
-      function testSortByYDataVarForcesDescending(testCase)
-         % Choosing ydatavar forces descending, which the docstring states.
+      function testSortByDefaultsToNoSorting(testCase)
+         % SortBy defaults to "none", so the legend keeps the group order,
+         % and SortVar alone changes nothing.
 
-         H = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
             SortVar = "ydatavar");
 
-         testCase.verifyNotEmpty(H);
+         returned = string(L.String(:));
+         expected = string(unique(testCase.Tbl.Grp));
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSortByOrdersTheLegend(testCase)
+         % SortBy "descend" orders the legend by the group mean of SortVar
+         % within the SortGroup groups, high to low.
+
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+            SortVar = "ydatavar", SortBy = "descend");
+
+         G = groupsummary(testCase.Tbl, "Grp", "mean", "Value");
+         [~, order] = sort(G.mean_Value, "descend");
+
+         returned = string(L.String(:));
+         expected = string(G.Grp(order));
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testCGroupOrderOrdersTheLegend(testCase)
+         % CGroupOrder is a partial order: the named member comes first,
+         % and the rest keep their order.
+
+         members = string(unique(testCase.Tbl.Grp));
+
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+            CGroupOrder = members(end));
+
+         returned = string(L.String(1));
+         expected = members(end);
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSparseSymbolGroupAlignsHandles(testCase)
+         % A symbol subset can hold only a color category whose code is
+         % not the last. gscatter then returns placeholder handles for the
+         % unused lower codes, and handle k is category k, so the
+         % assignment must align by code. A present-value mask miscounted
+         % here and errored.
+
+         g = categorical(["A"; "B"; "C"; "C"]);
+         s = categorical(["s1"; "s1"; "s1"; "s2"]);
+         x = (1:4)';
+         y = (4:-1:1)';
+         tbl = table(x, y, g, s, 'VariableNames', {'x', 'y', 'g', 's'});
+
+         % The order A, C, B gives C code 2, and the s2 subset holds only
+         % C rows, so its gscatter call returns two handles.
+         H = groupstats.scatter(tbl, "x", "y", "g", "s", ...
+            CGroupOrder = ["A", "C"]);
+
+         testCase.verifySize(H, [3, 2]);
+         returned = numel(H(2, 2).XData);
+         expected = 1;
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testCGroupOrderBeatsSortBy(testCase)
+         % An explicit member order on the sorted grouping wins over
+         % SortBy, the same rule the cats charts apply.
+
+         members = string(unique(testCase.Tbl.Grp));
+
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+            CGroupOrder = members(end), ...
+            SortVar = "ydatavar", SortBy = "descend");
+
+         returned = string(L.String(1));
+         expected = members(end);
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSortByStillSortsTheOtherGrouping(testCase)
+         % An explicit color order does not disable SortBy on the symbol
+         % grouping, because the sort reads SortGroup.
+
+         cmembers = string(unique(testCase.Tbl.Grp));
+
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+            "Sub", CGroupOrder = cmembers(end), ...
+            SortGroup = "sgroupvar", SortVar = "ydatavar", ...
+            SortBy = "descend");
+
+         G = groupsummary(testCase.Tbl, "Sub", "mean", "Value");
+         [~, order] = sort(G.mean_Value, "descend");
+
+         % The symbol entries follow the color entries in the legend.
+         ncolor = numel(cmembers);
+         returned = string(L.String(ncolor + 1));
+         expected = string(G.Sub(order(1)));
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSGroupOrderOrdersTheSymbolGroups(testCase)
+         % SGroupOrder does the same for the symbol grouping.
+
+         members = string(unique(testCase.Tbl.Sub));
+
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+            "Sub", SGroupOrder = members(end));
+
+         % The symbol entries follow the color entries in the legend.
+         ncolor = numel(unique(testCase.Tbl.Grp));
+         returned = string(L.String(ncolor + 1));
+         expected = members(end);
+         testCase.verifyEqual(returned, expected);
       end
    end
 end
 
-function threeOutputs(tbl)
-   %THREEOUTPUTS Ask scatter for a third output.
+function fourOutputs(tbl)
+   %FOUROUTPUTS Ask scatter for a fourth output.
    %
    % Written as a function so the call is a statement, which is the only
-   % place a three-output request is syntactically valid.
+   % place a four-output request is syntactically valid.
 
-   [~, ~, ~] = groupstats.scatter(tbl, "X", "Value", "Grp");
+   [~, ~, ~, ~] = groupstats.scatter(tbl, "X", "Value", "Grp");
 end
