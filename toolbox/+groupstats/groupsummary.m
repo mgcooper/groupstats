@@ -28,10 +28,16 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % groupsets - char or string scalar indicating a variable name in tbl which
    %             specifies which groupvars define distinct sets, also known as
    %             "ingroups". For all groupvars in groupsets,
-   %             G.(Percent_<varname>) will sum to 100%.
+   %             G.(Percent_<varname>) will sum to 100%. Omit the argument or
+   %             pass string.empty() to request no groupsets. The scalar
+   %             string "none" is not a groupsets value and is rejected, so a
+   %             table variable literally named "none" cannot be selected
+   %             this way.
    %
    % RowSelectVar, RowSelectMembers - keep only the rows whose RowSelectVar
-   %             value is one of RowSelectMembers, before summarizing.
+   %             value is one of RowSelectMembers, before summarizing. Give
+   %             both together: either one alone is an error, the same two
+   %             errors groupstats.prepareTableGroups raises.
    %
    %
    % This function provides three conveniences:
@@ -79,11 +85,10 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % import groupstats package
    import groupstats.groupselect
 
-   % "none" is the sentinel this family uses for "no groupsets". Convert it to
-   % the empty sentinel, so the code below never treats it as a variable name.
-   if isscalar(groupsets) && groupsets == "none"
-      groupsets = string.empty();
-   end
+   % string.empty() is the one no-groupsets sentinel across the family. The
+   % shared validator rejects a scalar "none" with the rewrite, so the code
+   % below never treats it as a variable name.
+   validategroupsets(groupsets)
 
    % An empty positional argument means "use the default", so a caller can
    % skip one and still reach the argument after it.
@@ -116,20 +121,20 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % also summarized as data.
    datavar = resolveDataVars(tbl, datavar, summaryvars);
 
-   % Keep only the requested rows. groupselect reports which variable it
-   % searched and what it looked for when nothing matches.
+   % Keep only the requested rows. Row selection needs both halves, and the
+   % shared check raises the same two errors prepareTableGroups raises,
+   % under this function's own identifiers. groupselect reports which
+   % variable it searched and what it looked for when nothing matches.
    %
    % Row selection is the only preparation this function shares with the
    % chart family. prepareTableGroups also coerces group variables to
    % categorical, drops unused categories and missing-group rows, and converts
    % the data variable to double. A summary must report the groups and rows
    % the caller's table holds, so it does not route through it.
+   validaterowselect(opts.RowSelectVar, opts.RowSelectMembers, ...
+      "groupsummary", "groupsummary")
    if ~isempty(opts.RowSelectMembers)
-      selectvars = opts.RowSelectVar;
-      if isempty(selectvars)
-         selectvars = groupvars;
-      end
-      tbl = groupselect(tbl, selectvars, opts.RowSelectMembers);
+      tbl = groupselect(tbl, opts.RowSelectVar, opts.RowSelectMembers);
    end
 
    % Parse the bins against groupvars, the list the caller sized them for.

@@ -58,6 +58,9 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    %  for a group variable that was not named.
    %  groupstats:prepareTableGroups:rowSelectVarWithoutMembers - RowSelectVar
    %  was named without RowSelectMembers.
+   %  groupstats:prepareTableGroups:unknownVariable - A named variable is not
+   %  a variable of the table. The message names the calling chart, and the
+   %  identifier stays the same for every caller, so a test can pin it.
    %
    % Notes.
    %
@@ -101,7 +104,12 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
       opts.ConvertDataVar (1, 1) logical = true
    end
 
-   Caller = upper(mcallername());
+   % The caller's name goes in this function's own error messages, so a
+   % chart user reads the chart's name. The three local checks below
+   % (requireGroupVar, validaterowselect, requireVariable) keep their
+   % identifiers under prepareTableGroups, so tests can pin them whatever
+   % the caller.
+   Caller = mcallername();
 
    % UPDATE: if YDataVar is categorical, and the calling function also accepts a
    % "Member"-of var, then the next check is too restrictive. Also, the next
@@ -124,8 +132,12 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
       'XGroupVar', 'XGroupMembers')
    requireGroupVar(opts.CGroupVar, opts.CGroupMembers, Caller, ...
       'CGroupVar', 'CGroupMembers')
-   requireGroupVar(opts.RowSelectVar, opts.RowSelectMembers, Caller, ...
-      'RowSelectVar', 'RowSelectMembers')
+
+   % Row selection is stricter: each half alone is an error, because a
+   % variable with no members selects no rows and leaves an empty chart.
+   % The shared check keeps groupsummary's errors identical to these.
+   validaterowselect(opts.RowSelectVar, opts.RowSelectMembers, ...
+      "prepareTableGroups", Caller)
 
    % Validate variable names by confirming that they are column names of tbl.
    VarNames = tbl.Properties.VariableNames;
@@ -140,25 +152,16 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    % default assigmnent step, but that's it
 
    % Validate YDataVar and (if provided) XDataVar and RowSelectVar.
-   validatestring(ydatavar, VarNames, Caller, 'ydatavar');
+   requireVariable(ydatavar, VarNames, Caller, 'ydatavar');
 
    if ~isempty(opts.XDataVar)
-      validatestring(opts.XDataVar, VarNames, Caller, 'XDataVar');
+      requireVariable(opts.XDataVar, VarNames, Caller, 'XDataVar');
    end
 
-   % Downselect the table by rows if requested
+   % Downselect the table by rows if requested. The half-request errors were
+   % raised above, so members are known to be present here.
    if ~isempty(opts.RowSelectVar)
-      validatestring(opts.RowSelectVar, VarNames, Caller, 'RowSelectVar');
-
-      % RowSelectVar with no members selects no rows, leaving an empty table
-      % and an empty chart. Report it in the caller's own vocabulary, the way
-      % the opposite combination is reported below.
-      if isempty(opts.RowSelectMembers)
-         error('groupstats:prepareTableGroups:rowSelectVarWithoutMembers', ...
-            ['RowSelectVar names %s, and RowSelectMembers is empty. ' ...
-            'Name the members to keep, or leave both out.'], ...
-            opts.RowSelectVar)
-      end
+      requireVariable(opts.RowSelectVar, VarNames, Caller, 'RowSelectVar');
 
       tbl = groupstats.groupselect(tbl, opts.RowSelectVar, ...
          opts.RowSelectMembers);
@@ -171,7 +174,7 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
 
    % Confirm each XGroupMember is a member of tbl.(XGroupVar)
    if ~isempty(opts.XGroupVar)
-      validatestring(opts.XGroupVar, VarNames, Caller, 'XGroupVar');
+      requireVariable(opts.XGroupVar, VarNames, Caller, 'XGroupVar');
    end
    if ~isempty(opts.XGroupMembers)
       % 18 Nov 2023 - I reversed XGroupMembers and tbl.(XGroupVar). I think this
@@ -204,7 +207,7 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
 
    % Confirm each CGroupMember is a member of tbl.(CGroupVar)
    if ~isempty(opts.CGroupVar)
-      validatestring(opts.CGroupVar, VarNames, Caller, 'CGroupVar');
+      requireVariable(opts.CGroupVar, VarNames, Caller, 'CGroupVar');
    end
    if ~isempty(opts.CGroupMembers)
       validatemember(opts.CGroupMembers, tbl.(opts.CGroupVar), Caller, ...
@@ -278,6 +281,21 @@ function requireGroupVar(GroupVar, GroupMembers, Caller, VarArg, MemberArg)
       error('groupstats:prepareTableGroups:membersWithoutGroupVar', ...
          '%s: %s was given without %s. Name the group variable too.', ...
          Caller, MemberArg, VarArg)
+   end
+end
+
+function requireVariable(VarName, VarNames, Caller, ArgName)
+   %REQUIREVARIABLE Require a name to be a variable of the table.
+   %
+   % The match is exact and case-sensitive, because the validated name
+   % indexes the table as tbl.(name) later, and that indexing is
+   % case-sensitive. The identifier is this function's own, so a test can
+   % pin it for every caller; the caller's name goes in the message.
+
+   if ~ismember(string(VarName), string(VarNames))
+      error('groupstats:prepareTableGroups:unknownVariable', ...
+         '%s: %s "%s" is not a variable of the table. Valid names: %s.', ...
+         Caller, ArgName, VarName, strjoin(string(VarNames), ', '))
    end
 end
 

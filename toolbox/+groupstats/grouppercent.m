@@ -17,7 +17,10 @@ function G = grouppercent(tbl, groupvars, groupbins, groupsets)
    %
    %  G gains one Percent_<groupvar> variable per member of GROUPSETS. Each
    %  one holds a within-group percent: for every member of that group
-   %  variable, the rows belonging to that member sum to 100.
+   %  variable, the rows belonging to that member sum to 100. Omit GROUPSETS
+   %  or pass string.empty() to use GROUPVARS. The scalar string "none" is
+   %  not a groupsets value and is rejected, so a table variable literally
+   %  named "none" cannot be selected this way.
    %
    %  Percent, which groupcounts produces, is a different quantity. It is each
    %  row's share of every observation in the table, so the whole column sums
@@ -43,11 +46,11 @@ function G = grouppercent(tbl, groupvars, groupbins, groupsets)
       groupsets (1,:) string = string.empty()
    end
 
-   % "none" is the sentinel groupstats.groupsummary passes down. Accept it and
-   % convert to the empty sentinel the rest of the family uses.
-   if isscalar(groupsets) && groupsets == "none"
-      groupsets = string.empty();
-   end
+   % string.empty() is the one no-groupsets sentinel across the family. The
+   % shared validator rejects a scalar "none" with the rewrite.
+   % groupstats.groupsummary validates before its pass-down, so this repeat
+   % only guards direct callers. An empty groupsets means: use groupvars.
+   validategroupsets(groupsets)
    if isempty(groupsets)
       groupsets = groupvars;
    end

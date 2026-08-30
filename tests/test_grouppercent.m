@@ -92,14 +92,35 @@ classdef test_grouppercent < matlab.unittest.TestCase
             'groupstats:grouppercent:multipleGroupSets');
       end
 
-      function testNoneSentinelIsAccepted(testCase)
-         % groupstats.groupsummary passes "none" down. It means the same as an
-         % empty groupsets: use groupvars.
+      function testNoneGroupSetsSentinelErrors(testCase)
+         % string.empty() is the one no-groupsets sentinel, so a scalar
+         % "none" groupsets is rejected with a rewrite hint. The third
+         % argument here is groupbins, where "none" stays legal as a
+         % binning scheme.
 
-         withnone = groupstats.grouppercent(testCase.Tbl, "Grp", "none", "none");
-         withempty = groupstats.grouppercent(testCase.Tbl, "Grp");
+         % Catch the exception directly so the message guidance is checked
+         % too, not only the identifier.
+         exception = MException.empty();
+         try
+            groupstats.grouppercent(testCase.Tbl, "Grp", "none", "none");
+         catch exception
+         end
+         testCase.assertNotEmpty(exception);
+         returned = exception.identifier;
+         expected = 'groupstats:validategroupsets:noneIsNotASentinel';
+         testCase.verifyEqual(returned, expected);
+         testCase.verifySubstring(exception.message, "string.empty()");
+      end
 
-         testCase.verifyEqual(withnone, withempty);
+      function testEmptyGroupSetsMeansUseGroupVars(testCase)
+         % An explicit string.empty() groupsets must mean the same as
+         % omitting the argument: use groupvars.
+
+         returned = groupstats.grouppercent(testCase.Tbl, "Grp", "none", ...
+            string.empty());
+         expected = groupstats.grouppercent(testCase.Tbl, "Grp");
+
+         testCase.verifyEqual(returned, expected);
       end
 
       function testSummarizedTableIsNotRecounted(testCase)

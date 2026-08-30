@@ -180,15 +180,26 @@ classdef test_groupsummary < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
-      function testRowSelectFindsTheVariableWhenNotNamed(testCase)
-         % Naming members without the variable searches the group variables.
+      function testRowSelectMembersWithoutVarErrors(testCase)
+         % Row selection needs both halves. Members alone have no column to
+         % search, the same rule prepareTableGroups applies, under this
+         % function's own identifier.
 
-         G = groupstats.groupsummary(testCase.Tbl, ["Grp", "Sub"], "mean", ...
-            "Value", "none", string.empty(), RowSelectMembers = "x");
+         testCase.verifyError( ...
+            @() groupstats.groupsummary(testCase.Tbl, ["Grp", "Sub"], ...
+            "mean", "Value", "none", string.empty(), ...
+            RowSelectMembers = "x"), ...
+            'groupstats:groupsummary:membersWithoutGroupVar');
+      end
 
-         returned = sum(G.GroupCount);
-         expected = sum(testCase.Tbl.Sub == "x");
-         testCase.verifyEqual(returned, expected);
+      function testRowSelectVarWithoutMembersErrors(testCase)
+         % The other half alone selects no rows and leaves an empty summary,
+         % so it is an error too.
+
+         testCase.verifyError( ...
+            @() groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
+            "Value", "none", string.empty(), RowSelectVar = "Sub"), ...
+            'groupstats:groupsummary:rowSelectVarWithoutMembers');
       end
 
       function testGroupCountMatchesTheTable(testCase)
@@ -235,16 +246,36 @@ classdef test_groupsummary < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
-      function testNoneGroupSetsSentinelIsAccepted(testCase)
-         % "none" is the sentinel this family uses for "no groupsets". It must
-         % mean the same as omitting the argument, not name a variable.
+      function testNoneGroupSetsSentinelErrors(testCase)
+         % string.empty() is the one no-groupsets sentinel, so a scalar
+         % "none" groupsets is rejected with a rewrite hint. groupbins keeps
+         % "none" because there it is a real binning scheme.
 
-         withnone = groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
-            "Value", "none", "none");
-         withempty = groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
+         % Catch the exception directly so the message guidance is checked
+         % too, not only the identifier.
+         exception = MException.empty();
+         try
+            groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
+               "Value", "none", "none");
+         catch exception
+         end
+         testCase.assertNotEmpty(exception);
+         returned = exception.identifier;
+         expected = 'groupstats:validategroupsets:noneIsNotASentinel';
+         testCase.verifyEqual(returned, expected);
+         testCase.verifySubstring(exception.message, "string.empty()");
+      end
+
+      function testEmptyGroupSetsMeansNoGroupSets(testCase)
+         % An explicit string.empty() groupsets must mean the same as
+         % omitting the argument.
+
+         returned = groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
+            "Value", "none", string.empty());
+         expected = groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
             "Value");
 
-         testCase.verifyEqual(withnone, withempty);
+         testCase.verifyEqual(returned, expected);
       end
 
       function testCallerVariableNamedDiscSurvives(testCase)

@@ -1,12 +1,12 @@
-function tbl = groupselect(tbl, varnames, groupmembers)
+function tbl = groupselect(tbl, groupvars, groupmembers)
    %GROUPSELECT Select rows of table by variable name and group members.
    %
-   %  TBL = GROUPSELECT(TBL, VARNAMES, GROUPMEMBERS)
+   %  TBL = GROUPSELECT(TBL, GROUPVARS, GROUPMEMBERS)
    %
    % Description
-   %  TBL = GROUPSELECT(TBL, VARNAMES, GROUPMEMBERS) returns the rows of TBL
-   %  whose value in one of the VARNAMES variables is a member of
-   %  GROUPMEMBERS. Exactly one of VARNAMES must hold every member of
+   %  TBL = GROUPSELECT(TBL, GROUPVARS, GROUPMEMBERS) returns the rows of TBL
+   %  whose value in one of the GROUPVARS variables is a member of
+   %  GROUPMEMBERS. Exactly one of GROUPVARS must hold every member of
    %  GROUPMEMBERS. That is the variable the rows are selected by.
    %
    %  Searching several variable names lets a caller pass a member list
@@ -27,7 +27,7 @@ function tbl = groupselect(tbl, varnames, groupmembers)
 
    arguments
       tbl tabular
-      varnames (:, 1) string
+      groupvars (:, 1) string
       groupmembers (:, 1) string
    end
 
@@ -39,16 +39,16 @@ function tbl = groupselect(tbl, varnames, groupmembers)
          'Requested no members. Name at least one member to select rows by.')
    end
 
-   % Find which groupvar contains the groupvarselect
+   % Find which group variable contains every requested member
    tf = arrayfun(@(var) all(ismember(groupmembers, string(unique(tbl.(var))))), ...
-      varnames);
+      groupvars);
 
-   % enforce one groupvar for downselection
+   % enforce one group variable for downselection
    if sum(tf) > 1
       error('groupstats:groupselect:ambiguousVariable', ...
-         ['only one groupvar can be downselected using %s. ' ...
+         ['only one group variable can be downselected using %s. ' ...
          'These hold every requested member: %s.'], ...
-         mfilename, strjoin(varnames(tf), ', '))
+         mfilename, strjoin(groupvars(tf), ', '))
    end
 
    % Name the members and the variables searched, so the caller can see which
@@ -57,9 +57,9 @@ function tbl = groupselect(tbl, varnames, groupmembers)
       error('groupstats:groupselect:noMatchingVariable', ...
          ['No variable holds every member of the requested set. ' ...
          'Requested: %s. Variables searched: %s.'], ...
-         strjoin(groupmembers, ', '), strjoin(varnames, ', '))
+         strjoin(groupmembers, ', '), strjoin(groupvars, ', '))
    end
 
-   % Remove members of groupvars that are "groupvarselect"
-   tbl = tbl(ismember(string(tbl.(varnames(tf))), groupmembers), :);
+   % Keep the rows whose selected variable's value is a requested member
+   tbl = tbl(ismember(string(tbl.(groupvars(tf))), groupmembers), :);
 end

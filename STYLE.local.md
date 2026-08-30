@@ -16,6 +16,13 @@ overwrites it.
   fields are PascalCase (`XGroupMembers`, `PlotMeans`, `LegendOrientation`);
   the `arguments`-block structs that hold them are named `opts` (options) and
   `props` (graphics pass-through properties).
+- Group-argument naming scheme: a scalar grouping variable is `groupvar`
+  (`groupbayes`, `groupdifference`, `groupmap`); a vector of grouping
+  variables is `groupvars` (`groupsummary`, `grouppercent`, `groupselect`);
+  the charts use role-prefixed `xgroupvar`/`cgroupvar`/`sgroupvar`.
+  `dropcats` keeps `varnames` because it names categorical variables, not
+  groupings. Positional member lists are `groupmembers`; name-value member
+  options are PascalCase `*Members`.
 - Test classes must be named `test_<subject>.m` and live in `tests/`,
   matching `test_dropcats.m`, `test_groupbayes.m`, and `test_groupmap.m`.
   There are no exceptions.

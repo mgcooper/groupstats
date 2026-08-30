@@ -177,22 +177,25 @@ classdef test_prepareTableGroups < matlab.unittest.TestCase
       end
 
       function testUnknownDataVarErrors(testCase)
-         % The data variable must name a column of the table.
-         %
-         % validatestring builds its identifier from the calling function's
-         % name, which prepareTableGroups reads with mcallername. The whole
-         % identifier therefore changes with the caller, so this pins the
-         % stable suffix. Beads groupstats-hw0 covers making the family's
-         % identifiers consistent.
+         % The data variable must name a column of the table. The identifier
+         % is prepareTableGroups' own and stays the same for every caller,
+         % so this pins it in full.
 
-         try
-            groupstats.prepareTableGroups(testCase.Tbl, "NoSuchVar");
-            testCase.verifyFail('Expected an error for an unknown variable.')
-         catch ME
-            testCase.verifyTrue( ...
-               endsWith(ME.identifier, ':unrecognizedStringChoice'), ...
-               sprintf('Unexpected identifier: %s', ME.identifier));
-         end
+         testCase.verifyError( ...
+            @() groupstats.prepareTableGroups(testCase.Tbl, "NoSuchVar"), ...
+            'groupstats:prepareTableGroups:unknownVariable');
+      end
+
+      function testUnknownVariableMatchesExactly(testCase)
+         % A partial or differently cased name is not a variable of the
+         % table, because the name indexes the table case-sensitively.
+
+         testCase.verifyError( ...
+            @() groupstats.prepareTableGroups(testCase.Tbl, "Valu"), ...
+            'groupstats:prepareTableGroups:unknownVariable');
+         testCase.verifyError( ...
+            @() groupstats.prepareTableGroups(testCase.Tbl, "value"), ...
+            'groupstats:prepareTableGroups:unknownVariable');
       end
 
       function testTimetableIsAccepted(testCase)
