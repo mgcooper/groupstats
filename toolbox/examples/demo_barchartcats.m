@@ -10,6 +10,7 @@
 
 data = groupstats.test.generateTestData('info');
 Info = data.Info;
+scenarios = data.scenarios;
 
 %% The two basic shapes
 
@@ -36,10 +37,10 @@ title("Three months, two scenarios")
 
 %% Change the statistic
 %
-% method selects what the bar height means. "mean" is the default.
+% Method selects what the bar height means. "mean" is the default.
 
 figure
-groupstats.barchartcats(Info, "peak", "month", method = "median");
+groupstats.barchartcats(Info, "peak", "month", Method = "median");
 title("Median peak by month")
 
 %% Sort the x-groups
@@ -93,28 +94,31 @@ title("Mean peak with standard deviation whiskers")
 
 figure
 groupstats.barchartcats(Info, "peak", "month", ...
-   method = "median", PlotError = true);
+   Method = "median", PlotError = true);
 title("Median peak with interquartile whiskers")
 
 %% Shade the x-groups
 %
-% ShadeGroups puts an alternating band behind each x-group, which helps when
-% many color groups make the group boundaries hard to see.
+% ShadeGroups puts an alternating band behind each x-group, which helps
+% when many color groups make the group boundaries hard to see. It is on
+% by default in both cats charts, so this section turns it off.
 
 figure
 groupstats.barchartcats(Info, "peak", "month", "scenario", ...
-   ShadeGroups = true);
-title("Alternating group shading")
+   ShadeGroups = false);
+title("Group shading turned off")
 
 %% Merge color groups
 %
-% MergeGroups takes the YData column indices to combine. The merged bar
-% carries the mean of its parts and its name joins the names it replaces.
-% Merging discards the spread, so PlotError cannot be set with it.
+% MergeGroupMembers names the color-group members to pool, one cell per
+% merge group. The merged bar is the statistic over the pooled member
+% rows. Its label joins the member names with " and ", and it takes the
+% first member's category position. MergeMethod = "membermean" instead
+% averages the member bars' summary values.
 
 figure
 groupstats.barchartcats(Info, "peak", "month", "scenario", ...
-   MergeGroups = {[2, 3]});
+   MergeGroupMembers = {scenarios(2:3)});
 title("The two future scenarios merged into one bar")
 
 %% Select rows before grouping

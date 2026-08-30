@@ -47,13 +47,6 @@ function checkTask(context)
    % permutest is vendored third-party code with its own license.
    files = files(~contains(files, fullfile("+groupstats", "permutest")));
 
-   % demo_groupbayes_counts.m holds the author's scratch work verbatim, so
-   % that production code can stay clean without losing it. Its subfunctions
-   % print at a debug prompt and assign values nothing reads, which is what
-   % they were written to do.
-   files = files(~endsWith(files, fullfile("examples", ...
-      "demo_groupbayes_counts.m")));
-
    issues = codeIssues(files);
 
    assert(isempty(issues.Issues), formattedDisplayText( ...

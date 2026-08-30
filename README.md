@@ -24,7 +24,7 @@ Thanks for checking it out. If you're just getting started, here's what we recom
   ```
 
   The remaining demos print tables: `demo_groupmap`, `demo_groupbayes`,
-  `demo_bayes`, `demo_pairwise_bayes`, and `demo_groupbayes_counts`.
+  `demo_bayes`, and `demo_pairwise_bayes`.
 
 To get more help:
 

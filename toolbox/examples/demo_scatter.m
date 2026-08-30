@@ -56,8 +56,8 @@ title("Summer months only")
 %% Order the legend
 %
 % SortGroup names which grouping the legend order follows, SortVar which
-% data variable the order sorts on, and SortBy the direction. Choosing
-% SortVar "ydatavar" forces "descend".
+% data variable the order sorts on, and SortBy the direction. SortBy
+% defaults to "none", so the legend keeps the group order until it is set.
 
 figure
 groupstats.scatter(Info, "peak", "runoff", "scenario", ...

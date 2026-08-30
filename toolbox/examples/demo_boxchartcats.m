@@ -85,7 +85,7 @@ title("SSP585-HOT-FAR drawn first")
 
 %% Shade the x-groups
 %
-% ShadeGroups is on by default here, unlike barchartcats. This section turns
+% ShadeGroups is on by default in both cats charts. This section turns
 % it off so the difference is visible.
 
 figure
@@ -94,11 +94,15 @@ groupstats.boxchartcats(Info, "peak", "month", "scenario", ...
 title("Group shading turned off")
 
 %% Select rows before grouping
+%
+% Keep two basins, so every (month, scenario) box pools two rows and shows
+% a real interquartile range. One basin leaves one row per box, and the
+% boxes collapse to points, which the chart reports with a warning.
 
 figure
 groupstats.boxchartcats(Info, "peak", "month", "scenario", ...
-   RowSelectVar = "basin", RowSelectMembers = "basinA");
-title("basinA rows only")
+   RowSelectVar = "basin", RowSelectMembers = ["basinA", "basinB"]);
+title("basinA and basinB rows only")
 
 %% Legend and graphics properties
 %
