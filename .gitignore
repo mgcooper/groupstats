@@ -57,13 +57,9 @@ submodules/
 # ----------------
 # ---- MATLAB ----
 # ----------------
-# note: put .prj under source control, and the part of resources/ that defines
-# the MATLAB Project, but not mltbx. resources/project/root holds the Package
-# Toolbox task the release reads; a clone without it cannot package. The
-# hashed sibling folders hold one label record per project file, which
-# packaging never reads, so they stay out.
-resources/project/*/
-!resources/project/root/
+# note: resources/project/root holds the Package Toolbox task the release
+# reads; a clone without it cannot package. The MATLAB Project state
+# policy below tracks all of resources/project.
 *.mltbx
 *.mlappinstall
 pathdef.m
@@ -627,3 +623,11 @@ TSWLatexianTemp*
 # toolbox help pages, which groupstats.help() opens, so they must ship.
 !toolbox/docs/html/
 !toolbox/docs/html/**
+
+# MATLAB Project state. Track resources/project, the project definition
+# openProject reads, so a fresh clone opens as a Project without running
+# the generator first. Ignore every other path under a resources/ folder:
+# MATLAB writes derived caches there, and a cached copy of another
+# project's state is machine-local, not source.
+**/resources/*
+!**/resources/project/
