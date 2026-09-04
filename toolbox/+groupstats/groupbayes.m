@@ -59,6 +59,11 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
    %     marginal probabilities, joint probabilities, and conditional
    %     probabilities.
    %
+   % In plain terms, P_B_GIVEN_A is the probability that an event in groupA
+   % co-occurs with a specific event in groupB. For flood events it
+   % quantifies the coherence, the simultaneous occurrence, between a
+   % subbasin flood and an outlet flood.
+   %
    % P_B_GIVEN_A and P_A_GIVEN_B do not change with Population. They are ratios
    % of counts, N_A_AND_B ./ N_A and N_A_AND_B ./ N_B, so N cancels. Population
    % changes only P_A, P_B, and P_A_AND_B. A conditional whose denominator
@@ -154,22 +159,14 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
       N_A = cellfun(@(A) sum(tbl.(groupvar) == A), groupA); % N(A,C), or N(A)
       N_B = cellfun(@(B) sum(tbl.(groupvar) == B), groupB); % N(B), or N(B,D)
 
-      % Subset groupB rows, count groupA columns
-      N_B_AND_A = cell2mat(arrayfun(@(A) ...
-         arrayfun(@(B) sum(tbl.(groupvar) == B & tbl{:, A}), groupB), ...
-         groupA, 'Uniform', 0)); % N(A and B)
-
-      % Subset groupA rows, count groupB columns
+      % Subset groupA rows, count groupB columns. Rows define the event "A"
+      % and columns define the event "and B", as described in the
+      % documentation. Subsetting by groupB rows and counting groupA columns
+      % gives the other, generally different, asymmetric count.
       N_A_AND_B = cell2mat(arrayfun(@(A) ...
          arrayfun(@(B) sum(tbl.(groupvar) == A & tbl{:, B}), groupB), ...
          groupA, 'Uniform', 0)); % N(A,C and B) or N(A and B,D)
 
-      if ~isequal(N_A_AND_B, N_B_AND_A)
-         % warning('N(A and B) ~= N(B and A)')
-      end
-
-      % Use N_A_AND_B, as described in the documentation (rows define the event
-      % "A", columns define the event "and B")
       % Count each row once. A row whose label appears in both sets belongs
       % to the population once. A pairwise call, where groupA equals groupB,
       % puts every label in both sets.
@@ -258,13 +255,3 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
    P = movevars(P,"GroupA","Before","N_A");
    P = movevars(P,"GroupB","After","GroupA");
 end
-
-% The scratch work that established why this function subsets rows by
-% groupA and counts groupB columns is in
-% sandbox/demo_groupbayes_counts.m, with the count comparison,
-% the Jaccard and phi attempts, and the explicit-loop version.
-
-% An open question from the column-syntax branch, kept verbatim:
-
-      % Need to consider if N should be:
-      % N = N_A + N_B - N_A_AND_B;

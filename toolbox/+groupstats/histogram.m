@@ -55,7 +55,8 @@ function varargout = histogram(tbl, datavar, opts, props)
    %
    % h = groupstats.histogram(_, Name, Value) specifies additional chart options
    % using one or more name-value pair arguments. For a list of properties, see
-   % Histogram Properties.
+   % Histogram Properties. In categorical mode, bin properties such as
+   % NumBins or BinEdges do not apply.
    %
    % Input Arguments
    %
@@ -113,25 +114,6 @@ function varargout = histogram(tbl, datavar, opts, props)
    % See also reordergroups, reordercats, barchart,
    % groupstats.namelists.legendorientation
 
-   % Histogram is unique. It has an option to plot data, or an option to plot
-   % categorical data, where one bar is plotted for each category member. Say I
-   % have a table with tbl.GroupName and each row is a group member, then
-   % histogram(tbl.GroupName) creates a histogram of the occurrences of each group
-   % member. In contrast, my other grouped plot functions would
-
-   % TODO: if the first input is a categorical array, use the "C" syntax from
-   % histogram. if the first input is an array and the second is a groupvar,
-   % then use it, in both cases the user would pass in tbl.(varname) direclty
-
-   % see plotGroupedHist in:
-   % fullfile(matlabroot, ...
-   % 'toolbox/matlab/specgraph/+matlab/+graphics/+chart/@ScatterHistogramChart')
-
-   % If I make groupvar opts.GroupVar, then if GroupVar is specified, datavar
-   % will be grouped by GroupVar, optionally only for GroupMembers. If datavar
-   % is categorical and GroupVar is not specified but GroupMembers is, then
-   % GroupMembers becomes the "Categories" input to histogram.
-
    arguments
       tbl
       datavar = string.empty()
@@ -155,17 +137,6 @@ function varargout = histogram(tbl, datavar, opts, props)
          "legendorientation")} = "vertical"
       props.?matlab.graphics.chart.primitive.Histogram
    end
-
-   % These are the histogram properties, but some won't work if the data is
-   % categorical e.g. NumBins.
-   %    'BarWidth', 'BinCounts', 'BinCountsMode', 'BusyAction', 'ButtonDownFcn',
-   %    'Categories', 'ContextMenu', 'CreateFcn', 'Data', 'DataTipTemplate',
-   %    'DeleteFcn', 'DisplayName', 'DisplayOrder', 'DisplayStyle', 'EdgeAlpha',
-   %    'EdgeColor', 'FaceAlpha', 'FaceColor', 'HandleVisibility', 'HitTest',
-   %    'Interruptible', 'LineStyle', 'LineWidth', 'Normalization',
-   %    'NumDisplayBins', 'Orientation', 'Parent', 'PickableParts', 'Selected',
-   %    'SelectionHighlight', 'SeriesIndex', 'ShowOthers', 'Tag', 'UserData',
-   %    'Visible'
 
    % Import groupstats functions.
    import groupstats.groupselect
@@ -206,12 +177,9 @@ function varargout = histogram(tbl, datavar, opts, props)
          'variable whose members are pooled.'])
    end
 
-   props = namedargs2cell(props); % replace with struct2varargin for pre-2022b
+   props = namedargs2cell(props);
 
-   % Special validation for categorical histogram
-   %    makeCategoricalHistogram = iscategorical(tbl.(datavar)) && ...
-   %       isempty(opts.GroupVar) && ~isempty(opts.GroupMembers);
-
+   % A categorical data variable with no GroupVar selects categorical mode.
    makeCategoricalHistogram = iscategorical(tbl.(datavar)) && ...
       isempty(opts.GroupVar);
 
@@ -348,7 +316,6 @@ function formatHistogram(H, parent)
 
    ylabel(parent, H(1).Normalization);
    set(parent, "XMinorTick", "on", "Box", "on");
-   % set(get(gca, 'XAxis'), 'TickLength', [0 0]);
 end
 
 %% Create the legend

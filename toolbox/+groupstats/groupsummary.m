@@ -54,9 +54,13 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % which is the frequency of each group relative to all observations in all
    % groups.
    %
+   % Limitations:
+   %
+   % groupbins edges must span the data. A bin scheme that leaves rows
+   % <undefined> makes the internal join error with "The key variables
+   % cannot contain any missing values".
+   %
    % See also: groupbayes, grouppercent
-
-   % Note, i changed GroupPercent back to Percent for consistency with matlab
 
    % groupsummary by default returns counts, but not percents.
    % groupcounts returns the counts and the percents.
@@ -65,11 +69,6 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % groupsets. This function combines the ability to compute additional
    % statistics using groupsummary with the default frequencies returned by
    % grouppercent.
-
-   % TODO:
-   % - integrate groupsummary functionsignatures
-
-   % methods = {@circ_mean,@circ_std,@circ_median,@iqr};
 
    arguments
       tbl tabular {mustBeNonempty}
@@ -148,61 +147,14 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
          tbl.(datavar(n)) = double(tbl.(datavar(n)));
       catch
          % let the built-in error catching do the work.
-         % error( ...
-         %    ['Failed to convert categorical datavar to numeric. Please ' ...
-         %    'ensure the categories can be represented as numeric values.']);
       end
    end
 
-   % Next was replaced by more robust method in if tableFlag section. This was
-   % for the first case where I just wanted to replace the function handles,
-   % before bringing in the groupsummary/grouppercent join, I think.
-   %
-   % Create a cellstr array of method names converting function handles to names
-   % names = methods;
-   % for n = 1:numel(methods)
-   %    if isa(methods{n},"function_handle")
-   %       names{n} = func2str(methods{n});
-   %    end
-   % end
-   % % make valid unique varnames
-   % names = matlab.lang.makeValidName(names, 'ReplacementStyle', 'delete');
-   % names = matlab.lang.makeUniqueStrings(names,1:numel(names),namelengthmax);
-   % % names = makevalidvarnames(names);
-
-
-   % Original, need to test the join with non-none bins
-   % G = groupsummary(tbl,groupvars,groupbins,methods,datavar);
-
-   % G = join( ...
-   %    groupsummary(tbl, groupvars, groupbins, methods, datavar), ...
-   %    groupstats.grouppercent(tbl, groupvars, groupbins, groupsets) );
-
-   % 19 Nov 2023 UPDATE:
-   % I think groupsets must be also included in groupvars, and maybe up to
-   % now that never came up but I called this function with "months" for
-   % groupvar and "scenario" for groupsets expecting it to compute
-   % groupsummary for all months by scenario, but groupsets is only used in
-   % the call to grouppercent. So I added the [groupvars, groupsets].
+   % Summarize with the built-in groupsummary, grouped by every summary
+   % variable, so each groupsets member gets its own rows.
    G = groupsummary(tbl, cellstr(summaryvars), groupbins, methods, datavar);
 
    G = dropDiscPrefix(G, cellstr(summaryvars));
-
-   % If groupbins are used and there is <undefined> e.g. if the groupbins did
-   % not include enough edges to define all bins, join will fail with error
-   % "The key variables cannot contain any missing values". So, try to
-   % replace with NaN. BUT this gets complicated if any values are ordinal or
-   % categorical (I think the <undefined> issue is due to categorical)
-   %
-   % This was a start to fix this, idea was to replace missing with nan, but
-   % then I realized its due to categorical, so its complicated whether that
-   % should be done or not, and insead, probably better to use a join
-   % approach similar to stacktables. But for now my solution was to properly
-   % efine the FCS bins outside this function
-   % vars = G.Properties.VariableNames;
-   % for n = 1:numel(vars)
-   %    idx = ismissing(G{:, vars{n}});
-   % end
 
    % Group the percents by summaryvars too, so the join has one key per
    % group and every row finds its match.
@@ -219,14 +171,8 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    G = movevars(G, "GroupCount", "Before", "Percent");
    V = G.Properties.VariableNames;
 
-   % NOTE: Apr 2024 - if methods is function handle like @(x) mean(x) then
-   % the stuff below literally makes the variable name "@(x)mean(x)_varname"
-
-   % this replaces the V2 part below but also negates the need for V1
+   % Rename the generated fun<n>_<var> columns after the anonymous methods.
    V = renameFunctionHandleVars(V, methods, datavar);
-
-   % V(notok) = cellfun(@(x) ...
-   %    strcat(func2str(x),'_',datavar), methods(~ok),'un',0);
 
    G = settablevarnames(G, V);
 end
@@ -278,6 +224,8 @@ function V = renameFunctionHandleVars(V, methods, datavar)
    %
    % The built-in groupsummary names an anonymous method's output fun1_<var>,
    % fun2_<var>, and so on. Replace those with the function's own text.
+   % func2str returns an anonymous function's full text, so the column for
+   % the method @(x)mean(x) is named @(x)mean(x)_<datavar>.
    %
    % Match the generated names by their fun<digits>_ shape, anchored to the
    % end. Matching a bare "fun" prefix would also rename a variable the caller
@@ -305,12 +253,11 @@ function V = renameFunctionHandleVars(V, methods, datavar)
 end
 
 function groupbins = parseGroupBins(groupbins, groupvars)
-   % NOTE: groupbins needs to have one binning method per groupvar, but its
-   % complicated b/c groupbins can be a vector e.g. bin edges or a cell array,
-   % so for groupvars = {'var1','var2'}, groupbins could be [1,2,3], and [1,2,3]
-   % would apply to both var1 and var2, but this probably isn't what we want,
-   % and groupsummary error message is hard to interpret in this case, so I need
-   % to require groiupbins to be a cell array I tink
+   %PARSEGROUPBINS Return one binning scheme per group variable.
+   %
+   % A scalar "none" or a single scheme broadcasts to every groupvar. Any
+   % other count mismatch errors here, because the message the built-in
+   % groupsummary raises for that case is hard to interpret.
 
    if ~iscell(groupbins)
       if isstring(groupbins) || ischar(groupbins)
@@ -345,62 +292,3 @@ function groupbins = parseGroupBins(groupbins, groupvars)
       'Provide one per variable, one in total, or the scalar string ' ...
       '"none".'], numel(groupbins), numel(groupvars))
 end
-
-% % TEST
-%    % This shows how I cannot get something like the change between groups
-%    without addding new functinaliyt like "ReferenceGroup" which is probably
-%    better for a standalone function
-%
-%    % If there was a "ReferenceGroup" option, I could make it work:
-%    ReferenceGroupVar = "basin";
-%    ReferenceGroup = "Outlet";
-%    Tref = tbl(tbl.(ReferenceGroupVar) == ReferenceGroup, :);
-%
-%
-%    Fcount = @(s, b, m) sum(tbl{tbl.rcp == s & tbl.month == m, b});
-%    Fcount("Historical", "Outlet", "Jan")
-%    months = unique(tbl.month);
-%    for n = 1:numel(months)
-%       idxInfo = tbl.month==months(n);
-%       idxStats = G.month==months(n);
-%       [Percents, Counts] = pfa.percentDeltaFCS(tbl(idxInfo, :), "rcp");
-%
-%       % to assign them,
-%       basinStats.Counts(idxStats) = Counts(:);
-%       basinStats.percentDeltaFCS(idxStats) = Percents(:);
-%    end
-%    % TEST
-
-% try
-%    [G,GR,GC] = groupsummary(tbl,groupvars,methods,datavar);
-% catch
-%    G = groupsummary(tbl,groupvars,methods,datavar);
-% end
-
-% Replace discretized (binned) groupvars. Note - might have worked to just
-% search for varnames containing datavar, but oh well. Update - I think this
-% just rebuilds the disc_<datavar> column names, so I commented it out when I
-% creatd the method below that searches for fun_ anmes
-% V1 = groupvars;
-% ok = false(size(groupbins));
-% ii = cellfun(@ischarlike, groupbins);
-% ok(ii) = cellfun(@(groupvar) ismember(groupvar, "none"), groupbins(ii));
-% V1(~ok) = cellfun(@(groupvar) ...
-%    strcat('disc_', groupvar), groupvars(~ok),'un',0);
-
-% % Replace custom function handles
-
-% % This works if datavar is a scalar
-% ok = cellfun(@(m) ~isa(m,'function_handle'), methods);
-% V2 = methods;
-% V2(ok) = strcat(methods(ok),'_', char(datavar));
-% V2(~ok) = cellfun(@(x) ...
-%    strcat(func2str(x),'_',char(datavar)), methods(~ok),'un',0);
-
-% % this could work when datavar is not a scalar, but not sure
-% vv = arrayfun(@(y) cellfun(@(x) ...
-%    strcat(x,'_', y), methods(ok),'un',0), datavar, 'un',0);
-% V2(ok) = cellstr(horzcat(vv{:}))
-
-% % Put them all together
-% V = horzcat(V1{:}, V2{:}, V(numel(groupvars)+numel(methods)+1:end));

@@ -50,8 +50,8 @@ function [stats, samples, result] = groupdifference(tbl, groupvar, datavar, opts
    %  RESULT   One entry per STATS row, holding a sentence per comparison that
    %           states whether the two samples come from the same distribution.
    %
-   % Note: pooling is applied across groupars, within the condition var sets, so
-   % pay attention to the difference if you want to specify pooled true
+   % Note: pooled=true pools across the group members within each condition
+   % set, not across sets.
    %
    % Errors
    %  groupstats:groupdifference:badReferenceGroup - ReferenceGroup is not a
@@ -80,7 +80,8 @@ function [stats, samples, result] = groupdifference(tbl, groupvar, datavar, opts
       stats = allSetDifferences(tbl, groupvar, datavar, opts.conditionvar, opts);
    end
 
-   % For now remove samples but need to update code below
+   % Convert the struct array to a table, then move boot_medians and result
+   % out into the SAMPLES and RESULT outputs.
    try
       stats = struct2table(stats, "AsArray", true);
    catch
@@ -227,22 +228,10 @@ function stats = allSetDifferences(tbl, groupvar, datavar, groupsets, opts)
    groupvalues = string(tbl.(groupvar));
    setvalues = string(tbl.(groupsets));
 
-   % Demo
-   % refData = tbl{ tbl.(groupvar) == members(1) & tbl.(groupsets) == sets(1), datavar };
-   % pooledData = tbl{ tbl.(groupvar) ~= members(1) & tbl.(groupsets) == sets(1), datavar };
-   % median(refData) - median(pooledData);
-   % results = bootdiff({refData, pooledData});
-   % Demo
-
    for m = 1:numel(sets)
 
-      % Each iteration of arrayfun is doing a comparison like this:
-      % T1 = tbl( tbl.(groupvar) == members(1) & tbl.(groupsets) == sets(m), : );
-      % T2 = tbl( tbl.(groupvar) == members(2) & tbl.(groupsets) == sets(m), : );
-
-      % Or, specifically on this data:
-      % d1 = tbl{ tbl.(groupvar) == members(1) & tbl.(groupsets) == sets(m), datavar };
-      % d2 = tbl{ tbl.(groupvar) == members(2) & tbl.(groupsets) == sets(m), datavar };
+      % Each arrayfun iteration extracts the datavar rows where groupvar
+      % equals one member and groupsets equals sets(m).
 
       % Collect all of the data for bootdiff. Compare as text so a cell array
       % of char works like a categorical or a string.
@@ -254,27 +243,13 @@ function stats = allSetDifferences(tbl, groupvar, datavar, groupsets, opts)
       % Compare member 1 to all other members within this groupset. The
       % reference group is the same whether the data is pooled or not; only
       % the members it is compared against change.
-      % In my test case, it compares ROS (sets(1)) in the historical scenario
-      % (members(1)) to all other members (members ~= members(1)).
       [grpdata, outgroup] = poolOutgroups(grpdata, members, opts.pooled);
-
-      % In this case what I want is to pool the data across the condition var
-      % but I still want to
 
       [p, h, testname] = compareToReference(grpdata, opts.tail);
 
-      % Use bootdiff to determine if the median is different. bootdiff
-      % works for both cases because it computes the bootstrapped differences,
-      % so if the first dataset is all zeros, it tests whether the data is
-      % significantly different from zero, and if not, it tests whether the
-      % differences between the first dataset and others are differnet from zero
-
-      % [result, samples] = bootdiff(grpdata);
+      % Use bootdiff for the bootstrapped median differences. It accepts
+      % grpdata pooled or not.
       stats = bootdiff(grpdata);
-
-      % I added this to diagnose something, not sure it should be added in
-      % general
-      % result.grpdata = grpdata;
 
       % Add the p-values and hypothesis test result to result struct. The
       % test name is a value, not part of the variable name, so a set that
@@ -293,25 +268,9 @@ function stats = allSetDifferences(tbl, groupvar, datavar, groupsets, opts)
       stats.set = string(sets(m));
 
       results{m} = stats;
-      % Try limiting the sample size of each draw
-      % result = bootdiff(scores, [], 0.05, 1000);
-
-      % Test for different medians using bootstrap replacement
-      % nboot = 1000;
-      % stat1 = bootstrp(nboot, @median, fcs1);
-      % stat2 = bootstrp(nboot, @median, fcs2);
-      % median(stat2-stat1)
-
-      % figure;
-      % histogram(tbl{groupvar == members(1), datavar}); hold on;
-      % histogram(tbl{groupvar == members(2), datavar});
-      % boxchart([fcs1 fcs2])
-      % boxchart(scenarios([1 5]), [fcs1 fcs2])
    end
 
-   % For each set, there can be multiple comparisons. In the test case, I
-   % only compare SR to ROS, so a per-set assignment would work, but in
-   % general, each "result" will have one p-value and one h-value for each SR
-   % vs ROS, LR, etc., so the labels are assigned inside the loop above.
+   % Each set can hold several comparisons, so the labels are assigned per
+   % comparison inside the loop before the sets concatenate.
    stats = vertcat(results{:});
 end

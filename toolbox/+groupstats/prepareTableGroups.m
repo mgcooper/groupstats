@@ -64,29 +64,11 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    %
    % Notes.
    %
-   % Two cases where the calling function parsing and this function need to
-   % interact carefully: 1) CGroupVar is empty, and CGroupMembers is empty, and
-   % 2) CGroupVar is NOT empty, and CGroupMembers is empty.
-   %
-   % Case 1 example using boxchartcats. If cgroupvar is not passed to the
-   % calling function, it is assigned string.empty, which means groupmembers
-   % returns string.empty for CGroupMembers, so CGroupMembers goes to
-   % prepareTableGroups empty, but the if-else check sets it true(height(tbl), 1),
-   % which is the desired behavior.
-   %
-   % The reason CGroupMembers cannot default to all groupmembers is because in
-   % this case, CGroupVar does not exist.
-   %
-   % Case 2 example. If cgroupvar is passed to boxchartcats but CGroupMembers is
-   % not, groupmembers returns all group members for CGroupMembers, so
-   % CGroupMembers goes to prepareTableGroups as all members, which is the
-   % desired behavior.
-   %
-   % Both cases reduce to one rule with the name-value arguments: empty members
-   % keep every row of that group variable. Resolving the members to the full
-   % member list would select the same rows, so this function does not call
-   % groupmembers at all. The calling functions still do, to fill their own
-   % option defaults.
+   % Empty members skip the member filter for that group variable; rows
+   % whose group value is missing or undefined are still dropped. Members
+   % cannot default to the full member list, because the group variable
+   % itself may be absent, and resolving them to the full member list would
+   % select the same rows, so this function does not call groupmembers.
    %
    % See also: groupstats.groupselect, groupstats.dropcats, groupmembers,
    % validatemember
@@ -111,22 +93,6 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    % the caller.
    Caller = mcallername();
 
-   % UPDATE: if YDataVar is categorical, and the calling function also accepts a
-   % "Member"-of var, then the next check is too restrictive. Also, the next
-   % check makes it difficult / impossible to mimic built-in functions for the
-   % simple case where no grouping is desired.
-
-   % Before commenting it out, I added isempty(RowSelectVar) as another
-   % requirement, but ultimately I think its better to let it pass and then
-   % mimic built-in behavior in the calling function.
-
-   % Exit if at least one grouping variable was not provided.
-   % if isempty(CGroupVar) && isempty(XGroupVar) && isempty(RowSelectVar)
-   %    eid = sprintf('groupstats:%s:noGroupingVarProvided', Caller);
-   %    msg = 'No XGroupVar or CGroupVar provided, try %s(tbl.(ydatavar))';
-   %    error(eid, msg, Caller);
-   % end
-
    % Members are meaningless without the variable they belong to.
    requireGroupVar(opts.XGroupVar, opts.XGroupMembers, Caller, ...
       'XGroupVar', 'XGroupMembers')
@@ -147,10 +113,6 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
       VarNames = [tbl.Properties.DimensionNames(1) VarNames];
    end
 
-   % other than YDataVar, we need ~isempty, then validatestr, then
-   % validateGroupMembers. The groupmembers default assignment eliminates the
-   % default assigmnent step, but that's it
-
    % Validate YDataVar and (if provided) XDataVar and RowSelectVar.
    requireVariable(ydatavar, VarNames, Caller, 'ydatavar');
 
@@ -165,11 +127,6 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
 
       tbl = groupstats.groupselect(tbl, opts.RowSelectVar, ...
          opts.RowSelectMembers);
-      % Dec 2023 - replaced VarNames with RowSelectVar, otherwise if
-      % RowSelectMembers are present in more than one of VarNames, groupselect
-      % errors b/c it only allows one variable to select rows by. Not sure why
-      % VarNames was ever used.
-      % tbl = groupstats.groupselect(tbl, VarNames, RowSelectMembers);
    end
 
    % Confirm each XGroupMember is a member of tbl.(XGroupVar)
@@ -177,18 +134,8 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
       requireVariable(opts.XGroupVar, VarNames, Caller, 'XGroupVar');
    end
    if ~isempty(opts.XGroupMembers)
-      % 18 Nov 2023 - I reversed XGroupMembers and tbl.(XGroupVar). I think this
-      % is the desired behavior - XGroupMembers defines the "ValidMembers"
-      % provided by the user, tbl.(XGroupVar) defines the actual members.
-      % UPDATE: reversing them fixes the situation where the data does not
-      % contain one of the expected group members e.g. in my application, I sent
-      % in all months from Jan-Dec which were previously defined, but the table
-      % did not contain any Feb data points. If instead I used
-      % unique(tbl.(XGroupVar)) to define XGroupMembers, it would work. So I
-      % commented out the "fix" and re-activated the old behavior, otherwise the
-      % expected behavior where a specific group member is designated by
-      % XGroupMembers leads to failure in validatemember.
-      % validatemember(tbl.(XGroupVar), XGroupMembers, Caller, 'XGroupMembers')
+      % validatemember checks each requested member against the data column,
+      % so a requested member absent from the data errors.
       validatemember(opts.XGroupMembers, tbl.(opts.XGroupVar), Caller, ...
          'XGroupMembers')
       inxgroup = ismember(string(tbl.(opts.XGroupVar)), opts.XGroupMembers);
@@ -210,6 +157,7 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
       requireVariable(opts.CGroupVar, VarNames, Caller, 'CGroupVar');
    end
    if ~isempty(opts.CGroupMembers)
+      % Same member check as the x-axis group above.
       validatemember(opts.CGroupMembers, tbl.(opts.CGroupVar), Caller, ...
          'CGroupMembers')
       incgroup = ismember(string(tbl.(opts.CGroupVar)), opts.CGroupMembers);
@@ -219,9 +167,6 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    else
       incgroup = true(height(tbl), 1);
    end
-
-   % I think I can replace everything below regarding badcats with a call to
-   % dropcats, and combine the try-catch cast to / from categorical for clarity
 
    % If xgroupvar/cgroupvar are not categorical, try to convert them. The chart
    % functions group and order by category, so a text or numeric group variable
@@ -320,27 +265,3 @@ function tbl = tryCategorical(tbl, GroupVar)
       % let the built-in error catching do the work.
    end
 end
-
-
-% For reference, I thought this would work but it fails if the calling function
-% has a non-empty X/CGroupVar and an empty X/CGroupMembers, so the default
-% assignment is almost worthless, but it does allow for calling this function
-% wihtout those variables at all, so there is still non-zero purpose
-
-% % Confirm each XGroupMember is a member of tbl.(XGroupVar)
-% if isempty(XGroupVar)
-%    inxgroup = true(height(tbl), 1);
-% else
-%    validatestring(XGroupVar, VarNames, Caller, 'XGroupVar');
-%    validatemember(XGroupMembers, tbl.(XGroupVar), Caller, 'XGroupMembers')
-%    inxgroup = ismember(string(tbl.(XGroupVar)), XGroupMembers);
-% end
-%
-% % Confirm each CGroupMember is a member of tbl.(CGroupVar)
-% if isempty(CGroupVar)
-%    incgroup = true(height(tbl), 1);
-% else
-%    validatestring(CGroupVar, VarNames, Caller, 'CGroupVar');
-%    validatemember(CGroupMembers, tbl.(CGroupVar), Caller, 'CGroupMembers')
-%    incgroup = ismember(string(tbl.(CGroupVar)), CGroupMembers);
-% end

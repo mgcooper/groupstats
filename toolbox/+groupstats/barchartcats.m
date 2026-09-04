@@ -107,6 +107,12 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % SortGroupMembers restricts which color-group members contribute to the
    % sort value.
    %
+   % Note
+   %
+   % Grouped data is summarized in category order, not first-appearance
+   % order. Legend text built outside this function must follow category
+   % order.
+   %
    % Dependencies
    %
    % These come from matfunclib and must be on the path:
@@ -117,30 +123,6 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    %
    % See also reordergroups, reordercats, barchart,
    % groupstats.boxchartcats, groupstats.namelists.sortorder
-
-   % NOTE: "unique" is embedded all over the place e.g. in the call to
-   % groupsummary in summarizeTableGroups ... which means the CGroup / YData at
-   % minimum is in sorted order. This creates a possible discrepancy. Setting
-   % legend text outside this function with unique(..., "stable") assumes the
-   % data is in stable order, and it is not. It could also lead to errors
-   % within this function, but will require time to sort out.
-
-   % TODO:
-   %
-   % - add a "histogram" or "frequencies" or maybe "groupfilter" option in
-   % which the xgroupvar is transformed to generate the values on the y axis. In
-   % this case ydatavar and xgroupvar would be the same. The data would then
-   % need to be numeric in an underlying sense, or ordinal, or otherwise
-   % compatible with the transformation applied to the xgroupvar data. Could add
-   % an option to use piechart instead of barchart. Or, this type of
-   % functionality could go to piechartcats, and that function could have a
-   % "DisplayType" option that uses bars instead of pies.
-   %
-   % - allow ydatavar to be a vector of strings indicating multiple columns in a
-   % table? Ran into this for the case where a table is already a summary table
-   % and I want to plot different vars side by side. Transform the table to
-   % accomplish this. Stack the vars into one var, and add a categorical var
-   % holding the original varnames.
 
    arguments
       tbl tabular
@@ -157,14 +139,10 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       opts.SortBy (1,1) string ...
          { groupstats.namelists.mustBeMemberOf(opts.SortBy, ...
          "sortorder") } = "none"
-      % SortGroupMembers are members of cgroupvar to be used for computing the
-      % sorting order of the xgroups. For example, say there are five xgroup
-      % members, i.e. five unique values of tbl.(xgroupvar), and three cgroup
-      % members. The default "ascend" computes the average of the three cgroup
-      % bars in each xgroup. It then sorts the xgroups by those averages. If
-      % instead you
-      % want to sort by a particular cgroup member, specify them using
-      % opts.SortGroupMembers.
+      % SortGroupMembers names the cgroupvar members whose bars compute
+      % each x-group's sort value when SortBy is set. The default "all"
+      % averages every cgroup bar; name specific members to sort by them
+      % alone.
       opts.SortGroupMembers (:,1) string = "all"
       opts.MergeGroupMembers (:,1) = string.empty()
       opts.MergeMethod (1,1) string ...
@@ -294,22 +272,9 @@ function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
       xgroupvar, cgroupvar, method)
    %SUMMARIZETABLEGROUPS
 
-   % TODO
-   % - check if two calls to groupsummary or similar has occurred in which case
-   % there may be e.g. mean_mean_<var>. This would happen if I passed in a table
-   % that was created with groupsummary, in which there is no need to summarize
-   % the data further.
-   % - Add a method to handle missing values. In the above example, a binning
-   % method may have been applied to the table outside this function. If a
-   % group has no members for a bin, the table will not have the size the
-   % cgroupvar and xgroupvar counts imply.
-
-   % cgroupvar complicates this when it is "none" and I don't think we need
-   % it anyway, in boxchartcats I set CData to a logical the same size as
-   % XData which I think is a hack to get boxchart to act right
-   % G = groupsummary(Tplot,xgroupvar, ["mean", "std"], ydatavar);
-   % NEVERMIND = we do need cgroupvar, it controls how groupsummary returns
-   % the groups which then implicitly gets bar to act right
+   % cgroupvar leads the grouping list because it controls the row order
+   % groupsummary returns, which the reshape below and bar's series
+   % layout rely on.
 
    if strcmp(method,'mean')
       G = groupsummary(tbl,[cgroupvar xgroupvar], ["mean", "std"], ydatavar);
@@ -328,12 +293,12 @@ function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
 
    % Each column of Y needs to correspond to a group of bars. Each bar in a
    % group is a different color, and each group is a different x-tick.
-   % XData = reshape(XData, [], numel(xgroupuse));
    XData = unique(XData);
    YData = reshape(YData, numel(XData), []);
    EData = reshape(EData, numel(XData), []);
 
-   % Aug 18, 2023, Moved this from the main function when prepareTableGroups
+   % cgroupvar may be empty; the logical stand-in makes bar treat
+   % everything as one color group, matching boxchartcats.
    try
       CData = tbl.(cgroupvar);
    catch
@@ -348,7 +313,9 @@ function [CData, YData] = mergemembermean(CData, YData, mergegroups)
    % The columns of YData arrive in category order of CData. Each merge
    % group's columns average into the first member's category position.
    % The shared relabel gives the merged category the same position, so
-   % the columns and the categories stay paired.
+   % the columns and the categories stay paired. The merged column takes
+   % the minimum member position; a mean position can collide with an
+   % unmerged column's position.
 
    % Capture the pre-merge category order, then relabel the rows through
    % the shared helper, which also validates the member names.
@@ -405,7 +372,6 @@ function [XData, YData, EData] = reorderXGroups(opts, sortcolumns, ...
       % would move each height onto another group's tick.
       XData = reordercats(XData, members(idx));
    end
-   % TODO: reorder the legend entries if custom ones provided
 end
 
 function [YData, EData, CData] = reorderCGroups(opts, YData, EData, CData)
@@ -529,11 +495,9 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
    % Note: "grouped" is the default. Use "BarLayout","stacked" for stacked
    H = bar( XData, YData, 'FaceColor', 'flat', props{:});
 
-   % For colors, if there are more bars than default colors, need to generate
-   % colors, so I switched to the method below that uses n=1:length(H)
-
-   % Load default colors to match the mean symbols to the boxcharts
-   % colors = defaultcolors;
+   % With FaceColor "flat", the scalar CData = n set below maps each bar
+   % series through the axes colormap, so a chart with more bars than
+   % ColorOrder rows still colors every bar distinctly.
 
    % Add a ylabel
    ylabel(ydatavar);
@@ -563,8 +527,6 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
       if ~ismember("FaceAlpha", given)
          H(n).FaceAlpha = 0.75;
       end
-      %H(n).FaceColor = colors(n,:);
-      %H(n).FaceAlpha = 0.3;
    end
 
    % Add the legend
@@ -589,9 +551,6 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
          'AutoUpdate', 'off', ...
          'Orientation', opts.LegendOrientation, ...
          'FontSize', 12);
-      % 'Location', 'northoutside', ...
-      % 'AutoUpdate', 'off', ...
-      % 'numcolumns', numel(legendtxt) );
 
       set(L, 'Visible', opts.Legend)
    catch
@@ -601,90 +560,7 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
       L = gobjects(0);
    end
 
-   % % Note: this might work if table data is passed in with all the group data,
-   % but % in my example I used the metadata table from Info which already has
-   % the group % summary calculations so I cannot get the std
-   %
-   % % To get same order as the boxcharts, use [XData CData], not [CData XData]
-   % try
-   %    [mu, uv] = groupsummary(YData(:), [XData(:) CData], ["mean", "std"]); % uv = [uv{:}];
-   % catch
-   %    [mu, uv] = groupsummary(YData, XData, ["mean", "std"]); % uv = [uv{:}];
-   % end
-
-   % % To add labels:
-   % for n = 1:numel(H)
-   %    xtips = H(n).XEndPoints;
-   %    ytips = H(n).YEndPoints;
-   %    labels = string(H(n).YData);
-   %    text(xtips,ytips,labels,'HorizontalAlignment','center',...
-   %        'VerticalAlignment','bottom')
-   % end
-
 end
-
-% mergecolumns_average, an alternative to the member-column merge above, is
-% in git history. It placed each merged column at the mean position of the
-% columns it merged, rather than at their minimum position. The author's
-% note on it: a mean position can collide with an unmerged column's
-% position. The live code uses the minimum for that reason.
-
-
-% % I moved anything out of here that was immediately applicable to above, whats
-% left could be helpful for adding the mean +/- std idea
-% function H = barchartcats(tbl,XData,YData,CData,ydatavar,method,varargs)
-% % barchartcats(tbl,ydatavar,xgroupvar,cgroupvar, ...
-% %    xgroupuse,cgroupuse,BoxChartOpts,opts)
-%
-% % Default method is 'mean'
-% if nargin < 5
-%    method = 'mean';
-% end
-%
-% % Summarize the data
-% if strcmp(method,'mean')
-%    % [mu, uv, uc] = groupsummary(YData, [XData CData], ["mean", "std"]);
-%    if istable(tbl)
-%       G = groupsummary(tbl,{XData CData}, ["mean", "std"], YData);
-%    else
-%       G = groupsummary(tbl, [XData CData], ["mean", "std"], YData);
-%    end
-% elseif strcmp(method,'median')
-%    % [mu, uv, uc] = groupsummary(YData, [XData CData], {"median", @iqr});
-%    G = groupsummary(tbl, [XData CData], {"median", @iqr}, YData);
-% end
-%
-% % % % % % % % % % % % % % % % % % % % % % % % % % %
-%
-% X = categorical(unique(metadata.basin));
-% Y = nan(numel(X), numel(scenarios));
-% for n = 1:numel(scenarios)
-%    Y(:,n) = metadata.threshold(metadata.scenario == scenarios(n));
-% end
-%
-% % Reorder from low to high POT
-% [~,idx] = sort(mean(Y,2));
-% X = reordercats(X,string(X(idx)));
-%
-% % % % % % % % % % % % % % % % % % % % % % % % % % %
-%
-% % Create the barchart
-% H = bar( XData, mu, 'FaceColor', 'flat', varargs{:} );
-%
-% Add error bars
-% hold on
-% if strcmp(method,'mean')
-%    for n = 1:length(mu)
-%       errorbar(n, mu(n), sigma(n), 'k', 'LineStyle', 'none');
-%    end
-% elseif strcmp(method,'median')
-%    for n = 1:length(mu)
-%       errorbar(n, mu(n), q3(n)-q1(n), 'k', 'LineStyle', 'none');
-%    end
-% end
-% hold off
-%
-% end
 
 %%
 % BSD 3-Clause License
@@ -716,11 +592,3 @@ end
 % CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 % OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 % OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-% Note, the columns need to be categorical, but the 'x/cgroupvar' and
-% 'xgroupuse/c' inputs can be strings/chars/cellstr or categorical. Specifying
-% 'string' in the arguments block converts implicitly to string.
-% ismember('someCategoricalVariable','someStringVariable') works, but only if
-% the string is scalar, or a cell array of chars. The approach here converts
-% to string. In a few places, attention is needed to convert to string
-% if non-scalar string/categorical comparisons are made.

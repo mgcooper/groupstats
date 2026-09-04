@@ -104,13 +104,6 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % See also: reordergroups, reordercats, boxchart,
    % groupstats.barchartcats, groupstats.namelists.sortorder
 
-   % Note, if notch is off, the mean looks nice as a solid white circle. If notch
-   % is on, the mean may fall outside the shaded region, so face color is needed.
-
-   % To add custom whiskers:
-   % arrayfun(@(n) set(H(n),'WhiskerLineStyle','none'),1:numel(H))
-   % then plot custom ones
-
    % Note, the columns need to be categorical, but the 'x/cgroupvar' and
    % 'xgroupuse/c' inputs can be strings/chars/cellstr or categorical.
    % Specifying 'string' in the arguments block performs an implicit conversion
@@ -254,8 +247,6 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % Add shaded bars to distinguish groups if requested
    shadeboxchartgroups(opts,H);
 
-   % for troubleshooting
-   % muTbl = groupsummary(Tplot,{xgroupvar,cgroupvar}, "mean", ydatavar);
    if opts.Legend == "off"
       legend off
    end
@@ -355,10 +346,11 @@ function [XData, YData] = reorderGroups(opts, XData, YData)
       members = string(categories(removecats(XData)));
       Locb = reordergroupmembers(opts.XGroupOrder, members, ...
          "boxchartcats", "XGroupOrder");
+
+      % reordercats changes the display order and leaves the rows where
+      % they are, so XData and YData stay paired row by row.
       XData = reordercats(XData, members(Locb));
-      % YData = YData(Locb, :);
    end
-   % TODO: reorder the legend entries if custom ones provided
 end
 
 function plotboxchartstats(opts,H,XData,YData,CData)
@@ -391,6 +383,14 @@ function plotboxchartstats(opts,H,XData,YData,CData)
    end
 end
 
+% Translation between boxchart and groupsummary
+%  boxchart    groupsummary(tbl,...)     groupsummary(A,...)
+% ----------  --------------------     -------------------
+% xgroupdata   groupvars{1} (varname)  groupvars(:,1) (column vector)
+% cgroupdata   groupvars{2} (varname)  groupvars(:,2) (column vector)
+% ydata        datavars     (varname)  A              (column vector)
+% N/A          method
+% N/A          groupbins = actual bin edges or method, for both tbl and A syntax
 function [mumat, medmat, xlocs] = boxchartstats(H, XData, YData, CData)
 
    % Import each package member this local function requires.
@@ -404,13 +404,8 @@ function [mumat, medmat, xlocs] = boxchartstats(H, XData, YData, CData)
    % categorical and the other is not, which the ordinary two-group call is.
    [mu, uv] = groupsummary(YData, {XData, CData}, "mean");
    med = groupsummary(YData, {XData, CData}, "median");
-   % Table format:
-   % muTbl = groupsummary(Tplot,{xgroupvar,cgroupvar}, "mean", ydatavar);
 
-   % If there were no missing charts on any xticks:
-   % mumat = reshape(mu,size(xlocs));
-
-   % Instead, place each summarized pair in its own slot. xlocs holds one row
+   % Place each summarized pair in its own slot. xlocs holds one row
    % per color group and one column per x-tick. A combination with no rows is
    % absent from uv, so it stays NaN here rather than shifting every later
    % value onto the wrong box.
@@ -457,9 +452,9 @@ function shadeboxchartgroups(CustomOpts, H)
    % Get the y-coordinate of the plot bounds
    [ylow, yhigh] = bounds(ylim);
 
-   % since we know the data is regular, fill nan's. naninterp1 needs at least
-   % two known points to interpolate between, so a grid with too few filled
-   % x-tick groups gets no shading rather than an error.
+   % The x-tick grid is regular, so interpolate the NaN bounds. naninterp1
+   % needs at least two known points to interpolate between, so a grid with
+   % too few filled x-tick groups gets no shading rather than an error.
    if nnz(~isnan(xleft)) < 2 || nnz(~isnan(xright)) < 2
       return
    end
@@ -470,7 +465,9 @@ function shadeboxchartgroups(CustomOpts, H)
    try
       dx = mean((xleft(2:end) - xright(1:end-1)),'omitnan') / 2;
    catch
-      % This means there is only one box, maybe no shading?
+      % Defensive catch for an unexpected indexing or arithmetic failure in
+      % the gap computation; half the box width stands in for dx. The guard
+      % above already returns when fewer than two bounds are known.
       dx = (xright - xleft) / 2;
    end
 
@@ -543,234 +540,6 @@ function setboxchartylim(H, XData, YData, CData)
    end
    ylim(bounds + [-padding padding]);
 end
-
-% % This was stuff in boxchartstats and/or plotboxchartmeans I did not end up using
-%
-% % Get the unique values on the X-axis
-% uX = unique(XData);
-%
-% % Get the number of xticks (number of boxchart groups)
-% NumX = numel(xgroupuse);
-% NumG = numel(cgroupuse);
-% symbols = defaultmarkers("closed");
-% sizes = [8, 8, 12, 8, 12];
-
-% % More explicit, for reference:
-% unique_cats = unique(CData);
-% unique_cats_vector = uv{:,2};
-% notmissing = ~isnan(xlocs);
-% mu_matrix = nan(size(xlocs));
-% for n = 1:numel(unique_cats)
-%    mu_matrix(n,notmissing(n,:)) = mu(unique_cats_vector==unique_cats(n));
-% end
-%
-% % This was the concise form of above before I saw the final version
-% ucats = unique(CData);
-% mumat = nan(size(xlocs));
-% for n = 1:numel(ucats)
-%    mumat(n,~isnan(xlocs(n,:))) = mu(uv{:,2}==ucats(n));
-% end
-
-% just in case the version above that first allocates nan(size(xlocs)) fails
-% mumat(~isnan(xlocs)) = mu(ismember(uv{:,2},unique(CData)));
-% mumat = reshape(mumat,size(xlocs)); mumat(isnan(xlocs)) = NaN;
-
-
-
-% % This does the same thing above does, but may be more useful. Note, ismember
-% % works b/w categorical and string iff the string is scalar
-% if any(~ismember(xgroupuse, string(unique(tbl.(xgroupvar)))))
-%    error('all elements of xgroupuse must be members of the set tbl.(xgroupvar)')
-% end
-% if any(~ismember(cgroupuse, string(unique(tbl.(cgroupvar)))))
-%    error('all elements of cgroupuse must be members of the set tbl.(cgroupvar)')
-% end
-
-% % This should not be necessary b/c I set cgroupuse/x to all values in
-% c/xgroupvar for the case where they are "none",
-
-% % Subset the rows for the cgroup and xgroup variables
-% if cgroupuse == "none"
-%    incgroup = true(height(tbl),1);
-% else
-%    incgroup = ismember(tbl.(cgroupvar),cgroupuse);
-% end
-%
-% if xgroupuse == "none"
-%    inxgroup = true(height(tbl),1);
-% else
-%    inxgroup = ismember(tbl.(xgroupvar),xgroupuse);
-% end
-%
-% iplot = incgroup | inxgroup;
-
-
-% % If both xgroupvar & cgroupvar are "none", there is no grouping variable
-% if xgroupvar == "none" && cgroupvar == "none"
-%    error('No xgroupvar or cgroupvar was specified, use boxchart')
-%
-%    % Could call createCategoricalBoxChart, or H = boxchart(tbl.(ydatavar))
-%    % H = createCategoricalBoxChart(XData,YData,CData,ydatavar,varargs);
-% end
-%
-% if cgroupvar == "none" % use all categorical variables
-%    cgroupvar = string(gettablevarnames(tbl,'categorical'));
-% end
-
-
-% ypatchnew = repmat([y_limits(1) y_limits(1) y_limits(2) y_limits(2) y_limits(1)], numel(P), 1);
-% ypatch = repmat([ylow; ylow; yhigh; yhigh; ylow], 1, numel(idxodd));
-% P.YData = repmat(ypatch_new(i, :);
-
-% % Function to update the patch's y-limits
-% function updateshadedbounds(P, ax)
-%    ypatchnew = repmat( ...
-%       [ax.YLim(1); ax.YLim(1); ax.YLim(2); ax.YLim(2); ax.YLim(1)], ...
-%       1, size(P.Faces,1));
-%    for n = 1:size(P.Faces,1)
-%       if isvalid(P(n))
-%          P(n).YData = ypatchnew(:,n);
-%       end
-%    end
-% end
-
-% shaded bars
-
-% function shadeboxchartgroups(shadegroups,H)
-%
-% if shadegroups == false
-%    return
-% end
-%
-% % Get the x-coordinate of the bounds of each boxchart group (the left/right-most
-% % x-coordinate of each xtick group)
-% [~,xleft,xright] = boxchartxdata(H);
-%
-% % get the y-coordinate of the plot bounds
-% [ylow,yhigh] = bounds(ylim);
-%
-% % to extend the shaded region halfway between each group:
-% dx = (xleft(2)-xright(1))/2;
-% xleft = xleft - dx;
-% xright = xright + dx;
-%
-% h_patch = gobjects(ceil(numel(xleft))/2,1);
-% for n = 1:2:numel(xleft)
-%
-%    xpatch = [xleft(n) xright(n) xright(n) xleft(n) xleft(n)];
-%    ypatch = [ylow ylow yhigh yhigh ylow];
-%
-%    h_patch(n) = patch('XData',xpatch,'YData',ypatch, ...
-%       'FaceColor',[0.5 0.5 0.5], ...
-%       'FaceAlpha',0.1, ...
-%       'EdgeColor','none');
-% end
-% ax = gca;
-% % Set up a listener for changes in the YLim property
-% addlistener(ax, 'YLim', 'PostSet', @(src, evt) updateshadedbounds(h_patch, ax));
-%
-% % Function to update the line's y-limits
-% function updateshadedbounds(h_patch, ax)
-%     y_limits = ax.YLim;
-%     h_patch.YData = y_limits;
-% end
-%
-% % % Create a sample plot
-% % x = 1:10;
-% % y = rand(1, 10);
-% % plot(x, y, 'o-');
-% % hold on;
-% %
-% % % Get the current axes
-% % ax = gca;
-% %
-% % % Plot a vertical line at x=5
-% % x_line = 5;
-% % y_limits = ax.YLim;
-% % h_line = line([x_line, x_line], y_limits);
-% end
-
-% Translation between boxchart and groupsummary
-%  boxchart    groupsummary(tbl,...)     groupsummary(A,...)
-% ----------  --------------------     -------------------
-% xgroupdata   groupvars{1} (varname)  groupvars(:,1) (column vector)
-% cgroupdata   groupvars{2} (varname)  groupvars(:,2) (column vector)
-% ydata        datavars     (varname)  A              (column vector)
-% N/A          method
-% N/A          groupbins = actual bin edges or method, for both tbl and A syntax
-%
-% For boxchart, I think the bin edges are the xvertex coordinates of each box
-
-
-
-%% This clarifies the array vs table syntax for calling groupsummary
-
-% % Array format: A and groupvars must have the same number of rows. groupvars can
-% % have multiple columns, to create multiple groups
-% A = tbl.(ydatavar);
-% groupvars = tbl.(cgroupvar);
-% [mu, uv] = groupsummary(A, groupvars, "mean");
-%
-% % This produces the data needed for boxchartcats
-% A = tbl.(ydatavar);
-% groupvars = [tbl.(cgroupvar) tbl.(xgroupvar)];
-% [mu, uv] = groupsummary(A, groupvars, "mean");
-% uv = horzcat(uv{:});
-%
-% % Using XData,YData,CData
-% A = double(YData);
-% groupvars = [CData XData];
-% [mu, uv] = groupsummary(A, groupvars, "mean");
-% uv = horzcat(uv{:});
-%
-% % Table format
-% groupvars = {cgroupvar,xgroupvar};
-% muTbl = groupsummary(tbl,groupvars, "mean", ydatavar);
-%
-% NOTE: none of these scatter/gscatter options seem to give what I want, because
-% they plot the group means
-%
-% scatter as of r2021b can plot data from a table
-% This is what we want to add to the plot, but the data are stacked vertically
-% instead of jittered horizontally which would be needed to plot directly on top
-% of boxchart, so probably easiest to use the method to get the boxchart verties
-% figure; hold on;
-% for n = 1:numel(uX)
-%    idx = ismember(muTbl.scenario,uX(n));
-%    scatter(muTbl(idx,:),"scenario","mean_FCS",'filled')
-% end
-%
-% Next ones plot all the data, I think it automatically computes unique values,
-% because it isn't plotting all the FCS values
-%
-% figure; scatter(tbl,"scenario","FCS",'filled')
-%
-% now we can use gscatter
-% figure; gscatter(XData,double(YData),CData)
-
-
-% these do not work
-% figure; gscatter(XData,double(YData),{cgroupvar,xgroupvar})
-% figure; gscatter(XData,double(YData),[CData XData])
-
-% This was how I originally figured it out, I had to loop over the x vars before
-% I figrued out to pass in two grouping vars as in the above examples
-% for n = 1:numel(uX)
-%    % [mu(n), uv(n)] = groupsummary(qpeaks, FCS, 'mean');
-%
-%    idx = Tplot.(xgroupvar) == uX(n);
-%
-%    % this works, using YData and CData
-%    % [mu, uv] = groupsummary(A, groupvars, method)
-%    % A = tbl.(ydatavar)
-%    % [mu(:,n), uv] = groupsummary(double(YData(idx)), CData(idx), 'mean');
-%
-%    % this works, using array syntax + indexing into the table
-%    %mu(:,n) = groupsummary(Tplot.(ydatavar)(idx),Tplot.(cgroupvar)(idx), 'mean');
-%
-%    % this works, using table syntax, but it returns a table
-%    % mu(:,n) = groupsummary(Tplot(idx,:),cgroupvar, 'mean',ydatavar);
-% end
 
 %% LICENSE
 %
