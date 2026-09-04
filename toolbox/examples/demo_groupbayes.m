@@ -1,15 +1,18 @@
+%% Conditional probabilities between two sets of group labels
+%
+% groupbayes counts co-occurrences between the members of groupA and the
+% members of groupB, and reports the marginal, joint, and conditional
+% probabilities for each pair.
+%
+% See also: groupstats.groupbayes, groupstats.test.generateTestData
 
-
-% Create a table tbl representing events
-groupvar = 'Group';
-groupA = {'A1', 'A2'};
-groupB = {'B1', 'B2'};
-tbl = table({'A1'; 'A2'; 'B1'; 'B2'; 'A1'; 'B2'; 'A1'; 'B1'; 'A2'; 'B2'}, ...
-   [true; false; true; true; true; false; true; false; true; true], ...
-   [false; true; true; false; true; true; false; true; false; false], ...
-   [true; true; false; false; true; true; false; false; true; true], ...
-   [false; false; true; true; false; true; true; false; false; true], ...
-   'VariableNames', {groupvar, 'A1', 'A2', 'B1', 'B2'});
+% Create a table tbl representing events. The same table backs the groupbayes
+% unit tests, so the demo and the tests cannot drift apart.
+data = groupstats.test.generateTestData('groupbayes');
+tbl = data.tbl;
+groupvar = data.groupvar;
+groupA = data.groupA;
+groupB = data.groupB;
 
 % Use the function groupbayes to calculate conditional probabilities
 P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
@@ -25,41 +28,47 @@ disp(P);
 % 'A2'      'B2'       0.2       0.3       0            0.0000         0.0000
 
 % Keep a copy of the original tbl
-Tkeep = tbl;
+originaltbl = tbl;
 
-% Adjust tbl so there are no A's in the rows
-tbl = tbl(contains(tbl.Group, {'B1', 'B2'}), :);
+%% Rows from one group only
+%
+% Removing the A rows is the clearer case to reason about. groupB can still
+% be B1 and B2. groupbayes counts N_A by rows, so N_A is zero, P_A is zero,
+% and every probability conditioned on A is NaN.
+%
+% Bayesian probabilities need every event present in both groups. Where both
+% groups have the same sample size, the rows could be taken as groupB, and
+% the columns matching the groupA members summed down to give N_A. That case
+% needs an assertion that summing down the groupB members matches the row
+% counts.
 
-% Need to return to these, but removing A's from the rows is less confusing b/c
-% groupB can still be B1, B2, but the function fails b/c it counts N_A by rows
-% ... I think that is necessary though, to get Bayesian probabilities, we have
-% to have all the events in both groups, but maybe if both groups have identical
-% sample size, then we could assume the rows are groupB, and the columns that
-% match groupA members we'd sum down to get N_A, so in that case we'd need to
-% assert that summing down the B groupd members matches the row counts, as a
-% check
+tbl = originaltbl(contains(originaltbl.Group, {'B1', 'B2'}), :);
 
-
-% Adjust tbl so there are no B's in the rows
-tbl = Tkeep;
-tbl = tbl(contains(tbl.Group, {'A1', 'A2'}), :);
-
-% Now when the function is called, groupB needs to be the A's, since the rows
-% are the "givens"
-groupA = {'B1', 'B2'};
-groupB = {'A1', 'A2'};
 P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
+disp(P);
 
-% Adjust tbl so there are no B's in the rows
-tbl = tbl(~contains(tbl.Group, {'B1', 'B2'}), {'Group', 'B1', 'B2'});
+%% Swap the roles of the two groups
+%
+% The rows are the givens, so groupB names the labels the rows hold.
 
-% Now when the function is called, groupA needs to be
-groupA = {'B1', 'B2'};
-groupB = {'A1', 'A2'};
-P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
+tbl = originaltbl(contains(originaltbl.Group, {'A1', 'A2'}), :);
 
-% Adjust it so there are no B's in the rows
-tbl = tbl(~contains(tbl.Group, {'B1', 'B2'}), {'Group', 'B1', 'B2'});
+P = groupstats.groupbayes(tbl, {'B1', 'B2'}, {'A1', 'A2'}, groupvar);
+disp(P);
+
+%% Columns for one group only
+%
+% Keeping the B columns alone leaves nothing to count the A events with.
+
+tbl = originaltbl(~contains(originaltbl.Group, {'B1', 'B2'}), ...
+   {'Group', 'B1', 'B2'});
+
+try
+   P = groupstats.groupbayes(tbl, {'B1', 'B2'}, {'A1', 'A2'}, groupvar);
+   disp(P);
+catch e
+   fprintf('Columns for group B alone: %s\n', e.message);
+end
 
 % This note was in groupbayes right after the "Counts of each groupA and groupB"
 % section:
@@ -70,4 +79,3 @@ tbl = tbl(~contains(tbl.Group, {'B1', 'B2'}), {'Group', 'B1', 'B2'});
 % true/false for group B members, which means we can compute P(B|A) but not
 % P(A|B). See demo_groupbayes for discussion, and a possible way to
 % accomodate that case.
-

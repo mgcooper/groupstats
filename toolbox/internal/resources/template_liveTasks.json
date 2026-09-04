@@ -1,9 +1,0 @@
-{
-  "GroupStatsLiveTask": {
-    "name": "GroupStatsLiveTask",
-    "description": "Compute grouped statistics on a table",
-    "keywords": "",
-    "uniqueId": "GroupStatsLiveTask",
-    "docLink": ""
-  }
-}

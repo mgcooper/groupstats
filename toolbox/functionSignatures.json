@@ -1,6 +1,6 @@
 {
    "_schemaVersion": "1.0.0",
-   "barchartcats":
+   "groupstats.barchartcats":
    {
       "inputs":
       [
@@ -73,12 +73,12 @@
             "purpose":"the group members to down-select rows of input table"
          },
          {
-            "name":"method", 
+            "name":"Method",
             "kind":"namevalue", 
             "type":
             [
                "char", "string", "scalar", 
-               "choices={'mean', 'median'}"
+               "choices=groupstats.namelists.centralstatistic()"
             ],
             "default":"'mean'",
             "purpose":"the method used to summarize the data"
@@ -89,7 +89,7 @@
             "type":
             [
                "char", "string", "scalar", 
-               "choices={'ascend', 'descend', 'order', 'none'}"
+               "choices=groupstats.namelists.sortorder()"
             ], 
             "default":"'none'",
             "purpose":"the method used to order the bars along the x-axis"
@@ -99,6 +99,37 @@
             "kind":"namevalue",
             "type":"choices=tablecompletions(tbl,'selectby',cgroupvar)",
             "purpose":"the cgroup members to compute sortby order"
+         },
+         {
+            "name":"MergeGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "purpose":"the color-group members to pool, one cell per merge group"
+         },
+         {
+            "name":"MergeMethod",
+            "kind":"namevalue",
+            "type":
+            [
+               "char", "string", "scalar",
+               "choices=groupstats.namelists.mergemethod()"
+            ],
+            "default":"'pooled'",
+            "purpose":"how the merged bar is computed"
+         },
+         {
+            "name":"ShadeGroups",
+            "kind":"namevalue",
+            "type":["logical", "scalar"],
+            "default":"true",
+            "purpose":"shade alternate x-tick groups"
+         },
+         {
+            "name":"PlotError",
+            "kind":"namevalue",
+            "type":["logical", "scalar"],
+            "default":"false",
+            "purpose":"draw a whisker per bar from the spread of its group"
          },
          {
             "name":"XGroupOrder",
@@ -123,18 +154,13 @@
             "purpose":"the variables in the order they should be plotted"
          },
          {
-            "name":"ShadeGroups",
-            "kind":"namevalue",
-            "type":["logical", "scalar"],
-            "purpose":"Option"
-         },
-         {
             "name":"Legend",
             "kind":"namevalue",
             "type":
             [
                ["char", "string", "cellstr"],
-               ["notempty"]
+               ["notempty"],
+               ["choices=groupstats.namelists.legendvisibility()"]
             ],
             "default":"'on'",
             "purpose":"toggle to turn legend on or off"
@@ -156,7 +182,7 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices={'horizontal', 'vertical'}"]
+               ["choices=groupstats.namelists.legendorientation()"]
             ],
             "purpose":"the legend orientation"},
          {
@@ -175,11 +201,74 @@
             "name":"L",
             "type":"matlab.graphics.illustration.Legend",
             "purpose":"the legend handle"
+         },
+         {
+            "name":"ax",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes the chart was drawn into"
          }
       ],
       "description":"Create bar chart of grouped data"
    },
-   "boxchartcats":
+   "groupstats.groupselect":
+   {
+      "inputs":
+      [
+         {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table to select rows from"},
+         {"name":"groupvars", "kind":"required", "type":[["cellstr","char","string"],["choices=tablecompletions(tbl)"]], "purpose":"the grouping variables"},
+         {"name":"groupmembers", "kind":"required", "type":[["cellstr","char","string"]], "purpose":"the members to keep"}
+      ]
+   },
+
+   "groupstats.grouppercent":
+   {
+      "inputs":
+      [
+         {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table of grouped data"},
+         {"name":"groupvars", "kind":"required", "type":[["cellstr","char","string"],["choices=tablecompletions(tbl)"]], "purpose":"the grouping variables"},
+         {"name":"groupbins", "kind":"ordered", "purpose":"the binning scheme for each grouping variable"},
+         {"name":"groupsets", "kind":"ordered", "type":[["cellstr","char","string"],["choices=tablecompletions(tbl)"]], "purpose":"the variables defining the set each percent is taken within"}
+      ]
+   },
+
+   "groupstats.groupdifference":
+   {
+      "inputs":
+      [
+         {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table of grouped data"},
+         {"name":"groupvar", "kind":"required", "type":[["cellstr","char","string"],["scalar"],["choices=tablecompletions(tbl)"]], "purpose":"the grouping variable"},
+         {"name":"datavar", "kind":"required", "type":[["cellstr","char","string"],["scalar"],["choices=tablecompletions(tbl)"]], "purpose":"the data variable to compare"},
+         {"name":"ReferenceGroup", "kind":"namevalue", "type":"choices=tablecompletions(tbl,'selectby',groupvar)", "purpose":"the member every other member is compared against"},
+         {"name":"conditionvar", "kind":"namevalue", "type":[["cellstr","char","string"],["scalar"],["choices=tablecompletions(tbl)"]], "purpose":"a second grouping variable, one comparison set per member"},
+         {"name":"pooled", "kind":"namevalue", "type":["logical","scalar"], "default":"false", "purpose":"compare the reference against every other member combined"},
+         {"name":"tail", "kind":"namevalue", "type":[["char","string"],["scalar"],["choices=groupstats.namelists.testtail()"]], "default":"'both'", "purpose":"which tail the rank test uses"}
+      ]
+   },
+
+   "groupstats.groupmap":
+   {
+      "inputs":
+      [
+         {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table to split"},
+         {"name":"groupvar", "kind":"required", "type":[["cellstr","char","string"],["scalar"],["choices=tablecompletions(tbl)"]], "purpose":"the variable to group by"},
+         {"name":"fcn", "kind":"required", "type":["function_handle"], "purpose":"the function applied to each group"},
+         {"name":"varargin", "kind":"ordered", "repeating":true, "purpose":"arguments passed to fcn after the group table"}
+      ]
+   },
+
+   "groupstats.groupbayes":
+   {
+      "inputs":
+      [
+         {"name": "tbl", "kind": "required", "type": ["tabular"], "purpose": "the table of grouped data"},
+         {"name": "groupA", "kind": "required", "purpose": "the first group, as labels or logical column names"},
+         {"name": "groupB", "kind": "required", "purpose": "the second group, as labels or logical column names"},
+         {"name": "groupvar", "kind": "ordered", "type": [["cellstr", "char", "string"], ["scalar"], ["choices=tablecompletions(tbl)"]], "purpose": "the variable holding the group labels"},
+         {"name": "Population", "kind": "namevalue", "type": [["char", "string"], ["scalar"], ["choices=groupstats.namelists.populationoption()"]], "default": "'union'", "purpose": "which rows the marginal probabilities are out of"}
+      ]
+   },
+
+   "groupstats.boxchartcats":
    {
       "inputs":
       [
@@ -250,6 +339,24 @@
             "kind":"namevalue",
             "type":"choices=tablecompletions(tbl,'selectby',RowSelectVar)",
             "purpose":"the group members to down-select rows of input table"
+         },
+         {
+            "name":"MergeGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "purpose":"the color-group members to pool, one cell per merge group"
+         },
+         {
+            "name":"SortBy",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char","string"],
+               ["scalar"],
+               ["choices=groupstats.namelists.sortorder()"]
+            ],
+            "default":"'none'",
+            "purpose":"the method used to order the boxes along the x-axis"
          },
          {
             "name":"XGroupOrder",
@@ -303,7 +410,8 @@
             "type":
             [
                ["char", "string", "cellstr"],
-               ["notempty"]
+               ["notempty"],
+               ["choices=groupstats.namelists.legendvisibility()"]
             ],
             "default":"'on'",
             "purpose":"toggle to turn legend on or off"
@@ -325,7 +433,7 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices={'horizontal', 'vertical'}"]
+               ["choices=groupstats.namelists.legendorientation()"]
             ],
             "purpose":"the legend orientation"},
          {
@@ -344,6 +452,11 @@
             "name":"L",
             "type":"matlab.graphics.illustration.Legend",
             "purpose":"the legend handle"
+         },
+         {
+            "name":"ax",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes the chart was drawn into"
          }
       ],
       "description":"Create boxchart of grouped data"
@@ -405,10 +518,16 @@
             "purpose":"the grouping sets"
          },
          {
-            "name":"rowselectmembers", 
-            "kind":"ordered", 
-            "type":["char","string"], 
-            "purpose":"the group members to down-select rows of input table"
+            "name":"RowSelectVar",
+            "kind":"namevalue",
+            "type":[["char","string"],["choices=tablecompletions(tbl)"]],
+            "purpose":"the row-selection variable; give it together with RowSelectMembers"
+         },
+         {
+            "name":"RowSelectMembers",
+            "kind":"namevalue",
+            "type":["char","string"],
+            "purpose":"the members to keep; give it together with RowSelectVar"
          }
       ],
       "outputs":
@@ -493,6 +612,35 @@
             "purpose":"the grouping variable members"
          },
          {
+            "name":"MergeGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=tablecompletions(tbl)",
+            "purpose":"the group members to merge"
+         },
+         {
+            "name":"GroupOrder",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char","string"],
+               ["choices=tablecompletions(tbl, 'selectby', GroupVar)"]
+            ],
+            "default":"'none'",
+            "purpose":"a partial order of the group members"
+         },
+         {
+            "name":"SortBy",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices=groupstats.namelists.sortorder()"]
+            ],
+            "default":"'none'",
+            "purpose":"order the groups by their group mean or counts"
+         },
+         {
             "name":"RowSelectVar",
             "kind":"namevalue",
             "type":
@@ -510,27 +658,22 @@
             "purpose":"the group members to down-select rows of input table"
          },
          {
-            "name":"MergeGroupVar",
-            "kind":"namevalue",
-            "type":
-            [
-               ["cellstr","char","string","vartype","pattern"],
-               ["scalar"],
-               ["choices=tablecompletions(tbl)"]
-            ],
-            "purpose":"the variable that contains groups to merge"
-         },
-         {
-            "name":"MergeGroupMembers",
-            "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl,'selectby',MergeGroupVar)",
-            "purpose":"the group members to merge"
-         },
-         {
             "name":"Parent",
             "kind":"namevalue",
             "type":"matlab.graphics.axis.AbstractAxes",
             "purpose":"the axes to plot into"
+         },
+         {
+            "name":"Legend",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char","string"],
+               ["scalar"],
+               ["choices=groupstats.namelists.legendvisibility()"]
+            ],
+            "default":"'on'",
+            "purpose":"toggle to turn legend on or off"
          },
          {
             "name":"LegendString",
@@ -549,11 +692,11 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices={'horizontal', 'vertical'}"]
+               ["choices=groupstats.namelists.legendorientation()"]
             ],
             "purpose":"the legend orientation"},
          {
-            "name":"Props",
+            "name":"props",
             "kind":"properties",
             "type":"matlab.graphics.chart.primitive.Histogram"}
       ],
@@ -568,6 +711,11 @@
             "name":"L",
             "type":"matlab.graphics.illustration.Legend",
             "purpose":"the legend handle"
+         },
+         {
+            "name":"ax",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes the chart was drawn into"
          }
       ],
       "description":"Create histogram of grouped data"
@@ -656,21 +804,10 @@
             "purpose":"the group members to down-select rows of input table"
          },
          {
-            "name":"MergeGroupVar",
-            "kind":"namevalue",
-            "type":
-            [
-               ["cellstr","char","string","vartype","pattern"],
-               ["scalar"],
-               ["choices=tablecompletions(tbl)"]
-            ],
-            "purpose":"the variable that contains groups to merge"
-         },
-         {
             "name":"MergeGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl,'selectby',MergeGroupVar)",
-            "purpose":"the group members to merge"
+            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "purpose":"the color-group members to pool, one cell per merge group"
          },
          {
             "name":"SortVar",
@@ -679,7 +816,7 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices={'xdatavar', 'ydatavar'}"]
+               ["choices=groupstats.namelists.sortdatavar()"]
             ],
             "purpose":"order the legend from high to low along the SortVar axis"},
          {
@@ -689,9 +826,31 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices={'cgroupvar', 'sgroupvar'}"]
+               ["choices=groupstats.namelists.sortgroupvar()"]
             ],
             "purpose":"order the legend from high to low mean value of the SortGroup data"},
+         {
+            "name":"CGroupOrder",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char","string"],
+               ["choices=tablecompletions(tbl, 'selectby', cgroupvar)"]
+            ],
+            "default":"'none'",
+            "purpose":"a partial order of the color-group members"
+         },
+         {
+            "name":"SGroupOrder",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char","string"],
+               ["choices=tablecompletions(tbl, 'selectby', sgroupvar)"]
+            ],
+            "default":"'none'",
+            "purpose":"a partial order of the symbol-group members"
+         },
          {
             "name":"Parent",
             "kind":"namevalue",
@@ -705,9 +864,10 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices={'ascend', 'descend'}"]
+               ["choices=groupstats.namelists.sortorder()"]
             ],
-            "purpose":"which direction to sort by"},
+            "default":"'none'",
+            "purpose":"order the legend by the SortGroup group means of SortVar; 'none' keeps the group order"},
          {
             "name":"Legend",
             "kind":"namevalue",
@@ -715,7 +875,7 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices={'on', 'off'}"]
+               ["choices=groupstats.namelists.legendvisibility()"]
             ],
             "purpose":"switch to turn the legend on or off"},
          {
@@ -735,11 +895,11 @@
             [
                ["char", "string"],
                ["scalar"],
-               ["choices={'horizontal', 'vertical'}"]
+               ["choices=groupstats.namelists.legendorientation()"]
             ],
             "purpose":"the legend orientation"},
          {
-            "name":"Props",
+            "name":"props",
             "kind":"properties",
             "type":"matlab.graphics.chart.primitive.Scatter"}
       ],
@@ -754,6 +914,11 @@
             "name":"L",
             "type":"matlab.graphics.illustration.Legend",
             "purpose":"the legend handle"
+         },
+         {
+            "name":"ax",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes the chart was drawn into"
          }
       ],
       "description":"Create scatter chart of grouped data"

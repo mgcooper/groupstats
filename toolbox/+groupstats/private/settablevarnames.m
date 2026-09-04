@@ -22,8 +22,9 @@ function tbl = settablevarnames(tbl,varnames,varargin)
    end
 
    % build consecutive varnames if requested
-   if strcmp(opt, 'consecutive') && numel(string(varnames)) == 1
-      varnames = strcat(varnames,string(1:numel(tbl.Properties.VariableNames)));
+   if strcmp(opt, 'consecutive') && isscalar(string(varnames))
+      varnames = strcat(string(varnames), "_", ...
+         string(1:numel(tbl.Properties.VariableNames)));
    else
       validateattributes(varnames, {'string', 'cell'}, ...
          {'numel', numel(tbl.Properties.VariableNames)}, mfilename, 'VARNAMES', 2)

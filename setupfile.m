@@ -43,8 +43,8 @@ function setupfile(varargin)
    % compiler - tbxprefix returns the root folder for mathworks toolboxes (its a
    % builtin func) - tempname, tempdir create temp folders and temp files
 
-   % At most one input, the project name
-   narginchk(0, 1)
+   % The project name, then the project path
+   narginchk(0, 2)
 
    % Store the initial warning state
    initialWarningState = warning;
@@ -62,10 +62,10 @@ function setupfile(varargin)
    [~, projectname] = fileparts(projectpath);
 
    % Override the inferred projectname/path if the user provided them
-   if nargin == 1
+   if nargin >= 1
       projectname = varargin{1};
-   elseif nargin == 2
-      projectname = varargin{1};
+   end
+   if nargin >= 2
       projectpath = varargin{2};
    end
 
@@ -81,16 +81,26 @@ function setupfile(varargin)
 
    % Run user hooks (e.g., Config.m, read .env, etc). The dot folder removal
    % should not ever be necessary, but it doesn't hurt to check.
-   hookslist = dir(fullfile(projectpath, 'userhooks/*.m'));
-   userhooks = fullfile(projectpath, {hookslist.name}.');
+   % Build the full path including the userhooks folder. Joining the project
+   % path to the file name alone drops that folder. Every hook path then names
+   % a file that does not exist, and the catch below hides it.
+   hookslist = dir(fullfile(projectpath, 'userhooks', '*.m'));
+   userhooks = fullfile(projectpath, 'userhooks', {hookslist.name}.');
    userhooks = userhooks(cellfun(@(p) ~endsWith(p, '.'), userhooks));
    for n = 1:numel(userhooks)
       try
          run(userhooks{n});
-         %run(fullfile(projectpath, 'userhooks', 'config'));
-      catch
+      catch e
+         % A broken hook must not stop the project from opening, but it must
+         % say so rather than fail without a trace.
+         warning('groupstats:setupfile:userHookFailed', ...
+            'User hook %s failed: %s', userhooks{n}, e.message)
       end
    end
+
+   % Record where this project is installed. groupstats.internal.installpath
+   % reads this preference.
+   setpref(projectname, 'install_path', projectpath);
 
    % This is true if running in desktop. Use it to suppress interactions with
    % the editor or any other feature that requires the Matlab desktop
@@ -100,9 +110,6 @@ function setupfile(varargin)
       % files
    end
 
-   % Set preferences setpref('mytoolbox', 'version', toolboxversion)
-   % addpref('mytoolbox', 'toolboxdir', thispath);
-
    % This detects if menv/mproject is being used to manage projects
    if strcmp(mcallername(), 'workon') || strcmp(mcallername(), 'configurepackage')
 
@@ -110,7 +117,14 @@ function setupfile(varargin)
 end
 
 %% function to safely add paths
-function pathadd(pathstring)
+function pathadd(pathstring, pathappend)
+
+   % Prepend by default. startup.m puts the whole ~/MATLAB tree on the path,
+   % where other projects hold their own copies of these functions.
+   % Appending would let one of those copies win.
+   if nargin < 2
+      pathappend = '-begin';
+   end
 
    % Generate a list of sub-folders. genpath ignores folders named private,
    % folders that begin with the @ character (class folders), folders that begin
@@ -131,8 +145,8 @@ function pathadd(pathstring)
    pathstring = strcat(subpaths, pathsep);
    pathstring = horzcat(pathstring{:});
 
-   % Add the paths to the end of the path
-   addpath(pathstring, '-end');
+   % Add the paths, at the front unless the caller says otherwise.
+   addpath(pathstring, pathappend);
 
    % Save the path (not enabled, generally do not want this)
    % savepath(fullfile(thispath,'pathdef.m'));

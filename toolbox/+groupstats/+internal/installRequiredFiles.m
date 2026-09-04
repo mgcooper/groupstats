@@ -11,7 +11,7 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
    %  INSTALLREQUIREDFILES(_, REMOTEREPONAME=REPONAME)
    %  INSTALLREQUIREDFILES(_, REMOTEBRANCH=BRANCHNAME)
    %  INSTALLREQUIREDFILES(_, GITHUBUSERNAME=USERNAME)
-   %  INSTALLREQUIREDFILES(_, TESTRUN=TRUE)
+   %  INSTALLREQUIREDFILES(_, DRYRUN=TRUE)
    %
    % Description
    %
@@ -74,7 +74,7 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
    %
    %  INSTALLPATH - full path to location where files are installed. The default
    %  value is a folder named "dependencies" in the toolbox folder.
-   %  TESTRUN - logical flag controlling whether files are installed. If true,
+   %  DRYRUN - logical flag controlling whether files are installed. If true,
    %  nothing is downloaded; the resolved file and url lists are returned and
    %  printed to the screen. The default value is false (files are installed).
    %
@@ -115,7 +115,7 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
       kwargs.installPath (1, :) string {mustBeTextScalar} ...
          = ""
 
-      kwargs.testRun (1, 1) logical {mustBeNumericOrLogical} ...
+      kwargs.dryrun (1, 1) logical {mustBeNumericOrLogical} ...
          = false
    end
 
@@ -147,7 +147,7 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
 
    % Option to install the missing requirement locally
    fileList = installPath + filesep + requirementsList;
-   if not(kwargs.testRun)
+   if not(kwargs.dryrun)
 
       if ~isfolder(installPath)
          mkdir(installPath)

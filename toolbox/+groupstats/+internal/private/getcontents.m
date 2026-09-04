@@ -87,8 +87,8 @@ function [cont,dirflag] = getcontents(directory,varargin)
    assert(strcmp(pathflag,'relative') | strcmp(pathflag,'full'),...
       'iosr:getContents:invalidPath', ...
       '''path'' option must ''relative'' or ''full''')
-   assert(islogical(recflag) & numel(recflag)==1, 'iosr:getContents:invalidRec', '''rec'' option must be logical')
-   assert(islogical(sortflag) & numel(sortflag)==1, 'iosr:getContents:invalidSoftFlag', '''sort'' option must be a logical')
+   assert(islogical(recflag) & isscalar(recflag), 'iosr:getContents:invalidRec', '''rec'' option must be logical')
+   assert(islogical(sortflag) & isscalar(sortflag), 'iosr:getContents:invalidSoftFlag', '''sort'' option must be a logical')
    assert(ischar(str), 'iosr:getContents:invalidStr', 'str must be a character array')
 
    % first pass: contents of top-level folder
@@ -166,7 +166,7 @@ function [cont,dirflag] = main(directory,str)
          case 'all'
             Y = true(size(dirbool));
          otherwise % use literal search string
-            Y = ~cellfun(@isempty,strfind(list,str));
+            Y = contains(list, str);
       end
    else
       Y = true(size(list));

@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding="utf-8"?>
+
+<toc version="2.0">
+<!-- First tocitem specifies top level in Help browser Contents pane -->
+   <tocitem target="groupstats_welcome.html">Group Stats Toolbox
+
+      <!-- A Getting Started Guide usually comes first -->
+      <tocitem target="groupstats_welcome.html"
+               image="HelpIcon.GETTING_STARTED">
+                  Getting Started
+      </tocitem>
+
+      <!-- Function reference next -->
+      <tocitem target="groupstats_welcome.html"
+               image="HelpIcon.FUNCTION">
+                  Functions
+      </tocitem>
+
+   </tocitem>
+</toc>

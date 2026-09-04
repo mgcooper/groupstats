@@ -1,92 +1,121 @@
-function tests = test_groupmap()
-   tests = functiontests(localfunctions);
+classdef test_groupmap < matlab.unittest.TestCase
+   %TEST_GROUPMAP Test groupstats.groupmap.
+   %
+   % These cases pin the settled rule for groupmap output. The group column
+   % is categorical and comes first in the returned table. That matches
+   % MATLAB's own groupsummary and groupcounts.
+   %
+   % The eight grouping cases differ only in the type of the group variable
+   % and the shape of the applied function's result. They run as one
+   % parameterized test rather than eight near-copies.
+   %
+   % See also: groupstats.groupmap, groupstats.test.generateTestData
+
+   properties (TestParameter)
+      % One parameter per grouping case. The case data lives in
+      % generateTestData so demos and scripts can use the same tables.
+      groupcase = buildGroupCases()
+   end
+
+   methods (Test)
+
+      function testGroupResult(testCase, groupcase)
+         % Apply the case's function and compare against its expected table.
+
+         returned = groupstats.groupmap(groupcase.tbl, groupcase.groupvar, ...
+            groupcase.fcn, groupcase.args{:});
+
+         if isnumeric(groupcase.expected)
+            % The array-output case checks only class and size, because the
+            % point is that groupmap wraps a non-table result in a table.
+            testCase.verifyClass(returned, 'table');
+            testCase.verifySize(returned, groupcase.expected);
+         else
+            expected = groupcase.expected;
+            testCase.verifyEqual(returned, expected);
+         end
+      end
+
+      function testGroupColumnIsFirst(testCase, groupcase)
+         % The group column comes first. This is the rule that separates the
+         % settled behavior from appending the group column last.
+
+         returned = groupstats.groupmap(groupcase.tbl, groupcase.groupvar, ...
+            groupcase.fcn, groupcase.args{:});
+
+         expected = groupcase.groupvar;
+         testCase.verifyEqual(returned.Properties.VariableNames{1}, expected);
+      end
+
+      function testOrdinalGroupKeepsItsOrder(testCase)
+         % An ordinal group variable keeps its Ordinal flag and its category
+         % order, so a relational comparison on the returned column works.
+         % Rewrapping an already-categorical value in categorical() would
+         % reset both.
+
+         months = ["Mar", "Jan", "Feb", "Jan", "Mar"];
+         order = ["Jan", "Feb", "Mar"];
+         tbl = table( ...
+            categorical(months(:), order, 'Ordinal', true), ...
+            [1; 2; 3; 4; 5], 'VariableNames', {'Month', 'Value'});
+
+         returned = groupstats.groupmap(tbl, 'Month', @(t) mean(t.Value));
+
+         testCase.verifyTrue(isordinal(returned.Month));
+         testCase.verifyEqual(categories(returned.Month), cellstr(order(:)));
+         testCase.verifyEqual(nnz(returned.Month < "Mar"), 2);
+      end
+
+      function testUnusedCategoriesSurvive(testCase)
+         % A categorical group variable keeps the categories no row uses.
+         % groupsummary keeps them too, and dropcats is the function that
+         % removes them on request.
+
+         tbl = table(categorical({'a'; 'b'}), [1; 2], ...
+            'VariableNames', {'Group', 'Value'});
+         tbl.Group = addcats(tbl.Group, 'c');
+
+         returned = groupstats.groupmap(tbl, 'Group', @(t) mean(t.Value));
+
+         expected = {'a'; 'b'; 'c'};
+         testCase.verifyEqual(categories(returned.Group), expected);
+      end
+
+      function testNameConflictErrors(testCase, groupcase)
+         % A function that returns a variable named like the group variable is
+         % an error. Inserting the group column over it would drop its data.
+
+         conflicting = @(t, varargin) table(mean(t.Value), ...
+            'VariableNames', {groupcase.groupvar});
+
+         testCase.verifyError( ...
+            @() groupstats.groupmap(groupcase.tbl, groupcase.groupvar, ...
+            conflicting), ...
+            'groupstats:groupmap:groupVariableNameConflict');
+      end
+
+      function testGroupColumnIsCategorical(testCase, groupcase)
+         % The group column is coerced to categorical whatever its input type.
+         % The docstring promises this and scenarioDeltas' numeric-variable
+         % sweep depends on it.
+
+         returned = groupstats.groupmap(groupcase.tbl, groupcase.groupvar, ...
+            groupcase.fcn, groupcase.args{:});
+
+         testCase.verifyClass(returned.(groupcase.groupvar), 'categorical');
+      end
+   end
 end
 
-function setupOnce(testCase)
-   % Add the directory containing groupmap to the path
-   testCase.TestData.origPath = path;
-   addpath(fileparts(which('groupmap')));
-end
+function cases = buildGroupCases()
+   %BUILDGROUPCASES Return the grouping cases as a name-keyed struct.
+   %
+   % matlab.unittest names each parameterized run after the field name, so the
+   % cases are keyed by their case name rather than indexed.
 
-function teardownOnce(testCase)
-   % Restore the original path
-   path(testCase.TestData.origPath);
-end
-
-% THESE ARE FAILING - NEED TO CONFIRM HOW TO COMPARE EQUALITY OF TABLES
-% also, had to use reordervars to make the vars be in alphabetical order, may
-% need to do the same to all other tests.
-
-function testNumericGrouping(testCase)
-   tbl = table([1;2;1;2;3], [10;20;30;40;50], 'VariableNames', {'Group', 'Value'});
-   fcn = @(t) mean(t.Value);
-   result = groupmap(tbl, 'Group', fcn);
-   result = reordervars(result, sort(result.Properties.VariableNames));
-
-   expected = table([1;2;3], [20;30;50], 'VariableNames', {'Group', 'Var1'});
-   testCase.verifyEqual(result, expected);
-end
-
-function testCategoricalGrouping(testCase)
-   tbl = table(categorical({'A';'B';'A';'B';'C'}), [1;2;3;4;5], ...
-      'VariableNames', {'Category', 'Value'});
-   fcn = @(t) mean(t.Value);
-   result = groupmap(tbl, 'Category', fcn);
-
-   expected = table(categorical({'A';'B';'C'}), [2;3;5], 'VariableNames', {'Category', 'Var1'});
-   testCase.verifyEqual(result, expected);
-end
-
-function testCellArrayGrouping(testCase)
-   tbl = table({'Red';'Blue';'Red';'Green';'Blue'}, [1;2;3;4;5], 'VariableNames', {'Color', 'Value'});
-   fcn = @(t) mean(t.Value);
-   result = groupmap(tbl, 'Color', fcn);
-
-   expected = table({'Blue';'Green';'Red'}, [3.5;4;2], 'VariableNames', {'Color', 'Var1'});
-   testCase.verifyEqual(result, expected);
-end
-
-function testLogicalGrouping(testCase)
-   tbl = table([true;false;true;false;true], [1;2;3;4;5], 'VariableNames', {'Flag', 'Value'});
-   fcn = @(t) mean(t.Value);
-   result = groupmap(tbl, 'Flag', fcn);
-
-   expected = table([false;true], [3;3], 'VariableNames', {'Flag', 'Var1'});
-   testCase.verifyEqual(result, expected);
-end
-
-function testCustomFunction(testCase)
-   tbl = table({'A';'B';'A';'B';'C'}, [1;2;3;4;5], 'VariableNames', {'Group', 'Value'});
-   fcn = @(t) table(min(t.Value), max(t.Value), mean(t.Value), 'VariableNames', {'Min', 'Max', 'Mean'});
-   result = groupmap(tbl, 'Group', fcn);
-
-   expected = table({'A';'B';'C'}, [1;2;5], [3;4;5], [2;3;5], 'VariableNames', {'Group', 'Min', 'Max', 'Mean'});
-   testCase.verifyEqual(result, expected);
-end
-
-function testEmptyGroup(testCase)
-   tbl = table({'A';'B';'A'}, [1;2;3], 'VariableNames', {'Group', 'Value'});
-   fcn = @(t) mean(t.Value);
-   result = groupmap(tbl, 'Group', fcn);
-
-   expected = table({'A';'B'}, [2;2], 'VariableNames', {'Group', 'Var1'});
-   testCase.verifyEqual(result, expected);
-end
-
-function testAdditionalArguments(testCase)
-   tbl = table({'A';'B';'A';'B';'C'}, [1;2;3;4;5], 'VariableNames', {'Group', 'Value'});
-   fcn = @(t, factor) mean(t.Value) * factor;
-   result = groupmap(tbl, 'Group', fcn, 2);
-
-   expected = table({'A';'B';'C'}, [4;6;10], 'VariableNames', {'Group', 'Var1'});
-   testCase.verifyEqual(result, expected);
-end
-
-function testNonTableOutput(testCase)
-   tbl = table({'A';'B';'A';'B';'C'}, [1;2;3;4;5], 'VariableNames', {'Group', 'Value'});
-   fcn = @(t) mean(t.Value);
-   result = groupmap(tbl, 'Group', fcn);
-
-   testCase.verifyClass(result, 'table');
-   testCase.verifySize(result, [3 2]);
+   data = groupstats.test.generateTestData('groupmap');
+   cases = struct();
+   for n = 1:numel(data.cases)
+      cases.(data.cases(n).name) = data.cases(n);
+   end
 end
