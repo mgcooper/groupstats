@@ -631,3 +631,6 @@ TSWLatexianTemp*
 # project's state is machine-local, not source.
 **/resources/*
 !**/resources/project/
+
+# Written by the Help browser search-database build beside the docs; not a source file.
+custom_toolbox.json

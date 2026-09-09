@@ -1,0 +1,203 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>Getting Started with Group Stats</title>
+<meta name="generator" content="MATLAB 25.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2026-09-08">
+<meta name="DC.source" content="groupstats_gettingStarted.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h1>Getting Started with Group Stats</h1>
+<!--introduction-->
+<p>Install the toolbox, draw a first chart, and explore the toolbox features.</p>
+<!--/introduction-->
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Installation</a>
+</li>
+<li>
+<a href="#2">Requirements</a>
+</li>
+<li>
+<a href="#3">A first example</a>
+</li>
+<li>
+<a href="#5">Where to go next</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Installation</h2>
+<p>Choose one:</p>
+<div>
+<ul>
+<li>Install the package: double-click <tt>GroupStatsToolbox.mltbx</tt>, or build it with <tt>buildtool release</tt> from the repository root and install <tt>release/GroupStatsToolbox.mltbx</tt>.</li>
+<li>Add the <tt>toolbox</tt> folder of a repository checkout to the path:</li>
+</ul>
+</div>
+<pre class="language-matlab">addpath(fullfile(<span class="string">'/path/to/groupstats'</span>, <span class="string">'toolbox'</span>))
+</pre>
+<p>Call the functions by their namespace, such as <tt>groupstats.groupsummary</tt>. Nothing else has to be on the path, all dependencies are included with the toolbox.</p>
+<h2 id="2">Requirements</h2>
+<p>The test suite passes on R2024b and R2025b. The toolbox needs R2021a or later, for <tt>arguments</tt> blocks and <tt>props.?Class</tt> property validation. <tt>groupstats.groupcompare</tt> and <tt>groupstats.scatter</tt> need the Statistics and Machine Learning Toolbox; the permutation test in <tt>groupcompare</tt> also needs the Image Processing Toolbox.</p>
+<h2 id="3">A first example</h2>
+<p>The fixture table holds one row per scenario, basin, and month, with a numeric peak. One box per basin, colored by scenario, in one call:</p>
+<pre class="codeinput">data = groupstats.test.generateTestData(<span class="string">'info'</span>);
+Info = data.Info;
+groupstats.boxchartcats(Info, <span class="string">"peak"</span>, <span class="string">"basin"</span>, <span class="string">"scenario"</span>);
+</pre>
+<img vspace="5" hspace="5" src="groupstats_gettingStarted_01.png" alt=""> <p>The same grouping, summarized:</p>
+<pre class="codeinput">G = groupstats.groupsummary(Info, [<span class="string">"basin"</span>, <span class="string">"scenario"</span>], <span class="string">"mean"</span>, <span class="string">"peak"</span>);
+disp(head(G, 6))
+</pre>
+<pre class="codeoutput">    basin          scenario         mean_peak    GroupCount    Percent    Percent_basin    Percent_scenario
+    ______    __________________    _________    __________    _______    _____________    ________________
+    Outlet    1980-2020-WRF-DIST      11.5           12        8.3333        33.333               25       
+    Outlet    SSP245-WARM-NEAR        12.5           12        8.3333        33.333               25       
+    Outlet    SSP585-HOT-FAR          13.5           12        8.3333        33.333               25       
+    basinA    1980-2020-WRF-DIST        12           12        8.3333        33.333               25       
+    basinA    SSP245-WARM-NEAR          13           12        8.3333        33.333               25       
+    basinA    SSP585-HOT-FAR            14           12        8.3333        33.333               25       
+</pre>
+<h2 id="5">Where to go next</h2>
+<div>
+<ul>
+<li>
+<a href="usingGroupStats.html">Using Group Stats</a> walks through the toolbox on this table.</li>
+<li>
+<a href="groupstats_examples_contents.html">Examples</a> lists the demos. Run <tt>demo_all</tt> to see every one, or <tt>demo_all("-close")</tt> to check that every one runs.</li>
+<li>
+<a href="m2html/function_index.html">Functions</a> lists every public function.</li>
+<li>
+<tt>groupstats.help("groupsummary")</tt> opens one function's page.</li>
+</ul>
+</div>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Getting Started with Group Stats
+% Install the toolbox, draw a first chart, and explore the toolbox features.
+
+%% Installation
+% Choose one:
+%
+% * Install the package: double-click |GroupStatsToolbox.mltbx|, or build
+% it with |buildtool release| from the repository root and install
+% |release/GroupStatsToolbox.mltbx|.
+% * Add the |toolbox| folder of a repository checkout to the path:
+%
+%   addpath(fullfile('/path/to/groupstats', 'toolbox'))
+%
+% Call the functions by their namespace, such as
+% |groupstats.groupsummary|. Nothing else has to be on the path, all
+% dependencies are included with the toolbox.
+
+%% Requirements
+% The test suite passes on R2024b and R2025b. The toolbox needs R2021a
+% or later, for |arguments| blocks and |props.?Class| property validation.
+% |groupstats.groupcompare| and |groupstats.scatter| need the Statistics
+% and Machine Learning Toolbox; the permutation test in |groupcompare| also
+% needs the Image Processing Toolbox.
+
+%% A first example
+% The fixture table holds one row per scenario, basin, and month, with a
+% numeric peak. One box per basin, colored by scenario, in one call:
+
+data = groupstats.test.generateTestData('info');
+Info = data.Info;
+groupstats.boxchartcats(Info, "peak", "basin", "scenario");
+
+%%
+% The same grouping, summarized:
+
+G = groupstats.groupsummary(Info, ["basin", "scenario"], "mean", "peak");
+disp(head(G, 6))
+
+%% Where to go next
+% * <usingGroupStats.html Using Group Stats> walks through the toolbox on
+% this table.
+% * <groupstats_examples_contents.html Examples> lists the demos. Run
+% |demo_all| to see every one, or |demo_all("-close")| to check that every
+% one runs.
+% * <m2html/function_index.html Functions> lists every public function.
+% * |groupstats.help("groupsummary")| opens one function's page.
+
+##### SOURCE END #####
+-->
+</body>
+</html>

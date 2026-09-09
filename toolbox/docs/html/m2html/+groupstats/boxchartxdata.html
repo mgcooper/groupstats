@@ -1,0 +1,195 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of boxchartxdata</title>
+  <meta name="keywords" content="boxchartxdata">
+  <meta name="description" content="BOXCHARTXDATA retrieve x-axis data for boxcharts in handle H">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../function_index.html">Home</a> &gt;  <a href="function_index.html">+groupstats</a> &gt; boxchartxdata.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../function_index.html"><img alt="<" border="0" src="../html_img/left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="function_index.html">Index for +groupstats&nbsp;<img alt=">" border="0" src="../html_img/right.png"></a></td></tr></table>-->
+
+<h1>boxchartxdata
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>BOXCHARTXDATA retrieve x-axis data for boxcharts in handle H</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>function [xlocs,xleft,xright] = boxchartxdata(H) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre class="comment">BOXCHARTXDATA retrieve x-axis data for boxcharts in handle H
+
+ Syntax
+  xlocs = boxchartxdata(H) returns the xtick locations for each boxchart in
+  H. If H contains groups of boxchart, each element of H is a group of
+  boxcharts per xtick in the figure.
+
+ Inputs:
+  H = BoxChart graphics object (one group per element of H). Every
+      element must share one Notch setting.
+
+ Outputs:
+  xlocs = array of xtick locations for each boxchart group in H
+
+ More detail:
+ size(xlocs) = numel(cgroupvars) x numel(xgroupvars) = M x N
+ size(H) = numel(cgroupvars) x 1 = M x 1
+
+ i.e., for a boxchart figure with:
+ N = numel(xgroupvars) (number of xticks), and
+ M = numel(cgroupvars) (number of boxcharts per xtick),
+
+ size(H) = M x 1 (number of boxcharts per xtick BY 1)
+ size(xlocs) = M x N (number of boxcharts per xtick BY number of xticks)
+
+
+ Example
+
+ Label every box with its median, placed at the box's x coordinate:
+
+  data = groupstats.test.generateTestData('info');
+  [H, ~, ax] = groupstats.boxchartcats(data.Info, &quot;peak&quot;, &quot;month&quot;, ...
+     &quot;scenario&quot;, XGroupMembers = [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mar&quot;]);
+  xlocs = groupstats.boxchartxdata(H);
+  text(ax, xlocs(1, :), [12 12 12], &quot;median&quot;, ...
+     HorizontalAlignment = &quot;center&quot;)
+
+ See also <a href="boxchartcats.html" class="code" title="function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">boxchartcats</a>, groupstats.<a href="boxchartydata.html" class="code" title="function ycoords = boxchartydata(data, varargin)">boxchartydata</a></pre></div>
+
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+
+This function calls:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+</ul>
+
+
+This function is called by:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="boxchartcats.html" class="code" title="function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">boxchartcats</a>	BOXCHARTCATS Box chart by groups along x-axis and by color within groups.</li></ul>
+<!-- crossreference -->
+
+
+
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [xlocs,xleft,xright] = boxchartxdata(H)</a>
+0002    <span class="comment">%BOXCHARTXDATA retrieve x-axis data for boxcharts in handle H</span>
+0003    <span class="comment">%</span>
+0004    <span class="comment">% Syntax</span>
+0005    <span class="comment">%  xlocs = boxchartxdata(H) returns the xtick locations for each boxchart in</span>
+0006    <span class="comment">%  H. If H contains groups of boxchart, each element of H is a group of</span>
+0007    <span class="comment">%  boxcharts per xtick in the figure.</span>
+0008    <span class="comment">%</span>
+0009    <span class="comment">% Inputs:</span>
+0010    <span class="comment">%  H = BoxChart graphics object (one group per element of H). Every</span>
+0011    <span class="comment">%      element must share one Notch setting.</span>
+0012    <span class="comment">%</span>
+0013    <span class="comment">% Outputs:</span>
+0014    <span class="comment">%  xlocs = array of xtick locations for each boxchart group in H</span>
+0015    <span class="comment">%</span>
+0016    <span class="comment">% More detail:</span>
+0017    <span class="comment">% size(xlocs) = numel(cgroupvars) x numel(xgroupvars) = M x N</span>
+0018    <span class="comment">% size(H) = numel(cgroupvars) x 1 = M x 1</span>
+0019    <span class="comment">%</span>
+0020    <span class="comment">% i.e., for a boxchart figure with:</span>
+0021    <span class="comment">% N = numel(xgroupvars) (number of xticks), and</span>
+0022    <span class="comment">% M = numel(cgroupvars) (number of boxcharts per xtick),</span>
+0023    <span class="comment">%</span>
+0024    <span class="comment">% size(H) = M x 1 (number of boxcharts per xtick BY 1)</span>
+0025    <span class="comment">% size(xlocs) = M x N (number of boxcharts per xtick BY number of xticks)</span>
+0026    <span class="comment">%</span>
+0027    <span class="comment">%</span>
+0028    <span class="comment">% Example</span>
+0029    <span class="comment">%</span>
+0030    <span class="comment">% Label every box with its median, placed at the box's x coordinate:</span>
+0031    <span class="comment">%</span>
+0032    <span class="comment">%  data = groupstats.test.generateTestData('info');</span>
+0033    <span class="comment">%  [H, ~, ax] = groupstats.boxchartcats(data.Info, &quot;peak&quot;, &quot;month&quot;, ...</span>
+0034    <span class="comment">%     &quot;scenario&quot;, XGroupMembers = [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mar&quot;]);</span>
+0035    <span class="comment">%  xlocs = groupstats.boxchartxdata(H);</span>
+0036    <span class="comment">%  text(ax, xlocs(1, :), [12 12 12], &quot;median&quot;, ...</span>
+0037    <span class="comment">%     HorizontalAlignment = &quot;center&quot;)</span>
+0038    <span class="comment">%</span>
+0039    <span class="comment">% See also boxchartcats, groupstats.boxchartydata</span>
+0040 
+0041    <span class="comment">% Each element of H is one color group's boxes. H(m).NodeChildren(5) is</span>
+0042    <span class="comment">% the Quadrilateral primitive that draws the box faces. A notched box</span>
+0043    <span class="comment">% has 8 vertices and a plain one 4. One count serves every element, so</span>
+0044    <span class="comment">% every chart in H must share one Notch setting; boxchartcats sets</span>
+0045    <span class="comment">% Notch once for all of its boxes. A mixed H would read the notched</span>
+0046    <span class="comment">% charts with the wrong stride.</span>
+0047    <span class="comment">% drawnow makes the primitive's vertex data current before it is read,</span>
+0048    <span class="comment">% and the warning it can raise on the way is not the caller's.</span>
+0049    withwarnoff(<span class="string">'MATLAB:handle_graphics:exceptions:SceneNode'</span>);
+0050    drawnow;
+0051 
+0052    <span class="comment">% Data dimensions</span>
+0053    M = numel(H);
+0054 
+0055    <span class="keyword">if</span> all( [H.Notch] == <span class="string">'on'</span> )
+0056       numVertsPerBox = 8;
+0057    <span class="keyword">else</span>
+0058       numVertsPerBox = 4;
+0059    <span class="keyword">end</span>
+0060 
+0061    <span class="comment">% Functions to retrieve box vertices and reshape them to per-box columns</span>
+0062    Fverts = @(m) H(m).NodeChildren(5).VertexData(1,:);
+0063    Fshape = @(m) reshape(Fverts(m), numVertsPerBox, []);
+0064 
+0065    <span class="comment">% Part 1 - Get the x-coordinates of the center of each boxchart. A box's</span>
+0066    <span class="comment">% center is the mean of its two x vertices. On boxchart's categorical</span>
+0067    <span class="comment">% ruler the ticks sit at the integers, and a group's boxes spread less</span>
+0068    <span class="comment">% than half a tick to either side. The rounded center is therefore the</span>
+0069    <span class="comment">% tick the box belongs to, and it indexes the box's column.</span>
+0070    xverts = cell(M, 1);
+0071    centers = cell(M, 1);
+0072    <span class="keyword">for</span> m = 1:M
+0073       xverts{m} = double(Fshape(m));
+0074       centers{m} = mean(xverts{m}(1:2, :), 1);
+0075    <span class="keyword">end</span>
+0076 
+0077    <span class="comment">% One column per tick up to the highest tick any group reaches. The box</span>
+0078    <span class="comment">% count of one group can be smaller than that, so sizing by the count</span>
+0079    <span class="comment">% would let a later assignment grow the matrix with zeros. A tick with</span>
+0080    <span class="comment">% no box of a group keeps NaN in that column.</span>
+0081    ticks = round([centers{:}]);
+0082    xlocs = nan(M, max([ticks, 0]));
+0083    xleft = nan(1, max([ticks, 0]));
+0084    xright = nan(1, max([ticks, 0]));
+0085    <span class="keyword">for</span> m = 1:M
+0086       xlocs(m, round(centers{m})) = centers{m};
+0087 
+0088       <span class="comment">% Part 2 - Get the min/max bounds of each boxchart group: the left</span>
+0089       <span class="comment">% edge of the first group's boxes and the right edge of the last</span>
+0090       <span class="comment">% group's, placed by the same tick index.</span>
+0091       <span class="keyword">switch</span> m
+0092          <span class="keyword">case</span> 1
+0093             xleft(round(centers{m})) = xverts{m}(1, :);
+0094          <span class="keyword">case</span> M
+0095             xright(round(centers{m})) = xverts{m}(2, :);
+0096       <span class="keyword">end</span>
+0097    <span class="keyword">end</span>
+0098 
+0099    <span class="comment">% With one color group the first group is also the last, and the switch</span>
+0100    <span class="comment">% above took only the first case.</span>
+0101    <span class="keyword">if</span> M == 1
+0102       xright(round(centers{M})) = xverts{M}(2, :);
+0103    <span class="keyword">end</span>
+0104 <span class="keyword">end</span></pre></div>
+</body>
+</html>

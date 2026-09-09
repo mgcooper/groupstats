@@ -1,0 +1,923 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of barchartcats</title>
+  <meta name="keywords" content="barchartcats">
+  <meta name="description" content="BARCHARTCATS Bar chart by groups along x-axis and by color within groups.">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../function_index.html">Home</a> &gt;  <a href="function_index.html">+groupstats</a> &gt; barchartcats.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../function_index.html"><img alt="<" border="0" src="../html_img/left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="function_index.html">Index for +groupstats&nbsp;<img alt=">" border="0" src="../html_img/right.png"></a></td></tr></table>-->
+
+<h1>barchartcats
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>BARCHARTCATS Bar chart by groups along x-axis and by color within groups.</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre class="comment">BARCHARTCATS Bar chart by groups along x-axis and by color within groups.
+
+ Description
+
+ This function creates a bar chart of the data grouped by specified
+ categories.
+
+ Syntax
+
+ h = barchartcats(tbl, ydatavar) creates a bar chart, for column ydatavar in
+ table tbl. If tbl.(ydatavar) is a vector, then barchart creates a single bar
+ chart. In this mode, BARCHARTCATS behaves exactly like BOXCHART(ydata)
+ where ydata = tbl.(ydatavar).
+
+ h = barchartcats(tbl, ydatavar, xgroupvar) groups the data in the vector
+ tbl.(ydatavar) according to the unique values in tbl.(xgroupvar) and plots
+ each group of data as a separate bar chart. xgroupdata determines the
+ position of each bar chart along the x-axis. ydata must be a vector, and
+ xgroupdata must have the same length as ydata.
+
+ h = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, &quot;XGroupMembers&quot;,
+  xgroupmembers, &quot;CGroupMembers&quot;, cgroupmembers) uses color to differentiate
+ between bar charts. The software groups the data in the vector ydata
+ according to the unique value combinations in xgroupdata (if specified) and
+ cgroupdata. It plots each group of data as a separate bar chart. The
+ vector cgroupdata then determines the color of each bar chart. ydata must
+ be a vector, and cgroupdata must have the same length as ydata. Specify the
+ 'GroupByColor' name-value pair argument after any of the input argument
+ combinations in the previous syntaxes.
+
+ h = barchartcats(_, Name, Value) specifies additional chart options using
+ one or more name-value pair arguments. For a list of properties, see
+ BarChart Properties.
+
+ Input Arguments:
+
+ tbl - A table containing the data to be plotted.
+
+ ydatavar - The name of the variable in the table tbl that contains the data
+ values for the bar chart.
+
+ xgroupvar - The name of the categorical variable in the table tbl used to
+ define groups along the x-axis.
+
+ cgroupvar - The name of the categorical variable in the table tbl used to
+ define groups for the colors of the bars.
+
+ Method - the method used in the call to groupsummary to compute the values
+ plotted as bars. The default method is 'mean'. For 'mean', the standard
+ deviation is also computed in the call to groupsummary to support the
+ addition of whiskers to the bars. If 'median' is passed in as the method,
+ the whiskers represent the interquartile range. Set PlotError to draw
+ them. PlotError needs one bar per x-tick, so omit cgroupvar.
+
+ xgroupuse - A cell array of categories to be used for the x-axis grouping.
+
+ cgroupuse - A cell array of categories to be used for the color grouping.
+
+ Parent - The axes to draw into. The default is gca, so repeated calls
+ reuse the current axes. The bars, the whiskers, the shading, the
+ legend, and the axis formatting all go into this axes, and the
+ current axes is not touched when another one is named.
+
+ LegendString - Replacement legend entries, one per color-group member.
+ LegendString(i) names the i-th member in category order after member
+ filtering and merging. CGroupOrder permutes the entries with the
+ series, so an entry stays on its member. SortBy orders the x-groups
+ and leaves the legend as it is.
+
+ ShadeGroups - Shade alternating x-tick groups to tell one group of
+ bars from the next. Defaults to true when cgroupvar is given and
+ false otherwise, because the shading marks a boundary between
+ colored bars that a single-series chart does not have. Pass
+ ShadeGroups=true to shade a single-series chart anyway.
+
+ MergeGroupMembers - A cell array of string vectors. Each cell names
+ the color-group members to pool into one bar, matching
+ groupstats.histogram. A bare string vector is one merge group. The
+ merged bar's label joins the member names with &quot; and &quot;, and the bar
+ takes the position of its first member in the current category order.
+
+ MergeMethod - &quot;pooled&quot; (default) or &quot;membermean&quot;. &quot;pooled&quot; summarizes
+ the pooled member rows, so the merged bar is the statistic over every
+ row of the merged members, and PlotError works. &quot;membermean&quot; is the
+ unweighted mean of the member bars' summary values, which weights each
+ member group equally regardless of its row count. With Method=&quot;mean&quot;
+ and equal-sized member groups the two agree. With Method=&quot;median&quot;
+ they can differ even then, because a pooled median is not the mean of
+ member medians. &quot;membermean&quot; discards the spread of the combined
+ groups, so PlotError cannot be set with it.
+
+ Output Arguments
+
+ H: A handle to the created bar chart.
+ L: The legend, or an empty graphics placeholder when the legend could
+    not be created.
+ AX: The axes the chart was drawn into.
+
+ Example
+
+ Plot the peak variable of the fixture table. Group along the x-axis by
+ month, and by color within each group by scenario.
+
+  data = groupstats.test.generateTestData('info');
+  h = groupstats.barchartcats(data.Info, &quot;peak&quot;, &quot;month&quot;, &quot;scenario&quot;);
+
+ Restrict the groups to named members. XGroupMembers and CGroupMembers are
+ name-value arguments, not positional ones.
+
+  h = groupstats.barchartcats(data.Info, &quot;peak&quot;, &quot;month&quot;, &quot;scenario&quot;, ...
+     XGroupMembers = [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mar&quot;], ...
+     CGroupMembers = data.scenarios(1:2));
+
+ Sort the x-groups by their group mean and pass a Bar property through:
+
+  h = groupstats.barchartcats(data.Info, &quot;peak&quot;, &quot;month&quot;, &quot;scenario&quot;, ...
+     SortBy = &quot;ascend&quot;, BarWidth = 0.5);
+
+ Sorting
+
+ SortBy orders the x-groups by their summarized value, &quot;ascend&quot; or
+ &quot;descend&quot;. The sorted grouping is always xgroupvar. Each x-group's
+ sort value is the mean of its bars' heights. SortGroupMembers names
+ the cgroupvar members whose bars enter that mean; omitted, or
+ string.empty(), it uses every bar. It needs cgroupvar, and each name
+ must be one of its members (post-merge names after a merge). XGroupOrder names the order
+ directly and takes precedence over SortBy.
+
+ Note
+
+ Grouped data is summarized in category order, not first-appearance
+ order. An (x-group, color-group) pair with no rows gets no bar, and
+ the other bars stay on their own ticks. A table that is already a
+ groupsummary output is summarized again: name its summary column as
+ ydatavar, and each bar is then Method over that column's rows in the
+ group, with the spread of those rows as the whisker.
+
+ Colors
+
+ Each color group takes the next row of defaultcolors, the palette
+ boxchartcats and scatter read, so the k-th color group of any chart
+ in the family has the same color. Pass FaceColor to override it, or
+ CData to color the bars through the colormap as bar does.
+
+ Dependencies
+
+ These come from matfunclib and must be on the path:
+
+  defaultcolors (libplot)      colors the bars
+  dealout (functools)          splits the outputs
+
+ Matt Cooper, 29-Nov-2022, https://github.com/mgcooper
+
+ See also reordergroups, reordercats, barchart,
+ groupstats.<a href="boxchartcats.html" class="code" title="function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">boxchartcats</a>, groupstats.namelists.sortorder</pre></div>
+
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+
+This function calls:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="barchartcats.html" class="code" title="function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">barchartcats</a>	BARCHARTCATS Bar chart by groups along x-axis and by color within groups.</li>
+<li><a href="groupsummary.html" class="code" title="function G = groupsummary(tbl, groupvars, methods, datavar,groupbins, opts)">groupsummary</a>	GROUPSUMMARY Compute group-wise statistics</li>
+<li><a href="prepareTableGroups.html" class="code" title="function tbl = prepareTableGroups(tbl, ydatavar, opts)">prepareTableGroups</a>	PREPARETABLEGROUPS Select rows and prepare group variables in a table.</li></ul>
+
+
+This function is called by:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="barchartcats.html" class="code" title="function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">barchartcats</a>	BARCHARTCATS Bar chart by groups along x-axis and by color within groups.</li></ul>
+<!-- crossreference -->
+
+
+<h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="#_sub1" class="code">function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar,</a></li>
+<li><a href="#_sub2" class="code">function [CData, YData] = mergemembermean(CData, YData, mergegroups)</a></li>
+<li><a href="#_sub3" class="code">function [XData, YData, EData] = reorderXGroups(opts, sortcolumns,</a></li>
+<li><a href="#_sub4" class="code">function [YData, EData, CData, opts] = reorderCGroups(opts, YData,</a></li>
+<li><a href="#_sub5" class="code">function plotBarErrors(opts, H, YData, EData)</a></li>
+<li><a href="#_sub6" class="code">function shadebarchartgroups(opts, H)</a></li>
+<li><a href="#_sub7" class="code">function [H, L, ax] = createCategoricalBarChart(XData, YData, CData,</a></li></ul>
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)</a>
+0002    <span class="comment">%BARCHARTCATS Bar chart by groups along x-axis and by color within groups.</span>
+0003    <span class="comment">%</span>
+0004    <span class="comment">% Description</span>
+0005    <span class="comment">%</span>
+0006    <span class="comment">% This function creates a bar chart of the data grouped by specified</span>
+0007    <span class="comment">% categories.</span>
+0008    <span class="comment">%</span>
+0009    <span class="comment">% Syntax</span>
+0010    <span class="comment">%</span>
+0011    <span class="comment">% h = barchartcats(tbl, ydatavar) creates a bar chart, for column ydatavar in</span>
+0012    <span class="comment">% table tbl. If tbl.(ydatavar) is a vector, then barchart creates a single bar</span>
+0013    <span class="comment">% chart. In this mode, BARCHARTCATS behaves exactly like BOXCHART(ydata)</span>
+0014    <span class="comment">% where ydata = tbl.(ydatavar).</span>
+0015    <span class="comment">%</span>
+0016    <span class="comment">% h = barchartcats(tbl, ydatavar, xgroupvar) groups the data in the vector</span>
+0017    <span class="comment">% tbl.(ydatavar) according to the unique values in tbl.(xgroupvar) and plots</span>
+0018    <span class="comment">% each group of data as a separate bar chart. xgroupdata determines the</span>
+0019    <span class="comment">% position of each bar chart along the x-axis. ydata must be a vector, and</span>
+0020    <span class="comment">% xgroupdata must have the same length as ydata.</span>
+0021    <span class="comment">%</span>
+0022    <span class="comment">% h = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, &quot;XGroupMembers&quot;,</span>
+0023    <span class="comment">%  xgroupmembers, &quot;CGroupMembers&quot;, cgroupmembers) uses color to differentiate</span>
+0024    <span class="comment">% between bar charts. The software groups the data in the vector ydata</span>
+0025    <span class="comment">% according to the unique value combinations in xgroupdata (if specified) and</span>
+0026    <span class="comment">% cgroupdata. It plots each group of data as a separate bar chart. The</span>
+0027    <span class="comment">% vector cgroupdata then determines the color of each bar chart. ydata must</span>
+0028    <span class="comment">% be a vector, and cgroupdata must have the same length as ydata. Specify the</span>
+0029    <span class="comment">% 'GroupByColor' name-value pair argument after any of the input argument</span>
+0030    <span class="comment">% combinations in the previous syntaxes.</span>
+0031    <span class="comment">%</span>
+0032    <span class="comment">% h = barchartcats(_, Name, Value) specifies additional chart options using</span>
+0033    <span class="comment">% one or more name-value pair arguments. For a list of properties, see</span>
+0034    <span class="comment">% BarChart Properties.</span>
+0035    <span class="comment">%</span>
+0036    <span class="comment">% Input Arguments:</span>
+0037    <span class="comment">%</span>
+0038    <span class="comment">% tbl - A table containing the data to be plotted.</span>
+0039    <span class="comment">%</span>
+0040    <span class="comment">% ydatavar - The name of the variable in the table tbl that contains the data</span>
+0041    <span class="comment">% values for the bar chart.</span>
+0042    <span class="comment">%</span>
+0043    <span class="comment">% xgroupvar - The name of the categorical variable in the table tbl used to</span>
+0044    <span class="comment">% define groups along the x-axis.</span>
+0045    <span class="comment">%</span>
+0046    <span class="comment">% cgroupvar - The name of the categorical variable in the table tbl used to</span>
+0047    <span class="comment">% define groups for the colors of the bars.</span>
+0048    <span class="comment">%</span>
+0049    <span class="comment">% Method - the method used in the call to groupsummary to compute the values</span>
+0050    <span class="comment">% plotted as bars. The default method is 'mean'. For 'mean', the standard</span>
+0051    <span class="comment">% deviation is also computed in the call to groupsummary to support the</span>
+0052    <span class="comment">% addition of whiskers to the bars. If 'median' is passed in as the method,</span>
+0053    <span class="comment">% the whiskers represent the interquartile range. Set PlotError to draw</span>
+0054    <span class="comment">% them. PlotError needs one bar per x-tick, so omit cgroupvar.</span>
+0055    <span class="comment">%</span>
+0056    <span class="comment">% xgroupuse - A cell array of categories to be used for the x-axis grouping.</span>
+0057    <span class="comment">%</span>
+0058    <span class="comment">% cgroupuse - A cell array of categories to be used for the color grouping.</span>
+0059    <span class="comment">%</span>
+0060    <span class="comment">% Parent - The axes to draw into. The default is gca, so repeated calls</span>
+0061    <span class="comment">% reuse the current axes. The bars, the whiskers, the shading, the</span>
+0062    <span class="comment">% legend, and the axis formatting all go into this axes, and the</span>
+0063    <span class="comment">% current axes is not touched when another one is named.</span>
+0064    <span class="comment">%</span>
+0065    <span class="comment">% LegendString - Replacement legend entries, one per color-group member.</span>
+0066    <span class="comment">% LegendString(i) names the i-th member in category order after member</span>
+0067    <span class="comment">% filtering and merging. CGroupOrder permutes the entries with the</span>
+0068    <span class="comment">% series, so an entry stays on its member. SortBy orders the x-groups</span>
+0069    <span class="comment">% and leaves the legend as it is.</span>
+0070    <span class="comment">%</span>
+0071    <span class="comment">% ShadeGroups - Shade alternating x-tick groups to tell one group of</span>
+0072    <span class="comment">% bars from the next. Defaults to true when cgroupvar is given and</span>
+0073    <span class="comment">% false otherwise, because the shading marks a boundary between</span>
+0074    <span class="comment">% colored bars that a single-series chart does not have. Pass</span>
+0075    <span class="comment">% ShadeGroups=true to shade a single-series chart anyway.</span>
+0076    <span class="comment">%</span>
+0077    <span class="comment">% MergeGroupMembers - A cell array of string vectors. Each cell names</span>
+0078    <span class="comment">% the color-group members to pool into one bar, matching</span>
+0079    <span class="comment">% groupstats.histogram. A bare string vector is one merge group. The</span>
+0080    <span class="comment">% merged bar's label joins the member names with &quot; and &quot;, and the bar</span>
+0081    <span class="comment">% takes the position of its first member in the current category order.</span>
+0082    <span class="comment">%</span>
+0083    <span class="comment">% MergeMethod - &quot;pooled&quot; (default) or &quot;membermean&quot;. &quot;pooled&quot; summarizes</span>
+0084    <span class="comment">% the pooled member rows, so the merged bar is the statistic over every</span>
+0085    <span class="comment">% row of the merged members, and PlotError works. &quot;membermean&quot; is the</span>
+0086    <span class="comment">% unweighted mean of the member bars' summary values, which weights each</span>
+0087    <span class="comment">% member group equally regardless of its row count. With Method=&quot;mean&quot;</span>
+0088    <span class="comment">% and equal-sized member groups the two agree. With Method=&quot;median&quot;</span>
+0089    <span class="comment">% they can differ even then, because a pooled median is not the mean of</span>
+0090    <span class="comment">% member medians. &quot;membermean&quot; discards the spread of the combined</span>
+0091    <span class="comment">% groups, so PlotError cannot be set with it.</span>
+0092    <span class="comment">%</span>
+0093    <span class="comment">% Output Arguments</span>
+0094    <span class="comment">%</span>
+0095    <span class="comment">% H: A handle to the created bar chart.</span>
+0096    <span class="comment">% L: The legend, or an empty graphics placeholder when the legend could</span>
+0097    <span class="comment">%    not be created.</span>
+0098    <span class="comment">% AX: The axes the chart was drawn into.</span>
+0099    <span class="comment">%</span>
+0100    <span class="comment">% Example</span>
+0101    <span class="comment">%</span>
+0102    <span class="comment">% Plot the peak variable of the fixture table. Group along the x-axis by</span>
+0103    <span class="comment">% month, and by color within each group by scenario.</span>
+0104    <span class="comment">%</span>
+0105    <span class="comment">%  data = groupstats.test.generateTestData('info');</span>
+0106    <span class="comment">%  h = groupstats.barchartcats(data.Info, &quot;peak&quot;, &quot;month&quot;, &quot;scenario&quot;);</span>
+0107    <span class="comment">%</span>
+0108    <span class="comment">% Restrict the groups to named members. XGroupMembers and CGroupMembers are</span>
+0109    <span class="comment">% name-value arguments, not positional ones.</span>
+0110    <span class="comment">%</span>
+0111    <span class="comment">%  h = groupstats.barchartcats(data.Info, &quot;peak&quot;, &quot;month&quot;, &quot;scenario&quot;, ...</span>
+0112    <span class="comment">%     XGroupMembers = [&quot;Jan&quot;, &quot;Feb&quot;, &quot;Mar&quot;], ...</span>
+0113    <span class="comment">%     CGroupMembers = data.scenarios(1:2));</span>
+0114    <span class="comment">%</span>
+0115    <span class="comment">% Sort the x-groups by their group mean and pass a Bar property through:</span>
+0116    <span class="comment">%</span>
+0117    <span class="comment">%  h = groupstats.barchartcats(data.Info, &quot;peak&quot;, &quot;month&quot;, &quot;scenario&quot;, ...</span>
+0118    <span class="comment">%     SortBy = &quot;ascend&quot;, BarWidth = 0.5);</span>
+0119    <span class="comment">%</span>
+0120    <span class="comment">% Sorting</span>
+0121    <span class="comment">%</span>
+0122    <span class="comment">% SortBy orders the x-groups by their summarized value, &quot;ascend&quot; or</span>
+0123    <span class="comment">% &quot;descend&quot;. The sorted grouping is always xgroupvar. Each x-group's</span>
+0124    <span class="comment">% sort value is the mean of its bars' heights. SortGroupMembers names</span>
+0125    <span class="comment">% the cgroupvar members whose bars enter that mean; omitted, or</span>
+0126    <span class="comment">% string.empty(), it uses every bar. It needs cgroupvar, and each name</span>
+0127    <span class="comment">% must be one of its members (post-merge names after a merge). XGroupOrder names the order</span>
+0128    <span class="comment">% directly and takes precedence over SortBy.</span>
+0129    <span class="comment">%</span>
+0130    <span class="comment">% Note</span>
+0131    <span class="comment">%</span>
+0132    <span class="comment">% Grouped data is summarized in category order, not first-appearance</span>
+0133    <span class="comment">% order. An (x-group, color-group) pair with no rows gets no bar, and</span>
+0134    <span class="comment">% the other bars stay on their own ticks. A table that is already a</span>
+0135    <span class="comment">% groupsummary output is summarized again: name its summary column as</span>
+0136    <span class="comment">% ydatavar, and each bar is then Method over that column's rows in the</span>
+0137    <span class="comment">% group, with the spread of those rows as the whisker.</span>
+0138    <span class="comment">%</span>
+0139    <span class="comment">% Colors</span>
+0140    <span class="comment">%</span>
+0141    <span class="comment">% Each color group takes the next row of defaultcolors, the palette</span>
+0142    <span class="comment">% boxchartcats and scatter read, so the k-th color group of any chart</span>
+0143    <span class="comment">% in the family has the same color. Pass FaceColor to override it, or</span>
+0144    <span class="comment">% CData to color the bars through the colormap as bar does.</span>
+0145    <span class="comment">%</span>
+0146    <span class="comment">% Dependencies</span>
+0147    <span class="comment">%</span>
+0148    <span class="comment">% These come from matfunclib and must be on the path:</span>
+0149    <span class="comment">%</span>
+0150    <span class="comment">%  defaultcolors (libplot)      colors the bars</span>
+0151    <span class="comment">%  dealout (functools)          splits the outputs</span>
+0152    <span class="comment">%</span>
+0153    <span class="comment">% Matt Cooper, 29-Nov-2022, https://github.com/mgcooper</span>
+0154    <span class="comment">%</span>
+0155    <span class="comment">% See also reordergroups, reordercats, barchart,</span>
+0156    <span class="comment">% groupstats.boxchartcats, groupstats.namelists.sortorder</span>
+0157 
+0158    arguments
+0159       tbl tabular
+0160       ydatavar (1,1) string {mustBeNonempty}
+0161       xgroupvar (1,1) string {mustBeNonempty}
+0162       <span class="comment">% One color grouping or none. A vector would name two groupings,</span>
+0163       <span class="comment">% which the chart has no second color axis for.</span>
+0164       cgroupvar string {mustBeScalarOrEmpty} = string.empty()
+0165       opts.XGroupMembers string = string.empty()
+0166       opts.CGroupMembers string = string.empty()
+0167       opts.RowSelectVar string = string.empty()
+0168       opts.RowSelectMembers string = string.empty()
+0169       opts.Method (:,1) string <span class="keyword">...</span>
+0170          { groupstats.namelists.mustBeMemberOf(opts.Method, <span class="keyword">...</span>
+0171          &quot;centralstatistic&quot;) } = &quot;mean&quot;
+0172       opts.SortBy (1,1) string <span class="keyword">...</span>
+0173          { groupstats.namelists.mustBeMemberOf(opts.SortBy, <span class="keyword">...</span>
+0174          &quot;sortorder&quot;) } = &quot;none&quot;
+0175       <span class="comment">% SortGroupMembers names the cgroupvar members whose bars compute</span>
+0176       <span class="comment">% each x-group's sort value when SortBy is set. Empty, the family's</span>
+0177       <span class="comment">% no-selection sentinel, averages every cgroup bar; name specific</span>
+0178       <span class="comment">% members to sort by them alone. A word such as &quot;all&quot; cannot be the</span>
+0179       <span class="comment">% sentinel, because a member can carry that name.</span>
+0180       opts.SortGroupMembers (:,1) string = string.empty()
+0181       opts.MergeGroupMembers (:,1) = string.empty()
+0182       opts.MergeMethod (1,1) string <span class="keyword">...</span>
+0183          { groupstats.namelists.mustBeMemberOf(opts.MergeMethod, <span class="keyword">...</span>
+0184          &quot;mergemethod&quot;) } = &quot;pooled&quot;
+0185       opts.XGroupOrder (:,1) string = &quot;none&quot;
+0186       opts.CGroupOrder (:,1) string = &quot;none&quot;
+0187       <span class="comment">% Axes to draw into. The default is gca, so repeated calls reuse the</span>
+0188       <span class="comment">% current axes, as scatter does.</span>
+0189       opts.Parent (1,1) {mustBeA(opts.Parent, <span class="keyword">...</span>
+0190          &quot;matlab.graphics.axis.AbstractAxes&quot;)} = gca
+0191       <span class="comment">% ShadeGroups marks the boundary between x-tick groups of several</span>
+0192       <span class="comment">% colored bars, so it is pointless with one bar per tick. The</span>
+0193       <span class="comment">% sentinel logical.empty() means &quot;unset&quot;: resolved right after this</span>
+0194       <span class="comment">% block to true when cgroupvar is given and false otherwise. An</span>
+0195       <span class="comment">% explicit true or false is not the sentinel and always wins, so</span>
+0196       <span class="comment">% ShadeGroups=true still shades a single-series chart. PlotError</span>
+0197       <span class="comment">% stays off by default.</span>
+0198       opts.ShadeGroups logical {mustBeScalarOrEmpty} = logical.empty()
+0199       opts.PlotError (1,1) logical = false
+0200       opts.Legend (:,1) string <span class="keyword">...</span>
+0201          {groupstats.namelists.mustBeMemberOf(opts.Legend, <span class="keyword">...</span>
+0202          &quot;legendvisibility&quot;)} = &quot;on&quot;
+0203       opts.LegendString (:,1) string = string.empty()
+0204       opts.LegendOrientation (1, 1) string <span class="keyword">...</span>
+0205          {groupstats.namelists.mustBeMemberOf(opts.LegendOrientation, <span class="keyword">...</span>
+0206          &quot;legendorientation&quot;)} = &quot;vertical&quot;
+0207       props.?matlab.graphics.chart.primitive.Bar
+0208    <span class="keyword">end</span>
+0209 
+0210    <span class="comment">% import groupstats package</span>
+0211    import groupstats.groupselect
+0212    import groupstats.prepareTableGroups
+0213 
+0214    <span class="comment">% Resolve the ShadeGroups sentinel. The shading tells one x-tick group</span>
+0215    <span class="comment">% of colored bars apart from the next, which only matters when a tick</span>
+0216    <span class="comment">% holds more than one bar, so it defaults on with cgroupvar and off</span>
+0217    <span class="comment">% without it. An explicit true or false is not the sentinel and wins.</span>
+0218    <span class="keyword">if</span> isempty(opts.ShadeGroups)
+0219       opts.ShadeGroups = ~isempty(cgroupvar);
+0220    <span class="keyword">end</span>
+0221 
+0222    varargs = namedargs2cell(props);
+0223 
+0224    <span class="comment">% H, L, and the axes are the outputs.</span>
+0225    nargoutchk(0, 3)
+0226 
+0227    <span class="comment">% Merging pools members of the color-group variable, so without one</span>
+0228    <span class="comment">% there is nothing to pool.</span>
+0229    <span class="keyword">if</span> isempty(cgroupvar) &amp;&amp; ~isempty(opts.MergeGroupMembers)
+0230       error(<span class="string">'groupstats:barchartcats:mergeWithoutGroupVar'</span>, <span class="keyword">...</span>
+0231          [<span class="string">'MergeGroupMembers was given without cgroupvar. Name the color '</span> <span class="keyword">...</span>
+0232          <span class="string">'group variable whose members are pooled.'</span>])
+0233    <span class="keyword">end</span>
+0234 
+0235    <span class="comment">% SortGroupMembers names color-group members, so without a color group</span>
+0236    <span class="comment">% there are none to name. Empty stands for every member.</span>
+0237    <span class="keyword">if</span> isempty(cgroupvar) &amp;&amp; ~isempty(opts.SortGroupMembers)
+0238       error(<span class="string">'groupstats:barchartcats:sortGroupMembersWithoutGroupVar'</span>, <span class="keyword">...</span>
+0239          [<span class="string">'SortGroupMembers was given without cgroupvar. Name the color '</span> <span class="keyword">...</span>
+0240          <span class="string">'group variable whose members compute the sort value.'</span>])
+0241    <span class="keyword">end</span>
+0242 
+0243    <span class="comment">% validate inputs</span>
+0244    tbl = <a href="prepareTableGroups.html" class="code" title="function tbl = prepareTableGroups(tbl, ydatavar, opts)">prepareTableGroups</a>(tbl, ydatavar, <span class="keyword">...</span>
+0245       XGroupVar = xgroupvar, <span class="keyword">...</span>
+0246       XGroupMembers = opts.XGroupMembers, <span class="keyword">...</span>
+0247       CGroupVar = cgroupvar, <span class="keyword">...</span>
+0248       CGroupMembers = opts.CGroupMembers, <span class="keyword">...</span>
+0249       RowSelectVar = opts.RowSelectVar, <span class="keyword">...</span>
+0250       RowSelectMembers = opts.RowSelectMembers);
+0251 
+0252    <span class="comment">% Merge before summarizing, so the merged bar is the statistic over the</span>
+0253    <span class="comment">% pooled member rows and its spread supports PlotError. The membermean</span>
+0254    <span class="comment">% method instead averages the member bars after summarizing, below.</span>
+0255    <span class="comment">% Member filtering above reads original names; ordering and sorting</span>
+0256    <span class="comment">% below read post-merge names.</span>
+0257    <span class="keyword">if</span> ~isempty(opts.MergeGroupMembers) &amp;&amp; opts.MergeMethod == &quot;pooled&quot;
+0258       tbl.(cgroupvar) = mergegroupmembers( <span class="keyword">...</span>
+0259          tbl.(cgroupvar), opts.MergeGroupMembers);
+0260    <span class="keyword">end</span>
+0261 
+0262    <span class="comment">% barchartcats requires summarizing the data, unlike boxchart</span>
+0263    [XData, YData, CData, EData] = <a href="#_sub1" class="code" title="subfunction [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ">summarizeTableGroups</a>( <span class="keyword">...</span>
+0264       tbl, ydatavar, xgroupvar, cgroupvar, opts.Method);
+0265 
+0266    <span class="comment">% main function</span>
+0267 
+0268    <span class="comment">% Note: plotBarErrors reads H.XEndPoints for the whisker positions rather</span>
+0269    <span class="comment">% than adapting the boxchartxdata method, because bar already computes the</span>
+0270    <span class="comment">% center of every bar it draws.</span>
+0271 
+0272    <span class="comment">% NOTE: the columns arrive in category order, because &quot;unique&quot; is</span>
+0273    <span class="comment">% embedded all over the place e.g. in the call to groupsummary in</span>
+0274    <span class="comment">% summarizeTableGroups. The sort mask below is built from that same</span>
+0275    <span class="comment">% order. Asking for &quot;stable&quot; here does not change the columns, only the</span>
+0276    <span class="comment">% list read against them, which is what made the sort read the wrong one.</span>
+0277 
+0278    <span class="comment">% The membermean merge averages the member bars' summary columns. The</span>
+0279    <span class="comment">% spread of a merged group is not the spread of its parts, so it</span>
+0280    <span class="comment">% discards EData, and the guard names the PlotError conflict. The pooled</span>
+0281    <span class="comment">% method above has no such conflict.</span>
+0282    <span class="keyword">if</span> ~isempty(opts.MergeGroupMembers) &amp;&amp; opts.MergeMethod == &quot;membermean&quot;
+0283       <span class="keyword">if</span> opts.PlotError
+0284          error(<span class="string">'groupstats:barchartcats:plotErrorNeedsUnmergedGroups'</span>, <span class="keyword">...</span>
+0285             [<span class="string">'PlotError needs the spread of each group, and '</span> <span class="keyword">...</span>
+0286             <span class="string">'MergeMethod=&quot;membermean&quot; combines groups whose spread does '</span> <span class="keyword">...</span>
+0287             <span class="string">'not add up. Use MergeMethod=&quot;pooled&quot;, omit '</span> <span class="keyword">...</span>
+0288             <span class="string">'MergeGroupMembers, or leave PlotError off.'</span>])
+0289       <span class="keyword">end</span>
+0290       [CData, YData] = <a href="#_sub2" class="code" title="subfunction [CData, YData] = mergemembermean(CData, YData, mergegroups)">mergemembermean</a>(CData, YData, opts.MergeGroupMembers);
+0291       EData = [];
+0292    <span class="keyword">end</span>
+0293 
+0294    <span class="comment">% Order the color groups. An explicit CGroupOrder names post-merge</span>
+0295    <span class="comment">% labels when a merge happened. LegendString moves with the columns.</span>
+0296    [YData, EData, CData, opts] = <a href="#_sub4" class="code" title="subfunction [YData, EData, CData, opts] = reorderCGroups(opts, YData, ">reorderCGroups</a>(opts, YData, EData, CData);
+0297 
+0298    <span class="comment">% Find the columns to use for computing the sort. The columns are in</span>
+0299    <span class="comment">% category order, and CGroupOrder permutes that order, so read the</span>
+0300    <span class="comment">% categories. unique(...,&quot;stable&quot;) gives first-appearance order and</span>
+0301    <span class="comment">% marks another color group's column. SortGroupMembers names post-merge</span>
+0302    <span class="comment">% labels when a merge happened.</span>
+0303    <span class="keyword">if</span> iscategorical(CData)
+0304       cgroups = string(categories(removecats(CData)));
+0305    <span class="keyword">else</span>
+0306       cgroups = string(unique(CData));
+0307    <span class="keyword">end</span>
+0308    <span class="keyword">if</span> isempty(opts.SortGroupMembers)
+0309       opts.SortGroupMembers = cgroups;
+0310    <span class="keyword">else</span>
+0311       <span class="comment">% A name that matches no member would select no column, and the sort</span>
+0312       <span class="comment">% would then read a NaN mean and change nothing, with no report.</span>
+0313       validatemember(opts.SortGroupMembers, cgroups, <span class="string">'BARCHARTCATS'</span>, <span class="keyword">...</span>
+0314          <span class="string">'SortGroupMembers'</span>)
+0315    <span class="keyword">end</span>
+0316    sortcolumns = ismember(cgroups, opts.SortGroupMembers);
+0317 
+0318    <span class="comment">% Custom ordering along x-axis</span>
+0319    [XData, YData, EData] = <a href="#_sub3" class="code" title="subfunction [XData, YData, EData] = reorderXGroups(opts, sortcolumns, ">reorderXGroups</a>(opts, sortcolumns, <span class="keyword">...</span>
+0320       XData, YData, EData);
+0321 
+0322    <span class="comment">% Create the figure</span>
+0323    [H, L, ax] = <a href="#_sub7" class="code" title="subfunction [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ">createCategoricalBarChart</a>(XData, YData, CData, cgroups, <span class="keyword">...</span>
+0324       ydatavar, opts, varargs);
+0325 
+0326    <span class="comment">% Draw the whiskers on top of the bars, then shade behind them.</span>
+0327    <a href="#_sub5" class="code" title="subfunction plotBarErrors(opts, H, YData, EData)">plotBarErrors</a>(opts, H, YData, EData);
+0328    <a href="#_sub6" class="code" title="subfunction shadebarchartgroups(opts, H)">shadebarchartgroups</a>(opts, H);
+0329 
+0330    hold(ax, <span class="string">'off'</span>)
+0331    [varargout{1:nargout}] = dealout(H, L, ax);
+0332 <span class="keyword">end</span>
+0333 
+0334 
+0335 <a name="_sub1" href="#_subfunctions" class="code">function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, </a><span class="keyword">...</span>
+0336       xgroupvar, cgroupvar, method)
+0337    <span class="comment">%SUMMARIZETABLEGROUPS</span>
+0338 
+0339    <span class="comment">% cgroupvar leads the grouping list because it controls the row order</span>
+0340    <span class="comment">% groupsummary returns, which the reshape below and bar's series</span>
+0341    <span class="comment">% layout rely on.</span>
+0342 
+0343    <span class="keyword">if</span> strcmp(method,<span class="string">'mean'</span>)
+0344       G = <a href="groupsummary.html" class="code" title="function G = groupsummary(tbl, groupvars, methods, datavar,groupbins, opts)">groupsummary</a>(tbl,[cgroupvar xgroupvar], [&quot;mean&quot;, &quot;std&quot;], ydatavar);
+0345       XData = G.(xgroupvar);
+0346       YData = G.(&quot;mean_&quot; + ydatavar);
+0347       EData = G.(&quot;std_&quot; + ydatavar);
+0348    <span class="keyword">elseif</span> strcmp(method,<span class="string">'median'</span>)
+0349       G = <a href="groupsummary.html" class="code" title="function G = groupsummary(tbl, groupvars, methods, datavar,groupbins, opts)">groupsummary</a>(tbl,[cgroupvar xgroupvar], {&quot;median&quot;, @iqr}, ydatavar);
+0350       XData = G.(xgroupvar);
+0351       YData = G.(&quot;median_&quot; + ydatavar);
+0352 
+0353       <span class="comment">% groupsummary names a function-handle method's column fun&lt;N&gt;_&lt;var&gt;.</span>
+0354       <span class="comment">% The spread that pairs with a median is the interquartile range.</span>
+0355       EData = G.(&quot;fun1_&quot; + ydatavar);
+0356    <span class="keyword">end</span>
+0357 
+0358    <span class="comment">% Each column of Y needs to correspond to a group of bars. Each bar in a</span>
+0359    <span class="comment">% group is a different color, and each group is a different x-tick.</span>
+0360    <span class="comment">% groupsummary returns one row per pair that has rows, so a pair with</span>
+0361    <span class="comment">% none is absent. Place each row in its own slot and leave the absent</span>
+0362    <span class="comment">% pairs NaN, which bar draws as no bar; a reshape would shift every</span>
+0363    <span class="comment">% later value onto another pair's bar.</span>
+0364    XData = unique(XData);
+0365    [~, ix] = ismember(G.(xgroupvar), XData);
+0366    <span class="keyword">if</span> isempty(cgroupvar)
+0367       ic = ones(height(G), 1);
+0368       ncols = 1;
+0369    <span class="keyword">else</span>
+0370       cmembers = unique(G.(cgroupvar));
+0371       [~, ic] = ismember(G.(cgroupvar), cmembers);
+0372       ncols = numel(cmembers);
+0373    <span class="keyword">end</span>
+0374    slot = sub2ind([numel(XData), ncols], ix, ic);
+0375    ydata = YData;
+0376    edata = EData;
+0377    YData = nan(numel(XData), ncols);
+0378    EData = nan(numel(XData), ncols);
+0379    YData(slot) = ydata;
+0380    EData(slot) = edata;
+0381 
+0382    <span class="comment">% cgroupvar may be empty; the logical stand-in makes bar treat</span>
+0383    <span class="comment">% everything as one color group, matching boxchartcats.</span>
+0384    <span class="keyword">if</span> isempty(cgroupvar)
+0385       CData = true(size(YData));
+0386    <span class="keyword">else</span>
+0387       CData = tbl.(cgroupvar);
+0388    <span class="keyword">end</span>
+0389 <span class="keyword">end</span>
+0390 
+0391 
+0392 <a name="_sub2" href="#_subfunctions" class="code">function [CData, YData] = mergemembermean(CData, YData, mergegroups)</a>
+0393    <span class="comment">%MERGEMEMBERMEAN Average member columns of the summary matrix by name.</span>
+0394    <span class="comment">%</span>
+0395    <span class="comment">% The columns of YData arrive in category order of CData. Each merge</span>
+0396    <span class="comment">% group's columns average into the first member's category position.</span>
+0397    <span class="comment">% The shared relabel gives the merged category the same position, so</span>
+0398    <span class="comment">% the columns and the categories stay paired. The merged column takes</span>
+0399    <span class="comment">% the minimum member position; a mean position can collide with an</span>
+0400    <span class="comment">% unmerged column's position.</span>
+0401 
+0402    <span class="comment">% Capture the pre-merge category order, then relabel the rows through</span>
+0403    <span class="comment">% the shared helper, which also validates the member names.</span>
+0404    members0 = string(categories(removecats(CData)));
+0405    CData = mergegroupmembers(CData, mergegroups);
+0406 
+0407    <span class="comment">% A bare member list is one merge group, the same rule the helper uses.</span>
+0408    <span class="keyword">if</span> ~iscell(mergegroups)
+0409       mergegroups = {mergegroups};
+0410    <span class="keyword">end</span>
+0411 
+0412    <span class="comment">% A member with no rows in an x-group holds NaN there, so the merged</span>
+0413    <span class="comment">% bar averages the members that exist and is NaN only when none do.</span>
+0414    keep = true(1, numel(members0));
+0415    <span class="keyword">for</span> n = 1:numel(mergegroups)
+0416       cols = find(ismember(members0, string(mergegroups{n})));
+0417       YData(:, min(cols)) = mean(YData(:, cols), 2, <span class="string">'omitnan'</span>);
+0418       keep(setdiff(cols, min(cols))) = false;
+0419    <span class="keyword">end</span>
+0420    YData = YData(:, keep);
+0421 <span class="keyword">end</span>
+0422 
+0423 <a name="_sub3" href="#_subfunctions" class="code">function [XData, YData, EData] = reorderXGroups(opts, sortcolumns, </a><span class="keyword">...</span>
+0424       XData, YData, EData)
+0425    <span class="comment">%REORDERGROUPS Reorder the x-axis (tick) groups.</span>
+0426    <span class="comment">%</span>
+0427    <span class="comment">% Use this to order categorical data, or data of any type, other than by</span>
+0428    <span class="comment">% the default ordinal ordering.</span>
+0429 
+0430    <span class="keyword">if</span> opts.XGroupOrder == &quot;none&quot;
+0431       <span class="comment">% The sortorder namelist allows ascend, descend, and none. &quot;stable&quot; is</span>
+0432       <span class="comment">% a sort option MATLAB accepts and this one does not.</span>
+0433 
+0434       <span class="comment">% A pair with no rows holds NaN, so the mean reads the bars that</span>
+0435       <span class="comment">% exist, and an x-group with none of the selected bars sorts last.</span>
+0436       <span class="keyword">switch</span> opts.SortBy
+0437          <span class="keyword">case</span> {&quot;ascend&quot;, &quot;descend&quot;}
+0438             stat = mean(YData(:, sortcolumns), 2, <span class="string">'omitnan'</span>);
+0439             [~, idx] = sort(stat, opts.SortBy, <span class="string">'MissingPlacement'</span>, <span class="string">'last'</span>);
+0440             XData = reordercats(XData, string(XData(idx)));
+0441          <span class="keyword">otherwise</span>
+0442             <span class="comment">% &quot;none&quot;, the only other value the sortorder namelist allows.</span>
+0443             <span class="comment">% &quot;stable&quot; was considered and left out: for categories it means</span>
+0444             <span class="comment">% the order they already have, which is what &quot;none&quot; does.</span>
+0445       <span class="keyword">end</span>
+0446    <span class="keyword">else</span>
+0447       <span class="comment">% Sort by order of provided elements</span>
+0448       <span class="comment">% A partial order names some x-groups and leaves the rest behind</span>
+0449       <span class="comment">% them, the way CGroupOrder does.</span>
+0450       members = string(categories(removecats(XData)));
+0451       idx = reordergroupmembers(opts.XGroupOrder, members, <span class="keyword">...</span>
+0452          &quot;<a href="barchartcats.html" class="code" title="function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">barchartcats</a>&quot;, &quot;XGroupOrder&quot;);
+0453 
+0454       <span class="comment">% reordercats changes the display order and leaves the rows where they</span>
+0455       <span class="comment">% are. bar pairs XData(i) with YData(i,:), so permuting the rows too</span>
+0456       <span class="comment">% would move each height onto another group's tick.</span>
+0457       XData = reordercats(XData, members(idx));
+0458    <span class="keyword">end</span>
+0459 <span class="keyword">end</span>
+0460 
+0461 <a name="_sub4" href="#_subfunctions" class="code">function [YData, EData, CData, opts] = reorderCGroups(opts, YData, </a><span class="keyword">...</span>
+0462       EData, CData)
+0463    <span class="comment">%REORDERCGROUPS Reorder the color groups, which are the columns of YData.</span>
+0464    <span class="comment">%</span>
+0465    <span class="comment">% bar draws one series per column, and the legend reads them in that</span>
+0466    <span class="comment">% order. Ordering the columns orders both the bars within each x-tick</span>
+0467    <span class="comment">% group and the legend. A caller's LegendString binds to the members in</span>
+0468    <span class="comment">% category order, so it is permuted the same way and stays on its data.</span>
+0469 
+0470    <span class="keyword">if</span> isscalar(opts.CGroupOrder) &amp;&amp; opts.CGroupOrder == &quot;none&quot;
+0471       <span class="keyword">return</span>
+0472    <span class="keyword">end</span>
+0473 
+0474    <span class="comment">% groupsummary groups by category order, so the columns of YData are in</span>
+0475    <span class="comment">% category order. unique(...,&quot;stable&quot;) would give first-appearance order</span>
+0476    <span class="comment">% and pair each label with the wrong column.</span>
+0477    <span class="keyword">if</span> iscategorical(CData)
+0478       members = string(categories(removecats(CData)));
+0479    <span class="keyword">else</span>
+0480       members = string(unique(CData));
+0481    <span class="keyword">end</span>
+0482 
+0483    idx = reordergroupmembers(opts.CGroupOrder, members, <span class="keyword">...</span>
+0484       &quot;<a href="barchartcats.html" class="code" title="function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">barchartcats</a>&quot;, &quot;CGroupOrder&quot;);
+0485 
+0486    YData = YData(:, idx);
+0487    <span class="keyword">if</span> ~isempty(EData)
+0488       EData = EData(:, idx);
+0489    <span class="keyword">end</span>
+0490    <span class="keyword">if</span> numel(opts.LegendString) == numel(members)
+0491       opts.LegendString = opts.LegendString(idx);
+0492    <span class="keyword">end</span>
+0493 
+0494    <span class="keyword">if</span> iscategorical(CData)
+0495       CData = reordercats(CData, members(idx));
+0496    <span class="keyword">end</span>
+0497 <span class="keyword">end</span>
+0498 
+0499 <a name="_sub5" href="#_subfunctions" class="code">function plotBarErrors(opts, H, YData, EData)</a>
+0500    <span class="comment">%PLOTBARERRORS Draw one whisker per bar, from the spread of its group.</span>
+0501    <span class="comment">%</span>
+0502    <span class="comment">% The whisker is the standard deviation for method &quot;mean&quot;, and the</span>
+0503    <span class="comment">% interquartile range for method &quot;median&quot;. summarizeTableGroups computes</span>
+0504    <span class="comment">% whichever pairs with the method.</span>
+0505 
+0506    <span class="keyword">if</span> ~opts.PlotError || isempty(EData)
+0507       <span class="keyword">return</span>
+0508    <span class="keyword">end</span>
+0509 
+0510    <span class="comment">% bar draws on a categorical ruler. That ruler converts any x it is given</span>
+0511    <span class="comment">% back to a category, so a whisker cannot sit at a fractional offset from</span>
+0512    <span class="comment">% its tick. With one series per tick the bar center is the tick, and the</span>
+0513    <span class="comment">% whiskers land correctly. With more, they would all stack on the tick</span>
+0514    <span class="comment">% center and read as belonging to the wrong bars.</span>
+0515    <span class="keyword">if</span> numel(H) &gt; 1
+0516       error(<span class="string">'groupstats:barchartcats:plotErrorNeedsOneSeries'</span>, <span class="keyword">...</span>
+0517          [<span class="string">'PlotError needs one bar per x-tick, and this chart has %d. '</span> <span class="keyword">...</span>
+0518          <span class="string">'A categorical x-axis places every whisker on the tick center, '</span> <span class="keyword">...</span>
+0519          <span class="string">'so they would not line up with their bars. Omit cgroupvar, or '</span> <span class="keyword">...</span>
+0520          <span class="string">'leave PlotError off.'</span>], numel(H))
+0521    <span class="keyword">end</span>
+0522 
+0523    <span class="comment">% XEndPoints holds the center of each bar in a series, which is where the</span>
+0524    <span class="comment">% whisker belongs. Computing it by hand would repeat bar's own layout.</span>
+0525    <span class="comment">% Take hold after the guard, so the error leaves the axes as it found them.</span>
+0526    ax = opts.Parent;
+0527    washeld = ishold(ax);
+0528    hold(ax, <span class="string">'on'</span>)
+0529 
+0530    errorbar(ax, H.XEndPoints, YData(:, 1), EData(:, 1), <span class="keyword">...</span>
+0531       <span class="string">'LineStyle'</span>, <span class="string">'none'</span>, <span class="string">'Color'</span>, <span class="string">'k'</span>, <span class="string">'LineWidth'</span>, 1, <span class="string">'CapSize'</span>, 4);
+0532 
+0533    <span class="keyword">if</span> ~washeld
+0534       hold(ax, <span class="string">'off'</span>)
+0535    <span class="keyword">end</span>
+0536 <span class="keyword">end</span>
+0537 
+0538 <a name="_sub6" href="#_subfunctions" class="code">function shadebarchartgroups(opts, H)</a>
+0539    <span class="comment">%SHADEBARCHARTGROUPS Shade alternate x-tick groups, as boxchartcats does.</span>
+0540 
+0541    <span class="keyword">if</span> ~opts.ShadeGroups
+0542       <span class="keyword">return</span>
+0543    <span class="keyword">end</span>
+0544 
+0545    <span class="comment">% Each series reports the center of its bars, so the leftmost and</span>
+0546    <span class="comment">% rightmost across every series bound the group.</span>
+0547    xends = vertcat(H.XEndPoints);
+0548    xleft = min(xends, [], 1);
+0549    xright = max(xends, [], 1);
+0550 
+0551    <span class="keyword">if</span> numel(xleft) &lt; 2
+0552       <span class="keyword">return</span>
+0553    <span class="keyword">end</span>
+0554 
+0555    <span class="comment">% XEndPoints lists each x-group in the row order XData held when bar()</span>
+0556    <span class="comment">% drew it, which is data order, not left-to-right display order.</span>
+0557    <span class="comment">% reordercats (SortBy or XGroupOrder) changes the display order without</span>
+0558    <span class="comment">% moving XData's rows, so that order can now disagree with position on</span>
+0559    <span class="comment">% the axis. Sort the left/right edges by position first, or the gap and</span>
+0560    <span class="comment">% the alternating selection below read the wrong neighbors and shade</span>
+0561    <span class="comment">% the wrong ticks.</span>
+0562    [xleft, order] = sort(xleft);
+0563    xright = xright(order);
+0564 
+0565    [ylow, yhigh] = bounds(ylim(opts.Parent));
+0566 
+0567    <span class="comment">% Extend each shaded region halfway to its neighbor, so the shading meets</span>
+0568    <span class="comment">% between groups rather than leaving a gap.</span>
+0569    dx = mean(xleft(2:end) - xright(1:end-1), <span class="string">'omitnan'</span>) / 2;
+0570    xleft = xleft - dx;
+0571    xright = xright + dx;
+0572 
+0573    idxodd = 1:2:numel(xleft);
+0574    xpatch = [xleft(idxodd); xright(idxodd); xright(idxodd); <span class="keyword">...</span>
+0575       xleft(idxodd); xleft(idxodd)];
+0576    ypatch = repmat([ylow; ylow; yhigh; yhigh; ylow], 1, numel(idxodd));
+0577 
+0578    P = patch(opts.Parent, xpatch, ypatch, <span class="string">'k'</span>, <span class="keyword">...</span>
+0579       <span class="string">'FaceColor'</span>, [0.5 0.5 0.5], <span class="keyword">...</span>
+0580       <span class="string">'FaceAlpha'</span>, 0.1, <span class="keyword">...</span>
+0581       <span class="string">'EdgeColor'</span>, <span class="string">'none'</span>);
+0582 
+0583    <span class="comment">% Put the shading behind the bars, and keep it out of the legend.</span>
+0584    uistack(P, <span class="string">'bottom'</span>);
+0585    set(get(get(P, <span class="string">'Annotation'</span>), <span class="string">'LegendInformation'</span>), <span class="keyword">...</span>
+0586       <span class="string">'IconDisplayStyle'</span>, <span class="string">'off'</span>);
+0587 <span class="keyword">end</span>
+0588 
+0589 <a name="_sub7" href="#_subfunctions" class="code">function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, </a><span class="keyword">...</span>
+0590       cgroups, ydatavar, opts, props)
+0591    <span class="comment">% Create the barchart. cgroups names one color group per YData column.</span>
+0592    <span class="comment">% It is read from the categories of CData after any merge relabeled</span>
+0593    <span class="comment">% them, so the names always match the columns.</span>
+0594 
+0595    <span class="comment">% Note: &quot;grouped&quot; is the default. Use &quot;BarLayout&quot;,&quot;stacked&quot; for stacked</span>
+0596    ax = opts.Parent;
+0597    H = bar(ax, XData, YData, props{:});
+0598 
+0599    <span class="comment">% Add a ylabel</span>
+0600    ylabel(ax, ydatavar);
+0601 
+0602    <span class="comment">% Format the plot</span>
+0603    set(ax, &quot;YGrid&quot;, &quot;on&quot;, &quot;XGrid&quot;, &quot;on&quot;, &quot;XMinorTick&quot;, &quot;off&quot;, &quot;Box&quot;, &quot;on&quot;);
+0604    set(ax.XAxis, <span class="string">'TickLength'</span>, [0 0]);
+0605 
+0606    <span class="comment">% Color the bars</span>
+0607 
+0608    <span class="comment">% The k-th color group takes the k-th row of defaultcolors, the palette</span>
+0609    <span class="comment">% boxchartcats and scatter read, so the family colors its groups alike.</span>
+0610    <span class="comment">% The palette holds 21 colors; more series than that wrap around.</span>
+0611    colors = defaultcolors();
+0612    colors = colors(mod((1:numel(H)) - 1, size(colors, 1)) + 1, :);
+0613 
+0614    <span class="comment">% bar already took the caller's properties, so setting one here would</span>
+0615    <span class="comment">% discard what they asked for. Apply each default only when they left it</span>
+0616    <span class="comment">% out.</span>
+0617    given = string(props(1:2:end));
+0618 
+0619    <span class="comment">% A caller's CData shows only under flat coloring, so &quot;flat&quot; stands in</span>
+0620    <span class="comment">% for the palette color when CData is given.</span>
+0621    <span class="keyword">for</span> n = 1:numel(H)
+0622       <span class="keyword">if</span> ~ismember(&quot;LineWidth&quot;, given)
+0623          H(n).LineWidth = 1;
+0624       <span class="keyword">end</span>
+0625       <span class="keyword">if</span> ismember(&quot;CData&quot;, given)
+0626          palettecolor = &quot;flat&quot;;
+0627       <span class="keyword">else</span>
+0628          palettecolor = colors(n, :);
+0629       <span class="keyword">end</span>
+0630       <span class="keyword">if</span> ~ismember(&quot;FaceColor&quot;, given)
+0631          H(n).FaceColor = palettecolor;
+0632       <span class="keyword">end</span>
+0633       <span class="keyword">if</span> ~ismember(&quot;EdgeColor&quot;, given)
+0634          H(n).EdgeColor = palettecolor;
+0635       <span class="keyword">end</span>
+0636       <span class="keyword">if</span> ~ismember(&quot;FaceAlpha&quot;, given)
+0637          H(n).FaceAlpha = 0.75;
+0638       <span class="keyword">end</span>
+0639    <span class="keyword">end</span>
+0640 
+0641    <span class="comment">% Add the legend</span>
+0642 
+0643    withwarnoff(<span class="string">'MATLAB:legend:IgnoringExtraEntries'</span>);
+0644    legendtxt = opts.LegendString;
+0645    <span class="keyword">if</span> isempty(legendtxt)
+0646 
+0647       <span class="comment">% If no cgroupvar was provided, CData will be a vector of &quot;true&quot;. This</span>
+0648       <span class="comment">% means a legend is unnecessary, if legendtxt was not provided.</span>
+0649       <span class="keyword">if</span> islogical(CData)
+0650          legendtxt = <span class="string">''</span>;
+0651          opts.Legend = <span class="string">'off'</span>;
+0652       <span class="keyword">else</span>
+0653          legendtxt = cgroups;
+0654       <span class="keyword">end</span>
+0655 
+0656    <span class="keyword">end</span>
+0657    <span class="keyword">try</span>
+0658       L = legend(ax, legendtxt, <span class="keyword">...</span>
+0659          <span class="string">'Location'</span>, <span class="string">'northwest'</span>, <span class="keyword">...</span>
+0660          <span class="string">'AutoUpdate'</span>, <span class="string">'off'</span>, <span class="keyword">...</span>
+0661          <span class="string">'Orientation'</span>, opts.LegendOrientation, <span class="keyword">...</span>
+0662          <span class="string">'FontSize'</span>, 12);
+0663 
+0664       set(L, <span class="string">'Visible'</span>, opts.Legend)
+0665    <span class="keyword">catch</span>
+0666       <span class="comment">% A legend failure must still assign L, or the (H, L, ax) return</span>
+0667       <span class="comment">% throws on an unassigned output. An empty placeholder matches the</span>
+0668       <span class="comment">% other charts' legend-failure value.</span>
+0669       L = gobjects(0);
+0670    <span class="keyword">end</span>
+0671 
+0672 <span class="keyword">end</span>
+0673 
+0674 <span class="comment">%%</span>
+0675 <span class="comment">% BSD 3-Clause License</span>
+0676 <span class="comment">%</span>
+0677 <span class="comment">% Copyright (c) 2023, Matthew Guy Cooper (mgcooper)</span>
+0678 <span class="comment">% All rights reserved.</span>
+0679 <span class="comment">%</span>
+0680 <span class="comment">% Redistribution and use in source and binary forms, with or without</span>
+0681 <span class="comment">% modification, are permitted provided that the following conditions are met:</span>
+0682 <span class="comment">%</span>
+0683 <span class="comment">% 1. Redistributions of source code must retain the above copyright notice, this</span>
+0684 <span class="comment">%    list of conditions and the following disclaimer.</span>
+0685 <span class="comment">%</span>
+0686 <span class="comment">% 2. Redistributions in binary form must reproduce the above copyright notice,</span>
+0687 <span class="comment">%    this list of conditions and the following disclaimer in the documentation</span>
+0688 <span class="comment">%    and/or other materials provided with the distribution.</span>
+0689 <span class="comment">%</span>
+0690 <span class="comment">% 3. Neither the name of the copyright holder nor the names of its</span>
+0691 <span class="comment">%    contributors may be used to endorse or promote products derived from</span>
+0692 <span class="comment">%    this software without specific prior written permission.</span>
+0693 <span class="comment">%</span>
+0694 <span class="comment">% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot;</span>
+0695 <span class="comment">% AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE</span>
+0696 <span class="comment">% IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE</span>
+0697 <span class="comment">% DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE</span>
+0698 <span class="comment">% FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL</span>
+0699 <span class="comment">% DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR</span>
+0700 <span class="comment">% SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER</span>
+0701 <span class="comment">% CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,</span>
+0702 <span class="comment">% OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</span>
+0703 <span class="comment">% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</span></pre></div>
+</body>
+</html>

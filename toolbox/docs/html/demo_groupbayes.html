@@ -1,0 +1,277 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>demo_groupbayes</title>
+<meta name="generator" content="MATLAB 25.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2026-09-08">
+<meta name="DC.source" content="demo_groupbayes.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Conditional probabilities between two sets of group labels</a>
+</li>
+<li>
+<a href="#2">Rows from one group only</a>
+</li>
+<li>
+<a href="#3">Swap the roles of the two groups</a>
+</li>
+<li>
+<a href="#4">Columns for one group only</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Conditional probabilities between two sets of group labels</h2>
+<p>groupbayes counts co-occurrences between the members of groupA and the members of groupB, and reports the marginal, joint, and conditional probabilities for each pair.</p>
+<p>See also: groupstats.groupbayes, groupstats.test.generateTestData</p>
+<pre class="codeinput">
+<span class="comment">% Create a table tbl representing events. The same table backs the groupbayes</span>
+<span class="comment">% unit tests, so the demo and the tests cannot drift apart.</span>
+data = groupstats.test.generateTestData(<span class="string">'groupbayes'</span>);
+tbl = data.tbl;
+groupvar = data.groupvar;
+groupA = data.groupA;
+groupB = data.groupB;
+
+<span class="comment">% Use the function groupbayes to calculate conditional probabilities</span>
+P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
+
+<span class="comment">% Display the resulting table</span>
+disp(P);
+
+<span class="comment">% Expected Result:</span>
+<span class="comment">% GroupA    GroupB     P_A       P_B       P_A_AND_B    P_B_GIVEN_A    P_A_GIVEN_B</span>
+<span class="comment">% 'A1'      'B1'       0.3       0.2       0.2          0.6667         1.0000</span>
+<span class="comment">% 'A1'      'B2'       0.3       0.3       0.1          0.3333         0.3333</span>
+<span class="comment">% 'A2'      'B1'       0.2       0.2       0.2          1.0000         1.0000</span>
+<span class="comment">% 'A2'      'B2'       0.2       0.3       0            0.0000         0.0000</span>
+
+<span class="comment">% Keep a copy of the original tbl</span>
+originaltbl = tbl;
+</pre>
+<pre class="codeoutput">    GroupA    GroupB    N_A    N_B    N_A_AND_B    P_A    P_B    P_A_AND_B    F_A    F_B    F_A_AND_B    P_B_GIVEN_A    P_A_GIVEN_B
+    ______    ______    ___    ___    _________    ___    ___    _________    ___    ___    _________    ___________    ___________
+      A1        B1       3      2         2        0.3    0.2       0.2       0.6    0.4       0.4         0.66667              1  
+      A1        B2       3      3         1        0.3    0.3       0.1       0.6    0.6       0.2         0.33333        0.33333  
+      A2        B1       2      2         2        0.2    0.2       0.2       0.4    0.4       0.4               1              1  
+      A2        B2       2      3         0        0.2    0.3         0       0.4    0.6         0               0              0  
+</pre>
+<h2 id="2">Rows from one group only</h2>
+<p>Removing the A rows is the clearer case to reason about. groupB can still be B1 and B2. groupbayes counts N_A by rows, so N_A is zero, P_A is zero, and every probability conditioned on A is NaN.</p>
+<p>Bayesian probabilities need every event present in both groups. Where both groups have the same sample size, the rows could be taken as groupB, and the columns matching the groupA members summed down to give N_A. That case needs an assertion that summing down the groupB members matches the row counts.</p>
+<pre class="codeinput">tbl = originaltbl(contains(originaltbl.Group, {<span class="string">'B1'</span>, <span class="string">'B2'</span>}), :);
+
+P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
+disp(P);
+</pre>
+<pre class="codeoutput">    GroupA    GroupB    N_A    N_B    N_A_AND_B    P_A    P_B    P_A_AND_B    F_A    F_B    F_A_AND_B    P_B_GIVEN_A    P_A_GIVEN_B
+    ______    ______    ___    ___    _________    ___    ___    _________    ___    ___    _________    ___________    ___________
+      A1        B1       0      2         0         0     0.4        0        NaN    Inf       NaN           NaN             0     
+      A1        B2       0      3         0         0     0.6        0        NaN    Inf       NaN           NaN             0     
+      A2        B1       0      2         0         0     0.4        0        NaN    Inf       NaN           NaN             0     
+      A2        B2       0      3         0         0     0.6        0        NaN    Inf       NaN           NaN             0     
+</pre>
+<h2 id="3">Swap the roles of the two groups</h2>
+<p>The rows are the givens, so groupB names the labels the rows hold.</p>
+<pre class="codeinput">tbl = originaltbl(contains(originaltbl.Group, {<span class="string">'A1'</span>, <span class="string">'A2'</span>}), :);
+
+P = groupstats.groupbayes(tbl, {<span class="string">'B1'</span>, <span class="string">'B2'</span>}, {<span class="string">'A1'</span>, <span class="string">'A2'</span>}, groupvar);
+disp(P);
+</pre>
+<pre class="codeoutput">    GroupA    GroupB    N_A    N_B    N_A_AND_B    P_A    P_B    P_A_AND_B    F_A    F_B    F_A_AND_B    P_B_GIVEN_A    P_A_GIVEN_B
+    ______    ______    ___    ___    _________    ___    ___    _________    ___    ___    _________    ___________    ___________
+      B1        A1       0      3         0         0     0.6        0        NaN    Inf       NaN           NaN             0     
+      B1        A2       0      2         0         0     0.4        0        NaN    Inf       NaN           NaN             0     
+      B2        A1       0      3         0         0     0.6        0        NaN    Inf       NaN           NaN             0     
+      B2        A2       0      2         0         0     0.4        0        NaN    Inf       NaN           NaN             0     
+</pre>
+<h2 id="4">Columns for one group only</h2>
+<p>Keeping the B columns alone leaves nothing to count the A events with.</p>
+<pre class="codeinput">tbl = originaltbl(~contains(originaltbl.Group, {<span class="string">'B1'</span>, <span class="string">'B2'</span>}), <span class="keyword">...</span>
+   {<span class="string">'Group'</span>, <span class="string">'B1'</span>, <span class="string">'B2'</span>});
+
+<span class="keyword">try</span>
+   P = groupstats.groupbayes(tbl, {<span class="string">'B1'</span>, <span class="string">'B2'</span>}, {<span class="string">'A1'</span>, <span class="string">'A2'</span>}, groupvar);
+   disp(P);
+<span class="keyword">catch</span> e
+   fprintf(<span class="string">'Columns for group B alone: %s\n'</span>, e.message);
+<span class="keyword">end</span>
+
+<span class="comment">% This note was in groupbayes right after the "Counts of each groupA and groupB"</span>
+<span class="comment">% section:</span>
+
+<span class="comment">% Note: above counts assume the group labels in the rows are also column</span>
+<span class="comment">% names as in the original floods case, but there could be a situation where</span>
+<span class="comment">% we have all the events for group B in the rows, and columns indicating</span>
+<span class="comment">% true/false for group B members, which means we can compute P(B|A) but not</span>
+<span class="comment">% P(A|B). See demo_groupbayes for discussion, and a possible way to</span>
+<span class="comment">% accomodate that case.</span>
+</pre>
+<pre class="codeoutput">Columns for group B alone: Unrecognized table variable name 'A1'.
+</pre>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Conditional probabilities between two sets of group labels
+%
+% groupbayes counts co-occurrences between the members of groupA and the
+% members of groupB, and reports the marginal, joint, and conditional
+% probabilities for each pair.
+%
+% See also: groupstats.groupbayes, groupstats.test.generateTestData
+
+% Create a table tbl representing events. The same table backs the groupbayes
+% unit tests, so the demo and the tests cannot drift apart.
+data = groupstats.test.generateTestData('groupbayes');
+tbl = data.tbl;
+groupvar = data.groupvar;
+groupA = data.groupA;
+groupB = data.groupB;
+
+% Use the function groupbayes to calculate conditional probabilities
+P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
+
+% Display the resulting table
+disp(P);
+
+% Expected Result:
+% GroupA    GroupB     P_A       P_B       P_A_AND_B    P_B_GIVEN_A    P_A_GIVEN_B
+% 'A1'      'B1'       0.3       0.2       0.2          0.6667         1.0000
+% 'A1'      'B2'       0.3       0.3       0.1          0.3333         0.3333
+% 'A2'      'B1'       0.2       0.2       0.2          1.0000         1.0000
+% 'A2'      'B2'       0.2       0.3       0            0.0000         0.0000
+
+% Keep a copy of the original tbl
+originaltbl = tbl;
+
+%% Rows from one group only
+%
+% Removing the A rows is the clearer case to reason about. groupB can still
+% be B1 and B2. groupbayes counts N_A by rows, so N_A is zero, P_A is zero,
+% and every probability conditioned on A is NaN.
+%
+% Bayesian probabilities need every event present in both groups. Where both
+% groups have the same sample size, the rows could be taken as groupB, and
+% the columns matching the groupA members summed down to give N_A. That case
+% needs an assertion that summing down the groupB members matches the row
+% counts.
+
+tbl = originaltbl(contains(originaltbl.Group, {'B1', 'B2'}), :);
+
+P = groupstats.groupbayes(tbl, groupA, groupB, groupvar);
+disp(P);
+
+%% Swap the roles of the two groups
+%
+% The rows are the givens, so groupB names the labels the rows hold.
+
+tbl = originaltbl(contains(originaltbl.Group, {'A1', 'A2'}), :);
+
+P = groupstats.groupbayes(tbl, {'B1', 'B2'}, {'A1', 'A2'}, groupvar);
+disp(P);
+
+%% Columns for one group only
+%
+% Keeping the B columns alone leaves nothing to count the A events with.
+
+tbl = originaltbl(~contains(originaltbl.Group, {'B1', 'B2'}), ...
+   {'Group', 'B1', 'B2'});
+
+try
+   P = groupstats.groupbayes(tbl, {'B1', 'B2'}, {'A1', 'A2'}, groupvar);
+   disp(P);
+catch e
+   fprintf('Columns for group B alone: %s\n', e.message);
+end
+
+% This note was in groupbayes right after the "Counts of each groupA and groupB"
+% section:
+
+% Note: above counts assume the group labels in the rows are also column
+% names as in the original floods case, but there could be a situation where
+% we have all the events for group B in the rows, and columns indicating
+% true/false for group B members, which means we can compute P(B|A) but not
+% P(A|B). See demo_groupbayes for discussion, and a possible way to
+% accomodate that case.
+
+##### SOURCE END #####
+-->
+</body>
+</html>

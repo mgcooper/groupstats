@@ -1,0 +1,284 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>demo_scatter</title>
+<meta name="generator" content="MATLAB 25.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2026-09-08">
+<meta name="DC.source" content="demo_scatter.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Grouped scatter charts with groupstats.scatter</a>
+</li>
+<li>
+<a href="#2">Color by one group</a>
+</li>
+<li>
+<a href="#3">Color and marker by two groups</a>
+</li>
+<li>
+<a href="#4">Restrict the members</a>
+</li>
+<li>
+<a href="#5">Select rows before plotting</a>
+</li>
+<li>
+<a href="#6">Order the legend</a>
+</li>
+<li>
+<a href="#7">Legend and line properties</a>
+</li>
+<li>
+<a href="#8">Plot into an existing axes</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Grouped scatter charts with groupstats.scatter</h2>
+<p>groupstats.scatter plots one table variable against another, coloring each point by a categorical group. A second group varies the marker, so one chart can show two groupings at once.</p>
+<p>gscatter draws the points as Line objects, so H holds Line handles and takes Line properties such as MarkerSize, not Scatter properties such as SizeData.</p>
+<p>See also: groupstats.scatter, gscatter, groupstats.test.generateTestData</p>
+<pre class="codeinput">data = groupstats.test.generateTestData(<span class="string">'info'</span>);
+Info = data.Info;
+
+<span class="comment">% peak against itself is not interesting, so build a second numeric variable</span>
+<span class="comment">% that carries a trend plus noise.</span>
+rng(1)
+Info.runoff = 2 * Info.peak + randn(height(Info), 1);
+</pre>
+<h2 id="2">Color by one group</h2>
+<pre class="codeinput">figure
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"scenario"</span>);
+title(<span class="string">"Runoff against peak, colored by scenario"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_scatter_01.png" alt=""> <h2 id="3">Color and marker by two groups</h2>
+<p>The size group varies the marker symbol and size, so both groupings are readable in one chart.</p>
+<pre class="codeinput">figure
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"scenario"</span>, <span class="string">"basin"</span>);
+title(<span class="string">"Colored by scenario, marked by basin"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_scatter_02.png" alt=""> <h2 id="4">Restrict the members</h2>
+<p>CGroupMembers and SGroupMembers keep only the named members. Rows outside them are dropped, which is different from hiding a series.</p>
+<pre class="codeinput">figure
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"scenario"</span>, <span class="string">"basin"</span>, <span class="keyword">...</span>
+   CGroupMembers = [<span class="string">"1980-2020-WRF-DIST"</span>, <span class="string">"SSP585-HOT-FAR"</span>], <span class="keyword">...</span>
+   SGroupMembers = [<span class="string">"basinA"</span>, <span class="string">"basinB"</span>]);
+title(<span class="string">"Two scenarios, two basins"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_scatter_03.png" alt=""> <h2 id="5">Select rows before plotting</h2>
+<p>RowSelectVar and RowSelectMembers restrict the table before grouping.</p>
+<pre class="codeinput">figure
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   RowSelectVar = <span class="string">"month"</span>, RowSelectMembers = [<span class="string">"Jun"</span>, <span class="string">"Jul"</span>, <span class="string">"Aug"</span>]);
+title(<span class="string">"Summer months only"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_scatter_04.png" alt=""> <h2 id="6">Order the legend</h2>
+<p>SortGroup names which grouping the legend order follows, SortVar which data variable the order sorts on, and SortBy the direction. SortBy defaults to "none", so the legend keeps the group order until it is set.</p>
+<pre class="codeinput">figure
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   SortGroup = <span class="string">"cgroupvar"</span>, SortVar = <span class="string">"xdatavar"</span>, SortBy = <span class="string">"ascend"</span>);
+title(<span class="string">"Legend ordered by ascending mean peak"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_scatter_05.png" alt=""> <h2 id="7">Legend and line properties</h2>
+<p>Any Line property passes through. MarkerSize reaches the underlying gscatter call.</p>
+<pre class="codeinput">figure
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   LegendOrientation = <span class="string">"horizontal"</span>, MarkerSize = 12);
+title(<span class="string">"Horizontal legend, larger markers"</span>)
+
+figure
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"scenario"</span>, Legend = <span class="string">"off"</span>);
+title(<span class="string">"Legend turned off"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_scatter_06.png" alt=""> <img vspace="5" hspace="5" src="demo_scatter_07.png" alt=""> <h2 id="8">Plot into an existing axes</h2>
+<p>Parent defaults to gca, so repeated calls reuse the current axes rather than opening a figure each time.</p>
+<pre class="codeinput">figure
+tiles = tiledlayout(1, 2);
+
+ax1 = nexttile(tiles);
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"scenario"</span>, Parent = ax1);
+title(ax1, <span class="string">"Colored by scenario"</span>)
+
+ax2 = nexttile(tiles);
+groupstats.scatter(Info, <span class="string">"peak"</span>, <span class="string">"runoff"</span>, <span class="string">"basin"</span>, Parent = ax2);
+title(ax2, <span class="string">"Colored by basin"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_scatter_08.png" alt=""> <img vspace="5" hspace="5" src="demo_scatter_09.png" alt=""> <p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Grouped scatter charts with groupstats.scatter
+%
+% groupstats.scatter plots one table variable against another, coloring each
+% point by a categorical group. A second group varies the marker, so one
+% chart can show two groupings at once.
+%
+% gscatter draws the points as Line objects, so H holds Line handles and
+% takes Line properties such as MarkerSize, not Scatter properties such as
+% SizeData.
+%
+% See also: groupstats.scatter, gscatter, groupstats.test.generateTestData
+
+data = groupstats.test.generateTestData('info');
+Info = data.Info;
+
+% peak against itself is not interesting, so build a second numeric variable
+% that carries a trend plus noise.
+rng(1)
+Info.runoff = 2 * Info.peak + randn(height(Info), 1);
+
+%% Color by one group
+
+figure
+groupstats.scatter(Info, "peak", "runoff", "scenario");
+title("Runoff against peak, colored by scenario")
+
+%% Color and marker by two groups
+%
+% The size group varies the marker symbol and size, so both groupings are
+% readable in one chart.
+
+figure
+groupstats.scatter(Info, "peak", "runoff", "scenario", "basin");
+title("Colored by scenario, marked by basin")
+
+%% Restrict the members
+%
+% CGroupMembers and SGroupMembers keep only the named members. Rows outside
+% them are dropped, which is different from hiding a series.
+
+figure
+groupstats.scatter(Info, "peak", "runoff", "scenario", "basin", ...
+   CGroupMembers = ["1980-2020-WRF-DIST", "SSP585-HOT-FAR"], ...
+   SGroupMembers = ["basinA", "basinB"]);
+title("Two scenarios, two basins")
+
+%% Select rows before plotting
+%
+% RowSelectVar and RowSelectMembers restrict the table before grouping.
+
+figure
+groupstats.scatter(Info, "peak", "runoff", "scenario", ...
+   RowSelectVar = "month", RowSelectMembers = ["Jun", "Jul", "Aug"]);
+title("Summer months only")
+
+%% Order the legend
+%
+% SortGroup names which grouping the legend order follows, SortVar which
+% data variable the order sorts on, and SortBy the direction. SortBy
+% defaults to "none", so the legend keeps the group order until it is set.
+
+figure
+groupstats.scatter(Info, "peak", "runoff", "scenario", ...
+   SortGroup = "cgroupvar", SortVar = "xdatavar", SortBy = "ascend");
+title("Legend ordered by ascending mean peak")
+
+%% Legend and line properties
+%
+% Any Line property passes through. MarkerSize reaches the underlying
+% gscatter call.
+
+figure
+groupstats.scatter(Info, "peak", "runoff", "scenario", ...
+   LegendOrientation = "horizontal", MarkerSize = 12);
+title("Horizontal legend, larger markers")
+
+figure
+groupstats.scatter(Info, "peak", "runoff", "scenario", Legend = "off");
+title("Legend turned off")
+
+%% Plot into an existing axes
+%
+% Parent defaults to gca, so repeated calls reuse the current axes rather
+% than opening a figure each time.
+
+figure
+tiles = tiledlayout(1, 2);
+
+ax1 = nexttile(tiles);
+groupstats.scatter(Info, "peak", "runoff", "scenario", Parent = ax1);
+title(ax1, "Colored by scenario")
+
+ax2 = nexttile(tiles);
+groupstats.scatter(Info, "peak", "runoff", "basin", Parent = ax2);
+title(ax2, "Colored by basin")
+
+##### SOURCE END #####
+-->
+</body>
+</html>

@@ -1,0 +1,397 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of groupcompare</title>
+  <meta name="keywords" content="groupcompare">
+  <meta name="description" content="GROUPCOMPARE Compare each group member against a reference member.">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../function_index.html">Home</a> &gt;  <a href="function_index.html">+groupstats</a> &gt; groupcompare.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../function_index.html"><img alt="<" border="0" src="../html_img/left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="function_index.html">Index for +groupstats&nbsp;<img alt=">" border="0" src="../html_img/right.png"></a></td></tr></table>-->
+
+<h1>groupcompare
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>GROUPCOMPARE Compare each group member against a reference member.</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>function [stats, samples] = groupcompare(tbl, groupvar, datavar, opts) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre class="comment">GROUPCOMPARE Compare each group member against a reference member.
+
+  STATS = GROUPCOMPARE(TBL, GROUPVAR, DATAVAR)
+  STATS = GROUPCOMPARE(_, ReferenceGroup=MEMBER)
+  STATS = GROUPCOMPARE(_, ConditionVar=NAME)
+  STATS = GROUPCOMPARE(_, Pooled=TRUE)
+  STATS = GROUPCOMPARE(_, Test=NAME, Tail=TAIL, Alpha=A)
+  [STATS, SAMPLES] = GROUPCOMPARE(_, Bootstrap=TRUE)
+
+ Description
+  STATS = GROUPCOMPARE(TBL, GROUPVAR, DATAVAR) tests DATAVAR in every
+  member of GROUPVAR against the reference member and returns one row
+  per comparison, every column plain. The reference member is the first
+  in category order, or the one ReferenceGroup names.
+
+  ConditionVar names a second grouping variable. The comparisons then
+  run once per member of that variable, and STATS gains a Set column.
+  A member with no rows in a set has no comparison there.
+
+  Pooled=true compares the reference against every other member
+  combined, one comparison per set, with Group naming the pooled
+  members. Pooling is within each ConditionVar set: the sets are what
+  the comparison is conditioned on, so there is no option to pool
+  across them. To pool across sets, omit ConditionVar.
+
+  Test names the test, and is never inferred from the data:
+   &quot;ranksum&quot;     (default) the two-sample rank-sum test of the
+                 reference data against the group data.
+   &quot;signrank&quot;    the one-sample sign-rank test of the group data
+                 against the median of the reference data. With an
+                 all-zero reference that is a test against zero.
+   &quot;permutation&quot; the cluster-based permutation test of the vendored
+                 permutest, on the two samples as independent trials
+                 of one data point, with NumPermutations permutations.
+                 The single point is the one cluster, and its p-value
+                 is reported. When the point does not reach the cluster
+                 threshold Alpha there is no cluster: P is NaN and H is
+                 false. permutest counts the possible permutations with
+                 nchoosek, which warns (MATLAB:nchoosek:LargeCoefficient)
+                 once the two samples together hold more than about 56
+                 values; the test still runs.
+  Tail is read against the reference: &quot;both&quot; (default) the medians
+  differ, &quot;right&quot; the reference median is greater, &quot;left&quot; it is less.
+  Alpha is the significance level of every test and interval. H is
+  true when P is at or below Alpha.
+
+  Bootstrap=true adds the bootstrapped signed median difference, group
+  minus reference, with its Alpha confidence interval. The columns are
+  MedianDiff, CILower, CIUpper, and HBootstrap, true when the interval
+  excludes zero. NumBootstrap sets the resample count.
+
+ Outputs
+  STATS    One row per comparison: Set (with ConditionVar), Reference,
+           Group, DataVar, Test, P, H, and with Bootstrap the four
+           bootstrap columns.
+  SAMPLES  NumBootstrap-by-height(STATS) bootstrapped signed median
+           differences, one column per row of STATS, for plotting the
+           difference distribution. Empty without Bootstrap.
+
+ Errors
+  groupstats:groupcompare:badReferenceGroup - ReferenceGroup is not a
+  member of GROUPVAR.
+  groupstats:groupcompare:emptyReferenceGroup - the reference member
+  has no values in one of the ConditionVar sets, or, without
+  ConditionVar, every one of its DATAVAR values is missing.
+  groupstats:groupcompare:multiColumnDataVar - DATAVAR names a matrix
+  variable.
+  groupstats:prepareTableGroups:unknownVariable and
+  groupstats:prepareTableGroups:multiColumnGroupVar, from the shared
+  preprocessing groupsamples runs, pass through unchanged.
+
+  A table with no usable row gives STATS with no rows.
+
+ Example
+  tbl = table(categorical([repmat(&quot;ctrl&quot;, 8, 1); repmat(&quot;a&quot;, 8, 1); ...
+     repmat(&quot;b&quot;, 8, 1)]), ...
+     [randn(8, 1); randn(8, 1) + 1; randn(8, 1) + 2], ...
+     'VariableNames', {'Group', 'Value'});
+  stats = groupstats.groupcompare(tbl, &quot;Group&quot;, &quot;Value&quot;, ...
+     ReferenceGroup=&quot;ctrl&quot;, Bootstrap=true);
+  stats(:, [&quot;Group&quot;, &quot;P&quot;, &quot;H&quot;, &quot;MedianDiff&quot;])
+
+ Dependencies
+  ranksum, signrank, and quantile need the Statistics and Machine
+  Learning Toolbox. Test=&quot;permutation&quot; runs the vendored permutest,
+  which needs that toolbox too, for tinv, and the Image Processing
+  Toolbox, for bwconncomp.
+
+ See also: groupstats.<a href="groupsamples.html" class="code" title="function S = groupsamples(tbl, groupvar, datavar, opts)">groupsamples</a>, ranksum, signrank,
+ groupstats.namelists.comparetest, groupstats.namelists.testtail</pre></div>
+
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+
+This function calls:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="groupcompare.html" class="code" title="function [stats, samples] = groupcompare(tbl, groupvar, datavar, opts)">groupcompare</a>	GROUPCOMPARE Compare each group member against a reference member.</li>
+<li><a href="groupsamples.html" class="code" title="function S = groupsamples(tbl, groupvar, datavar, opts)">groupsamples</a>	GROUPSAMPLES Collect the data of each group member, reference first.</li></ul>
+
+
+This function is called by:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="groupcompare.html" class="code" title="function [stats, samples] = groupcompare(tbl, groupvar, datavar, opts)">groupcompare</a>	GROUPCOMPARE Compare each group member against a reference member.</li></ul>
+<!-- crossreference -->
+
+
+<h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="#_sub1" class="code">function p = runTest(refdata, groupdata, opts)</a></li>
+<li><a href="#_sub2" class="code">function tail = flipTail(tail)</a></li></ul>
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function [stats, samples] = groupcompare(tbl, groupvar, datavar, opts)</a>
+0002    <span class="comment">%GROUPCOMPARE Compare each group member against a reference member.</span>
+0003    <span class="comment">%</span>
+0004    <span class="comment">%  STATS = GROUPCOMPARE(TBL, GROUPVAR, DATAVAR)</span>
+0005    <span class="comment">%  STATS = GROUPCOMPARE(_, ReferenceGroup=MEMBER)</span>
+0006    <span class="comment">%  STATS = GROUPCOMPARE(_, ConditionVar=NAME)</span>
+0007    <span class="comment">%  STATS = GROUPCOMPARE(_, Pooled=TRUE)</span>
+0008    <span class="comment">%  STATS = GROUPCOMPARE(_, Test=NAME, Tail=TAIL, Alpha=A)</span>
+0009    <span class="comment">%  [STATS, SAMPLES] = GROUPCOMPARE(_, Bootstrap=TRUE)</span>
+0010    <span class="comment">%</span>
+0011    <span class="comment">% Description</span>
+0012    <span class="comment">%  STATS = GROUPCOMPARE(TBL, GROUPVAR, DATAVAR) tests DATAVAR in every</span>
+0013    <span class="comment">%  member of GROUPVAR against the reference member and returns one row</span>
+0014    <span class="comment">%  per comparison, every column plain. The reference member is the first</span>
+0015    <span class="comment">%  in category order, or the one ReferenceGroup names.</span>
+0016    <span class="comment">%</span>
+0017    <span class="comment">%  ConditionVar names a second grouping variable. The comparisons then</span>
+0018    <span class="comment">%  run once per member of that variable, and STATS gains a Set column.</span>
+0019    <span class="comment">%  A member with no rows in a set has no comparison there.</span>
+0020    <span class="comment">%</span>
+0021    <span class="comment">%  Pooled=true compares the reference against every other member</span>
+0022    <span class="comment">%  combined, one comparison per set, with Group naming the pooled</span>
+0023    <span class="comment">%  members. Pooling is within each ConditionVar set: the sets are what</span>
+0024    <span class="comment">%  the comparison is conditioned on, so there is no option to pool</span>
+0025    <span class="comment">%  across them. To pool across sets, omit ConditionVar.</span>
+0026    <span class="comment">%</span>
+0027    <span class="comment">%  Test names the test, and is never inferred from the data:</span>
+0028    <span class="comment">%   &quot;ranksum&quot;     (default) the two-sample rank-sum test of the</span>
+0029    <span class="comment">%                 reference data against the group data.</span>
+0030    <span class="comment">%   &quot;signrank&quot;    the one-sample sign-rank test of the group data</span>
+0031    <span class="comment">%                 against the median of the reference data. With an</span>
+0032    <span class="comment">%                 all-zero reference that is a test against zero.</span>
+0033    <span class="comment">%   &quot;permutation&quot; the cluster-based permutation test of the vendored</span>
+0034    <span class="comment">%                 permutest, on the two samples as independent trials</span>
+0035    <span class="comment">%                 of one data point, with NumPermutations permutations.</span>
+0036    <span class="comment">%                 The single point is the one cluster, and its p-value</span>
+0037    <span class="comment">%                 is reported. When the point does not reach the cluster</span>
+0038    <span class="comment">%                 threshold Alpha there is no cluster: P is NaN and H is</span>
+0039    <span class="comment">%                 false. permutest counts the possible permutations with</span>
+0040    <span class="comment">%                 nchoosek, which warns (MATLAB:nchoosek:LargeCoefficient)</span>
+0041    <span class="comment">%                 once the two samples together hold more than about 56</span>
+0042    <span class="comment">%                 values; the test still runs.</span>
+0043    <span class="comment">%  Tail is read against the reference: &quot;both&quot; (default) the medians</span>
+0044    <span class="comment">%  differ, &quot;right&quot; the reference median is greater, &quot;left&quot; it is less.</span>
+0045    <span class="comment">%  Alpha is the significance level of every test and interval. H is</span>
+0046    <span class="comment">%  true when P is at or below Alpha.</span>
+0047    <span class="comment">%</span>
+0048    <span class="comment">%  Bootstrap=true adds the bootstrapped signed median difference, group</span>
+0049    <span class="comment">%  minus reference, with its Alpha confidence interval. The columns are</span>
+0050    <span class="comment">%  MedianDiff, CILower, CIUpper, and HBootstrap, true when the interval</span>
+0051    <span class="comment">%  excludes zero. NumBootstrap sets the resample count.</span>
+0052    <span class="comment">%</span>
+0053    <span class="comment">% Outputs</span>
+0054    <span class="comment">%  STATS    One row per comparison: Set (with ConditionVar), Reference,</span>
+0055    <span class="comment">%           Group, DataVar, Test, P, H, and with Bootstrap the four</span>
+0056    <span class="comment">%           bootstrap columns.</span>
+0057    <span class="comment">%  SAMPLES  NumBootstrap-by-height(STATS) bootstrapped signed median</span>
+0058    <span class="comment">%           differences, one column per row of STATS, for plotting the</span>
+0059    <span class="comment">%           difference distribution. Empty without Bootstrap.</span>
+0060    <span class="comment">%</span>
+0061    <span class="comment">% Errors</span>
+0062    <span class="comment">%  groupstats:groupcompare:badReferenceGroup - ReferenceGroup is not a</span>
+0063    <span class="comment">%  member of GROUPVAR.</span>
+0064    <span class="comment">%  groupstats:groupcompare:emptyReferenceGroup - the reference member</span>
+0065    <span class="comment">%  has no values in one of the ConditionVar sets, or, without</span>
+0066    <span class="comment">%  ConditionVar, every one of its DATAVAR values is missing.</span>
+0067    <span class="comment">%  groupstats:groupcompare:multiColumnDataVar - DATAVAR names a matrix</span>
+0068    <span class="comment">%  variable.</span>
+0069    <span class="comment">%  groupstats:prepareTableGroups:unknownVariable and</span>
+0070    <span class="comment">%  groupstats:prepareTableGroups:multiColumnGroupVar, from the shared</span>
+0071    <span class="comment">%  preprocessing groupsamples runs, pass through unchanged.</span>
+0072    <span class="comment">%</span>
+0073    <span class="comment">%  A table with no usable row gives STATS with no rows.</span>
+0074    <span class="comment">%</span>
+0075    <span class="comment">% Example</span>
+0076    <span class="comment">%  tbl = table(categorical([repmat(&quot;ctrl&quot;, 8, 1); repmat(&quot;a&quot;, 8, 1); ...</span>
+0077    <span class="comment">%     repmat(&quot;b&quot;, 8, 1)]), ...</span>
+0078    <span class="comment">%     [randn(8, 1); randn(8, 1) + 1; randn(8, 1) + 2], ...</span>
+0079    <span class="comment">%     'VariableNames', {'Group', 'Value'});</span>
+0080    <span class="comment">%  stats = groupstats.groupcompare(tbl, &quot;Group&quot;, &quot;Value&quot;, ...</span>
+0081    <span class="comment">%     ReferenceGroup=&quot;ctrl&quot;, Bootstrap=true);</span>
+0082    <span class="comment">%  stats(:, [&quot;Group&quot;, &quot;P&quot;, &quot;H&quot;, &quot;MedianDiff&quot;])</span>
+0083    <span class="comment">%</span>
+0084    <span class="comment">% Dependencies</span>
+0085    <span class="comment">%  ranksum, signrank, and quantile need the Statistics and Machine</span>
+0086    <span class="comment">%  Learning Toolbox. Test=&quot;permutation&quot; runs the vendored permutest,</span>
+0087    <span class="comment">%  which needs that toolbox too, for tinv, and the Image Processing</span>
+0088    <span class="comment">%  Toolbox, for bwconncomp.</span>
+0089    <span class="comment">%</span>
+0090    <span class="comment">% See also: groupstats.groupsamples, ranksum, signrank,</span>
+0091    <span class="comment">% groupstats.namelists.comparetest, groupstats.namelists.testtail</span>
+0092 
+0093    arguments
+0094       tbl tabular
+0095       groupvar (1, 1) string {mustBeNonempty}
+0096       datavar (1, 1) string {mustBeNonempty}
+0097       opts.ReferenceGroup string {mustBeScalarOrEmpty} = string.empty()
+0098       opts.ConditionVar string {mustBeScalarOrEmpty} = string.empty()
+0099       opts.Pooled (1, 1) logical = false
+0100       opts.Test (1, 1) string <span class="keyword">...</span>
+0101          {groupstats.namelists.mustBeMemberOf(opts.Test, &quot;comparetest&quot;)} <span class="keyword">...</span>
+0102          = &quot;ranksum&quot;
+0103       opts.Tail (1, 1) string <span class="keyword">...</span>
+0104          {groupstats.namelists.mustBeMemberOf(opts.Tail, &quot;testtail&quot;)} = &quot;both&quot;
+0105       opts.Alpha (1, 1) double <span class="keyword">...</span>
+0106          {mustBeInRange(opts.Alpha, 0, 1, &quot;exclusive&quot;)} = 0.05
+0107       opts.Bootstrap (1, 1) logical = false
+0108       opts.NumBootstrap (1, 1) double {mustBeInteger, mustBePositive} = 10000
+0109       opts.NumPermutations (1, 1) double {mustBeInteger, mustBePositive} <span class="keyword">...</span>
+0110          = 10000
+0111    <span class="keyword">end</span>
+0112 
+0113    import groupstats.groupsamples
+0114 
+0115    <span class="comment">% The reshape, reference first within each set. groupsamples reports</span>
+0116    <span class="comment">% its checks under its own identifiers; a caller of this function pins</span>
+0117    <span class="comment">% this function's, so they are renamed on the way through.</span>
+0118    <span class="keyword">try</span>
+0119       S = <a href="groupsamples.html" class="code" title="function S = groupsamples(tbl, groupvar, datavar, opts)">groupsamples</a>(tbl, groupvar, datavar, <span class="keyword">...</span>
+0120          ReferenceGroup = opts.ReferenceGroup, <span class="keyword">...</span>
+0121          ConditionVar = opts.ConditionVar, Pooled = opts.Pooled);
+0122    <span class="keyword">catch</span> e
+0123       <span class="keyword">if</span> startsWith(e.identifier, &quot;groupstats:<a href="groupsamples.html" class="code" title="function S = groupsamples(tbl, groupvar, datavar, opts)">groupsamples</a>:&quot;)
+0124          error(replace(e.identifier, &quot;groupstats:<a href="groupsamples.html" class="code" title="function S = groupsamples(tbl, groupvar, datavar, opts)">groupsamples</a>:&quot;, <span class="keyword">...</span>
+0125             &quot;groupstats:<a href="groupcompare.html" class="code" title="function [stats, samples] = groupcompare(tbl, groupvar, datavar, opts)">groupcompare</a>:&quot;), <span class="string">'%s'</span>, e.message)
+0126       <span class="keyword">end</span>
+0127       rethrow(e)
+0128    <span class="keyword">end</span>
+0129 
+0130    <span class="comment">% Walk the sets. Without ConditionVar there is one, holding every row;</span>
+0131    <span class="comment">% a table with no usable row has none.</span>
+0132    <span class="keyword">if</span> height(S) == 0
+0133       setrows = {};
+0134    <span class="keyword">elseif</span> isempty(opts.ConditionVar)
+0135       setrows = {(1:height(S))'};
+0136    <span class="keyword">else</span>
+0137       sets = unique(S.Set, <span class="string">'stable'</span>);
+0138       setrows = arrayfun(@(s) find(S.Set == s), sets, <span class="keyword">...</span>
+0139          <span class="string">'UniformOutput'</span>, false);
+0140    <span class="keyword">end</span>
+0141 
+0142    <span class="comment">% One block of rows per set. The reference is the set's first sample</span>
+0143    <span class="comment">% and every other sample is one comparison. Each comparison gets its</span>
+0144    <span class="comment">% test result, then the set's rows are assembled with their labels.</span>
+0145    rows = cell(numel(setrows), 1);
+0146    drawn = cell(1, numel(setrows));
+0147    <span class="keyword">for</span> m = 1:numel(setrows)
+0148       refdata = S.Data{setrows{m}(1)};
+0149       others = setrows{m}(2:end);
+0150       ncomp = numel(others);
+0151 
+0152       P = zeros(ncomp, 1);
+0153       <span class="keyword">for</span> n = 1:ncomp
+0154          P(n) = <a href="#_sub1" class="code" title="subfunction p = runTest(refdata, groupdata, opts)">runTest</a>(refdata, S.Data{others(n)}, opts);
+0155       <span class="keyword">end</span>
+0156       H = P &lt;= opts.Alpha;
+0157 
+0158       rows{m} = table(repmat(S.Group(setrows{m}(1)), ncomp, 1), <span class="keyword">...</span>
+0159          S.Group(others), repmat(datavar, ncomp, 1), <span class="keyword">...</span>
+0160          repmat(opts.Test, ncomp, 1), P, H, <span class="string">'VariableNames'</span>, <span class="keyword">...</span>
+0161          {<span class="string">'Reference'</span>, <span class="string">'Group'</span>, <span class="string">'DataVar'</span>, <span class="string">'Test'</span>, <span class="string">'P'</span>, <span class="string">'H'</span>});
+0162       <span class="keyword">if</span> ~isempty(opts.ConditionVar)
+0163          rows{m} = addvars(rows{m}, S.Set(others), <span class="keyword">...</span>
+0164             <span class="string">'NewVariableNames'</span>, <span class="string">'Set'</span>, <span class="string">'Before'</span>, 1);
+0165       <span class="keyword">end</span>
+0166 
+0167       <span class="comment">% The bootstrap runs on the same samples, reference first.</span>
+0168       <span class="keyword">if</span> opts.Bootstrap
+0169          boot = bootmediandiff([{refdata}; S.Data(others)]', <span class="keyword">...</span>
+0170             NumBootstrap = opts.NumBootstrap, Alpha = opts.Alpha);
+0171          rows{m}.MedianDiff = boot.MedianDiff(:);
+0172          rows{m}.CILower = boot.CILower(:);
+0173          rows{m}.CIUpper = boot.CIUpper(:);
+0174          rows{m}.HBootstrap = boot.H(:);
+0175          drawn{m} = boot.Differences;
+0176       <span class="keyword">end</span>
+0177    <span class="keyword">end</span>
+0178    <span class="comment">% Start from the schema, so no sets still returns the documented table.</span>
+0179    stats = table(strings(0, 1), strings(0, 1), strings(0, 1), <span class="keyword">...</span>
+0180       strings(0, 1), zeros(0, 1), false(0, 1), <span class="string">'VariableNames'</span>, <span class="keyword">...</span>
+0181       {<span class="string">'Reference'</span>, <span class="string">'Group'</span>, <span class="string">'DataVar'</span>, <span class="string">'Test'</span>, <span class="string">'P'</span>, <span class="string">'H'</span>});
+0182    <span class="keyword">if</span> ~isempty(opts.ConditionVar)
+0183       stats = addvars(stats, strings(0, 1), <span class="string">'NewVariableNames'</span>, <span class="string">'Set'</span>, <span class="keyword">...</span>
+0184          <span class="string">'Before'</span>, 1);
+0185    <span class="keyword">end</span>
+0186    <span class="keyword">if</span> opts.Bootstrap
+0187       stats.MedianDiff = zeros(0, 1);
+0188       stats.CILower = zeros(0, 1);
+0189       stats.CIUpper = zeros(0, 1);
+0190       stats.HBootstrap = false(0, 1);
+0191    <span class="keyword">end</span>
+0192    stats = vertcat(stats, rows{:});
+0193 
+0194    <span class="comment">% One column per row of stats, NumBootstrap rows even when there are no</span>
+0195    <span class="comment">% comparisons; empty without Bootstrap.</span>
+0196    <span class="keyword">if</span> opts.Bootstrap
+0197       samples = [zeros(opts.NumBootstrap, 0), horzcat(drawn{:})];
+0198    <span class="keyword">else</span>
+0199       samples = [];
+0200    <span class="keyword">end</span>
+0201 <span class="keyword">end</span>
+0202 
+0203 <a name="_sub1" href="#_subfunctions" class="code">function p = runTest(refdata, groupdata, opts)</a>
+0204    <span class="comment">%RUNTEST Run the named test of one group against the reference.</span>
+0205    <span class="comment">%</span>
+0206    <span class="comment">% Tail is read against the reference throughout. ranksum reads its tail</span>
+0207    <span class="comment">% against its first argument, the reference here. signrank tests the</span>
+0208    <span class="comment">% group data against the reference median, so its first argument is the</span>
+0209    <span class="comment">% group and the tail flips. permutest's one-sided test detects a larger</span>
+0210    <span class="comment">% first argument, so the argument order carries the tail.</span>
+0211 
+0212    <span class="keyword">switch</span> opts.Test
+0213       <span class="keyword">case</span> &quot;ranksum&quot;
+0214          p = ranksum(refdata, groupdata, <span class="string">'alpha'</span>, opts.Alpha, <span class="keyword">...</span>
+0215             <span class="string">'tail'</span>, opts.Tail);
+0216       <span class="keyword">case</span> &quot;signrank&quot;
+0217          p = signrank(groupdata, median(refdata), <span class="string">'alpha'</span>, opts.Alpha, <span class="keyword">...</span>
+0218             <span class="string">'tail'</span>, <a href="#_sub2" class="code" title="subfunction tail = flipTail(tail)">flipTail</a>(opts.Tail));
+0219       <span class="keyword">case</span> &quot;permutation&quot;
+0220          <span class="comment">% permutest takes trials along the last dimension, so each sample</span>
+0221          <span class="comment">% is one row: one data point, one trial per value. With no cluster</span>
+0222          <span class="comment">% (the point's t-statistic is below the threshold) tsums is empty</span>
+0223          <span class="comment">% and pvalues keeps its initial value, so read tsums.</span>
+0224          <span class="keyword">if</span> opts.Tail == &quot;left&quot;
+0225             [~, pvalues, tsums] = permutest(groupdata(:)', refdata(:)', <span class="keyword">...</span>
+0226                false, opts.Alpha, opts.NumPermutations, false);
+0227          <span class="keyword">else</span>
+0228             [~, pvalues, tsums] = permutest(refdata(:)', groupdata(:)', <span class="keyword">...</span>
+0229                false, opts.Alpha, opts.NumPermutations, opts.Tail == &quot;both&quot;);
+0230          <span class="keyword">end</span>
+0231          <span class="keyword">if</span> isempty(tsums)
+0232             p = NaN;
+0233          <span class="keyword">else</span>
+0234             p = pvalues(1);
+0235          <span class="keyword">end</span>
+0236    <span class="keyword">end</span>
+0237 <span class="keyword">end</span>
+0238 
+0239 <a name="_sub2" href="#_subfunctions" class="code">function tail = flipTail(tail)</a>
+0240    <span class="comment">%FLIPTAIL Swap right and left; both stays.</span>
+0241 
+0242    <span class="keyword">switch</span> tail
+0243       <span class="keyword">case</span> &quot;right&quot;
+0244          tail = &quot;left&quot;;
+0245       <span class="keyword">case</span> &quot;left&quot;
+0246          tail = &quot;right&quot;;
+0247    <span class="keyword">end</span>
+0248 <span class="keyword">end</span></pre></div>
+</body>
+</html>

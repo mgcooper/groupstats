@@ -1,0 +1,418 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>demo_pairwise_bayes</title>
+<meta name="generator" content="MATLAB 25.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2026-09-08">
+<meta name="DC.source" content="demo_pairwise_bayes.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Pairwise conditional probabilities against a manual computation</a>
+</li>
+<li>
+<a href="#2">Probabilities</a>
+</li>
+<li>
+<a href="#3">Use groupbayes to confirm</a>
+</li>
+<li>
+<a href="#5">Asymmetric counts</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Pairwise conditional probabilities against a manual computation</h2>
+<p>This demo checks groupbayes's Pairwise option against a hand-rolled pairwise computation. It builds a symmetric event matrix for 8 components, computes every pairwise conditional probability with plain matrix arithmetic, and compares those numbers against groupbayes called with the same label set as both groups. The later sections repeat the comparison from the asymmetric-count case, where the two triangles of the joint-count matrix differ.</p>
+<p>See also: groupstats.groupbayes, demo_groupbayes, demo_bayes</p>
+<pre class="codeinput">
+<span class="comment">% Compare floating point results. The checks below allow for round off in</span>
+<span class="comment">% probabilities computed two ways.</span>
+isequaltol = @(a, b) all(abs(a - b) &lt; 1e-10, <span class="string">'all'</span>);
+
+<span class="comment">% Generate random events for 8 components</span>
+N = 10000;
+
+<span class="comment">% Sample data for 8 components</span>
+data = randi(100, [8 N]);
+
+<span class="comment">% Threshold for each component's event</span>
+thresholds = repmat(40, 8, 1);
+
+<span class="comment">% Boolean matrix indicating if event happened for each component</span>
+events = data &gt; thresholds;
+</pre>
+<h2 id="2">Probabilities</h2>
+<pre class="codeinput">
+<span class="comment">% Compute N_A_AND_B as symmetric</span>
+N_A_AND_B = events * events';
+
+<span class="comment">% Member-wise sample sizes</span>
+N_A_B = sum(events, 2);
+
+<span class="comment">% Pair-wise sample sizes</span>
+N_A_PLUS_N_B = N_A_B + N_A_B';
+
+<span class="comment">% Diagonal set to member-wise sample sizes. The linear index 1:n+1:end</span>
+<span class="comment">% walks the diagonal of a square matrix.</span>
+N_A_PLUS_N_B(1:size(N_A_PLUS_N_B, 1) + 1:end) = N_A_B;
+
+<span class="comment">% Marginal probabilities</span>
+P_A_B = N_A_B ./ N_A_PLUS_N_B;
+
+<span class="comment">% Probability that both conditions are met, given all possible states</span>
+P_A_AND_B = N_A_AND_B ./ N_A_PLUS_N_B;
+
+<span class="comment">% Conditional probabilities</span>
+P_Cond = P_A_AND_B ./ P_A_B;
+</pre>
+<h2 id="3">Use groupbayes to confirm</h2>
+<pre class="codeinput">
+<span class="comment">% This shows that P_Cond is P(A|B), and since all pairwise combos are computed,</span>
+<span class="comment">% it also contains P(B|A) since P(A|B) = P(B|A) for the case where A and B are</span>
+<span class="comment">% reversed i.e., if we have GroupA = A1, GroupB = B1, then P(A1|B1) is the value</span>
+<span class="comment">% of P_A_GIVEN_B for that pairwise probability, which is equivalent to the</span>
+<span class="comment">% P_B_GIVEN_A value for the pair GroupA = B1, GroupB = A1.</span>
+
+v = {<span class="string">'A1'</span>, <span class="string">'A2'</span>, <span class="string">'A3'</span>, <span class="string">'A4'</span>, <span class="string">'A5'</span>, <span class="string">'A6'</span>, <span class="string">'A7'</span>, <span class="string">'A8'</span>};
+tbl = array2table(events', <span class="string">'VariableNames'</span>, v);
+
+<span class="comment">% Passing the same label set as both groups is the point of a pairwise</span>
+<span class="comment">% call, so every event belongs to both sets. Pairwise=true declares that</span>
+<span class="comment">% intent and keeps the marginals warning quiet.</span>
+P = groupstats.groupbayes(tbl, v, v, Pairwise = true);
+
+<span class="comment">% Reshape the P_Cond matrix for comparison with P from groupbayes</span>
+P.P2 = reshape(P_Cond, [], 1);
+
+numel(unique(round(P_Cond, 10)))
+numel(unique(round(P.P_B_GIVEN_A, 10)))
+numel(unique(round(P.P_A_GIVEN_B, 10)))
+numel(unique([round(P.P_B_GIVEN_A, 10); round(P.P_A_GIVEN_B, 10)]))
+</pre>
+<pre class="codeoutput">ans =
+    57
+ans =
+    57
+ans =
+    57
+ans =
+    57
+</pre>
+<pre class="codeinput">
+<span class="comment">% Given your existing code till P_A_AND_B</span>
+N_A = sum(events, 2);
+N_B = N_A;  <span class="comment">% Since the events are symmetric</span>
+
+P_A_given_B = zeros(size(events, 1));
+P_B_given_A = zeros(size(events, 1));
+
+<span class="keyword">for</span> i = 1:size(events, 1)
+   <span class="keyword">for</span> j = 1:size(events, 1)
+      <span class="keyword">if</span> i ~= j
+         P_A_given_B(i, j) = N_A_AND_B(i, j) / N_B(j);
+         P_B_given_A(i, j) = N_A_AND_B(i, j) / N_A(i);
+      <span class="keyword">end</span>
+   <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+numel(unique(P_A_given_B))
+numel(unique(P_B_given_A))
+numel(unique( [P_A_given_B(:); P_B_given_A(:)] ))
+
+isequaltol(P_A_given_B, P_B_given_A')
+</pre>
+<pre class="codeoutput">ans =
+    57
+ans =
+    57
+ans =
+    57
+ans =
+  logical
+   1
+</pre>
+<h2 id="5">Asymmetric counts</h2>
+<pre class="codeinput">
+<span class="comment">% When the joint count of A and B differs from the count of B and A, the</span>
+<span class="comment">% two triangles of N_A_AND_B differ. The line below keeps the upper</span>
+<span class="comment">% triangle as the reference and mirrors it over the lower one, so the</span>
+<span class="comment">% matrix is symmetric again and the steps above apply. Which triangle is</span>
+<span class="comment">% the reference depends on which direction counts the unique events; see</span>
+<span class="comment">% the groupbayes help on the groupvar syntax.</span>
+
+<span class="comment">% To adjust for the asymmetry:</span>
+N_A_AND_B = triu(N_A_AND_B, 1) + triu(N_A_AND_B, 1)' + diag(diag(N_A_AND_B));
+</pre>
+<pre class="codeinput">
+<span class="comment">% Take the lower triangular (including the diagonal) for P(A|B)</span>
+P_A_given_B = tril(P_Cond);
+
+<span class="comment">% Take the upper triangular (excluding the diagonal) for P(B|A)</span>
+P_B_given_A = triu(P_Cond, 1);
+
+<span class="comment">% Fill in the missing entries in P_B_given_A using P_A_given_B</span>
+<span class="keyword">for</span> i = 1:8
+   <span class="keyword">for</span> j = 1:8
+      <span class="keyword">if</span> i &gt; j
+         P_B_given_A(i, j) = P_A_given_B(j, i);
+      <span class="keyword">end</span>
+   <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre>
+<p>Separate out the matrices</p>
+<pre class="codeinput">P_A_given_B = P_Cond;
+P_B_given_A = P_Cond;
+
+<span class="comment">% Fill in P_A_given_B using the upper triangle of P_Cond</span>
+<span class="keyword">for</span> i = 1:8
+   <span class="keyword">for</span> j = 1:8
+      <span class="keyword">if</span> i &lt; j
+         P_A_given_B(i, j) = P_Cond(j, i);
+      <span class="keyword">end</span>
+   <span class="keyword">end</span>
+<span class="keyword">end</span>
+
+<span class="comment">% Fill in P_B_given_A using the lower triangle of P_Cond</span>
+<span class="keyword">for</span> i = 1:8
+   <span class="keyword">for</span> j = 1:8
+      <span class="keyword">if</span> i &gt; j
+         P_B_given_A(j, i) = P_Cond(i, j);
+      <span class="keyword">end</span>
+   <span class="keyword">end</span>
+<span class="keyword">end</span>
+</pre>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Pairwise conditional probabilities against a manual computation
+%
+% This demo checks groupbayes's Pairwise option against a hand-rolled
+% pairwise computation. It builds a symmetric event matrix for 8
+% components, computes every pairwise conditional probability with plain
+% matrix arithmetic, and compares those numbers against groupbayes called
+% with the same label set as both groups. The later sections repeat the
+% comparison from the asymmetric-count case, where the two triangles of
+% the joint-count matrix differ.
+%
+% See also: groupstats.groupbayes, demo_groupbayes, demo_bayes
+
+% Compare floating point results. The checks below allow for round off in
+% probabilities computed two ways.
+isequaltol = @(a, b) all(abs(a - b) < 1e-10, 'all');
+
+% Generate random events for 8 components
+N = 10000;
+
+% Sample data for 8 components
+data = randi(100, [8 N]);
+
+% Threshold for each component's event
+thresholds = repmat(40, 8, 1);
+
+% Boolean matrix indicating if event happened for each component
+events = data > thresholds;
+
+%% Probabilities
+
+% Compute N_A_AND_B as symmetric
+N_A_AND_B = events * events';
+
+% Member-wise sample sizes
+N_A_B = sum(events, 2);
+
+% Pair-wise sample sizes
+N_A_PLUS_N_B = N_A_B + N_A_B';
+
+% Diagonal set to member-wise sample sizes. The linear index 1:n+1:end
+% walks the diagonal of a square matrix.
+N_A_PLUS_N_B(1:size(N_A_PLUS_N_B, 1) + 1:end) = N_A_B;
+
+% Marginal probabilities
+P_A_B = N_A_B ./ N_A_PLUS_N_B;
+
+% Probability that both conditions are met, given all possible states
+P_A_AND_B = N_A_AND_B ./ N_A_PLUS_N_B;
+
+% Conditional probabilities
+P_Cond = P_A_AND_B ./ P_A_B;
+
+%% Use groupbayes to confirm
+
+% This shows that P_Cond is P(A|B), and since all pairwise combos are computed,
+% it also contains P(B|A) since P(A|B) = P(B|A) for the case where A and B are
+% reversed i.e., if we have GroupA = A1, GroupB = B1, then P(A1|B1) is the value
+% of P_A_GIVEN_B for that pairwise probability, which is equivalent to the
+% P_B_GIVEN_A value for the pair GroupA = B1, GroupB = A1.
+
+v = {'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8'};
+tbl = array2table(events', 'VariableNames', v);
+
+% Passing the same label set as both groups is the point of a pairwise
+% call, so every event belongs to both sets. Pairwise=true declares that
+% intent and keeps the marginals warning quiet.
+P = groupstats.groupbayes(tbl, v, v, Pairwise = true);
+
+% Reshape the P_Cond matrix for comparison with P from groupbayes
+P.P2 = reshape(P_Cond, [], 1);
+
+numel(unique(round(P_Cond, 10)))
+numel(unique(round(P.P_B_GIVEN_A, 10)))
+numel(unique(round(P.P_A_GIVEN_B, 10)))
+numel(unique([round(P.P_B_GIVEN_A, 10); round(P.P_A_GIVEN_B, 10)]))
+
+%%
+
+% Given your existing code till P_A_AND_B
+N_A = sum(events, 2);
+N_B = N_A;  % Since the events are symmetric
+
+P_A_given_B = zeros(size(events, 1));
+P_B_given_A = zeros(size(events, 1));
+
+for i = 1:size(events, 1)
+   for j = 1:size(events, 1)
+      if i ~= j
+         P_A_given_B(i, j) = N_A_AND_B(i, j) / N_B(j);
+         P_B_given_A(i, j) = N_A_AND_B(i, j) / N_A(i);
+      end
+   end
+end
+
+numel(unique(P_A_given_B))
+numel(unique(P_B_given_A))
+numel(unique( [P_A_given_B(:); P_B_given_A(:)] ))
+
+isequaltol(P_A_given_B, P_B_given_A')
+%% Asymmetric counts
+
+% When the joint count of A and B differs from the count of B and A, the
+% two triangles of N_A_AND_B differ. The line below keeps the upper
+% triangle as the reference and mirrors it over the lower one, so the
+% matrix is symmetric again and the steps above apply. Which triangle is
+% the reference depends on which direction counts the unique events; see
+% the groupbayes help on the groupvar syntax.
+
+% To adjust for the asymmetry:
+N_A_AND_B = triu(N_A_AND_B, 1) + triu(N_A_AND_B, 1)' + diag(diag(N_A_AND_B));
+
+%%
+
+% Take the lower triangular (including the diagonal) for P(A|B)
+P_A_given_B = tril(P_Cond);
+
+% Take the upper triangular (excluding the diagonal) for P(B|A)
+P_B_given_A = triu(P_Cond, 1);
+
+% Fill in the missing entries in P_B_given_A using P_A_given_B
+for i = 1:8
+   for j = 1:8
+      if i > j
+         P_B_given_A(i, j) = P_A_given_B(j, i);
+      end
+   end
+end
+
+%%
+% Separate out the matrices
+P_A_given_B = P_Cond;
+P_B_given_A = P_Cond;
+
+% Fill in P_A_given_B using the upper triangle of P_Cond
+for i = 1:8
+   for j = 1:8
+      if i < j
+         P_A_given_B(i, j) = P_Cond(j, i);
+      end
+   end
+end
+
+% Fill in P_B_given_A using the lower triangle of P_Cond
+for i = 1:8
+   for j = 1:8
+      if i > j
+         P_B_given_A(j, i) = P_Cond(i, j);
+      end
+   end
+end
+
+##### SOURCE END #####
+-->
+</body>
+</html>

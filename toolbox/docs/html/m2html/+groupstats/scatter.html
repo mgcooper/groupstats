@@ -1,0 +1,657 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of scatter</title>
+  <meta name="keywords" content="scatter">
+  <meta name="description" content="SCATTER Scatter chart categorical table data.">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../function_index.html">Home</a> &gt;  <a href="function_index.html">+groupstats</a> &gt; scatter.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../function_index.html"><img alt="<" border="0" src="../html_img/left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="function_index.html">Index for +groupstats&nbsp;<img alt=">" border="0" src="../html_img/right.png"></a></td></tr></table>-->
+
+<h1>scatter
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>SCATTER Scatter chart categorical table data.</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar,sgroupvar, opts, props) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre class="comment">SCATTER Scatter chart categorical table data.
+
+  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR)
+  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR, SGROUPVAR)
+  [H, L, AX] = SCATTER(_)
+  [___] = SCATTER(_, Name = Value)
+
+ Description
+  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR) plots TBL.(YDATAVAR)
+  against TBL.(XDATAVAR), coloring each point by its CGROUPVAR member.
+
+  H = SCATTER(_, SGROUPVAR) also varies the marker symbol and size by
+  SGROUPVAR member, so one chart shows two groupings at once.
+
+  [H, L, AX] = SCATTER(_) also returns the legend and the axes. H is a
+  matrix with one row per color group and one column per size group.
+
+ Name-value arguments
+  CGroupMembers    Members of CGROUPVAR to keep. Rows outside them go.
+  SGroupMembers    Members of SGROUPVAR to keep.
+  RowSelectVar     Name of a variable used only to select rows.
+  RowSelectMembers Members of RowSelectVar to keep.
+  MergeGroupMembers A cell array of string vectors. Each cell names the
+                   CGROUPVAR members to pool into one color group,
+                   matching groupstats.histogram. A bare string vector
+                   is one merge group. The merged group's label joins
+                   the member names with &quot; and &quot;, and it takes the
+                   position of its first member in the current category
+                   order. CGroupMembers reads original names; the
+                   legend reads post-merge names.
+  SortGroup        Which grouping the legend order follows, &quot;cgroupvar&quot;
+                   or &quot;sgroupvar&quot;. Inert until SortBy is set.
+  SortVar          Which data variable the legend order sorts on,
+                   &quot;xdatavar&quot; or &quot;ydatavar&quot;. Inert until SortBy is set.
+  SortBy           &quot;ascend&quot;, &quot;descend&quot;, or &quot;none&quot; (default). &quot;none&quot;
+                   keeps the legend in the group order. The direction
+                   sorts the legend by the group mean of SortVar within
+                   the SortGroup groups. So SortGroup picks which
+                   grouping is sorted, SortVar picks which data
+                   variable computes the statistic, and SortBy picks
+                   the direction. The cats charts sort xgroupvar only,
+                   so they have no SortGroup; their SortGroupMembers
+                   picks the color-group members that enter the
+                   statistic.
+  CGroupOrder      A partial order of CGROUPVAR members. Named members
+                   come first; the rest keep their order. Reorders the
+                   draw and legend order and overrides SortBy.
+  SGroupOrder      A partial order of SGROUPVAR members, the same way.
+  Parent           Axes to plot into. The default is gca, so repeated
+                   calls reuse the current axes rather than opening a
+                   figure each time.
+  Legend           &quot;on&quot; or &quot;off&quot;.
+  LegendString     Replacement legend entries. The default is the group
+                   member names. LegendString(i) names the i-th
+                   CGROUPVAR member in category order after member
+                   filtering and merging, followed by one entry per
+                   SGROUPVAR member when there are two or more.
+                   CGroupOrder, SGroupOrder, and SortBy move the entries
+                   with the groups, so an entry stays on its member. A
+                   list that does not cover every entry is ignored and
+                   the member names stand.
+  LegendOrientation &quot;vertical&quot; or &quot;horizontal&quot;.
+
+  Any Line property may also be passed by name. gscatter draws the
+  points as Line objects, so H holds Line handles and takes Line
+  properties such as MarkerSize, not Scatter properties such as
+  SizeData.
+
+ Example
+  data = groupstats.test.generateTestData('groupsummary');
+  h = groupstats.scatter(data.tbl, &quot;Value&quot;, &quot;Other&quot;, &quot;Grp&quot;);
+  h = groupstats.scatter(data.tbl, &quot;Value&quot;, &quot;Other&quot;, &quot;Grp&quot;, &quot;Sub&quot;, ...
+     SortVar = &quot;ydatavar&quot;, SortBy = &quot;descend&quot;, Legend = &quot;off&quot;);
+
+ Categorical data variables
+  A categorical XDATAVAR or YDATAVAR whose categories are numbers is
+  converted to those numbers. One whose categories are names is drawn
+  by category ranking, with the categories as the tick labels, so an
+  ordinal variable keeps its order on the axis and SortBy sorts the
+  legend by that ranking.
+
+ Positional order
+  scatter charts two continuous data variables in the built-in
+  scatter(x, y) order, so xdatavar comes before ydatavar. The cats
+  charts put ydatavar second because their second axis is a grouping,
+  not a data variable; there is no xgroupvar here to reconcile to.
+  cgroupvar is required. This order is deliberate.
+
+ Dependencies
+  These matfunclib files ship inside the package, in private/:
+
+   defaultcolors, defaultmarkers (libplot)
+   dealout (functools)
+
+ See also: <a href="boxchartcats.html" class="code" title="function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">boxchartcats</a>, <a href="barchartcats.html" class="code" title="function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">barchartcats</a>, gscatter,
+ groupstats.namelists.sortorder</pre></div>
+
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+
+This function calls:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="groupsummary.html" class="code" title="function G = groupsummary(tbl, groupvars, methods, datavar,groupbins, opts)">groupsummary</a>	GROUPSUMMARY Compute group-wise statistics</li>
+<li><a href="prepareTableGroups.html" class="code" title="function tbl = prepareTableGroups(tbl, ydatavar, opts)">prepareTableGroups</a>	PREPARETABLEGROUPS Select rows and prepare group variables in a table.</li>
+<li><a href="scatter.html" class="code" title="function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar,sgroupvar, opts, props)">scatter</a>	SCATTER Scatter chart categorical table data.</li></ul>
+
+
+This function is called by:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="boxchartcats.html" class="code" title="function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">boxchartcats</a>	BOXCHARTCATS Box chart by groups along x-axis and by color within groups.</li>
+<li><a href="scatter.html" class="code" title="function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar,sgroupvar, opts, props)">scatter</a>	SCATTER Scatter chart categorical table data.</li></ul>
+<!-- crossreference -->
+
+
+<h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="#_sub1" class="code">function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps,</a></li>
+<li><a href="#_sub2" class="code">function [data, labels] = rankcategories(data)</a></li>
+<li><a href="#_sub3" class="code">function order = legendOrder(XData, YData, CData, SData, opts)</a></li>
+<li><a href="#_sub4" class="code">function h = gscatterOneGroup(XData, YData, CData, colors, symbol, size)</a></li>
+<li><a href="#_sub5" class="code">function restoreCurrent(previousfigure, fig, previousaxes)</a></li>
+<li><a href="#_sub6" class="code">function [colors, symbols, sizes] = getPlotDecorators(CGrps)</a></li>
+<li><a href="#_sub7" class="code">function [cleg, sleg] = legendhandles(CGrps, SGrps, colors, symbols, sizes)</a></li>
+<li><a href="#_sub8" class="code">function L = groupLegend(cleg, sleg, CGrps, SGrps, legendnames, opts)</a></li></ul>
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, </a><span class="keyword">...</span>
+0002       sgroupvar, opts, props)
+0003    <span class="comment">%SCATTER Scatter chart categorical table data.</span>
+0004    <span class="comment">%</span>
+0005    <span class="comment">%  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR)</span>
+0006    <span class="comment">%  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR, SGROUPVAR)</span>
+0007    <span class="comment">%  [H, L, AX] = SCATTER(_)</span>
+0008    <span class="comment">%  [___] = SCATTER(_, Name = Value)</span>
+0009    <span class="comment">%</span>
+0010    <span class="comment">% Description</span>
+0011    <span class="comment">%  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR) plots TBL.(YDATAVAR)</span>
+0012    <span class="comment">%  against TBL.(XDATAVAR), coloring each point by its CGROUPVAR member.</span>
+0013    <span class="comment">%</span>
+0014    <span class="comment">%  H = SCATTER(_, SGROUPVAR) also varies the marker symbol and size by</span>
+0015    <span class="comment">%  SGROUPVAR member, so one chart shows two groupings at once.</span>
+0016    <span class="comment">%</span>
+0017    <span class="comment">%  [H, L, AX] = SCATTER(_) also returns the legend and the axes. H is a</span>
+0018    <span class="comment">%  matrix with one row per color group and one column per size group.</span>
+0019    <span class="comment">%</span>
+0020    <span class="comment">% Name-value arguments</span>
+0021    <span class="comment">%  CGroupMembers    Members of CGROUPVAR to keep. Rows outside them go.</span>
+0022    <span class="comment">%  SGroupMembers    Members of SGROUPVAR to keep.</span>
+0023    <span class="comment">%  RowSelectVar     Name of a variable used only to select rows.</span>
+0024    <span class="comment">%  RowSelectMembers Members of RowSelectVar to keep.</span>
+0025    <span class="comment">%  MergeGroupMembers A cell array of string vectors. Each cell names the</span>
+0026    <span class="comment">%                   CGROUPVAR members to pool into one color group,</span>
+0027    <span class="comment">%                   matching groupstats.histogram. A bare string vector</span>
+0028    <span class="comment">%                   is one merge group. The merged group's label joins</span>
+0029    <span class="comment">%                   the member names with &quot; and &quot;, and it takes the</span>
+0030    <span class="comment">%                   position of its first member in the current category</span>
+0031    <span class="comment">%                   order. CGroupMembers reads original names; the</span>
+0032    <span class="comment">%                   legend reads post-merge names.</span>
+0033    <span class="comment">%  SortGroup        Which grouping the legend order follows, &quot;cgroupvar&quot;</span>
+0034    <span class="comment">%                   or &quot;sgroupvar&quot;. Inert until SortBy is set.</span>
+0035    <span class="comment">%  SortVar          Which data variable the legend order sorts on,</span>
+0036    <span class="comment">%                   &quot;xdatavar&quot; or &quot;ydatavar&quot;. Inert until SortBy is set.</span>
+0037    <span class="comment">%  SortBy           &quot;ascend&quot;, &quot;descend&quot;, or &quot;none&quot; (default). &quot;none&quot;</span>
+0038    <span class="comment">%                   keeps the legend in the group order. The direction</span>
+0039    <span class="comment">%                   sorts the legend by the group mean of SortVar within</span>
+0040    <span class="comment">%                   the SortGroup groups. So SortGroup picks which</span>
+0041    <span class="comment">%                   grouping is sorted, SortVar picks which data</span>
+0042    <span class="comment">%                   variable computes the statistic, and SortBy picks</span>
+0043    <span class="comment">%                   the direction. The cats charts sort xgroupvar only,</span>
+0044    <span class="comment">%                   so they have no SortGroup; their SortGroupMembers</span>
+0045    <span class="comment">%                   picks the color-group members that enter the</span>
+0046    <span class="comment">%                   statistic.</span>
+0047    <span class="comment">%  CGroupOrder      A partial order of CGROUPVAR members. Named members</span>
+0048    <span class="comment">%                   come first; the rest keep their order. Reorders the</span>
+0049    <span class="comment">%                   draw and legend order and overrides SortBy.</span>
+0050    <span class="comment">%  SGroupOrder      A partial order of SGROUPVAR members, the same way.</span>
+0051    <span class="comment">%  Parent           Axes to plot into. The default is gca, so repeated</span>
+0052    <span class="comment">%                   calls reuse the current axes rather than opening a</span>
+0053    <span class="comment">%                   figure each time.</span>
+0054    <span class="comment">%  Legend           &quot;on&quot; or &quot;off&quot;.</span>
+0055    <span class="comment">%  LegendString     Replacement legend entries. The default is the group</span>
+0056    <span class="comment">%                   member names. LegendString(i) names the i-th</span>
+0057    <span class="comment">%                   CGROUPVAR member in category order after member</span>
+0058    <span class="comment">%                   filtering and merging, followed by one entry per</span>
+0059    <span class="comment">%                   SGROUPVAR member when there are two or more.</span>
+0060    <span class="comment">%                   CGroupOrder, SGroupOrder, and SortBy move the entries</span>
+0061    <span class="comment">%                   with the groups, so an entry stays on its member. A</span>
+0062    <span class="comment">%                   list that does not cover every entry is ignored and</span>
+0063    <span class="comment">%                   the member names stand.</span>
+0064    <span class="comment">%  LegendOrientation &quot;vertical&quot; or &quot;horizontal&quot;.</span>
+0065    <span class="comment">%</span>
+0066    <span class="comment">%  Any Line property may also be passed by name. gscatter draws the</span>
+0067    <span class="comment">%  points as Line objects, so H holds Line handles and takes Line</span>
+0068    <span class="comment">%  properties such as MarkerSize, not Scatter properties such as</span>
+0069    <span class="comment">%  SizeData.</span>
+0070    <span class="comment">%</span>
+0071    <span class="comment">% Example</span>
+0072    <span class="comment">%  data = groupstats.test.generateTestData('groupsummary');</span>
+0073    <span class="comment">%  h = groupstats.scatter(data.tbl, &quot;Value&quot;, &quot;Other&quot;, &quot;Grp&quot;);</span>
+0074    <span class="comment">%  h = groupstats.scatter(data.tbl, &quot;Value&quot;, &quot;Other&quot;, &quot;Grp&quot;, &quot;Sub&quot;, ...</span>
+0075    <span class="comment">%     SortVar = &quot;ydatavar&quot;, SortBy = &quot;descend&quot;, Legend = &quot;off&quot;);</span>
+0076    <span class="comment">%</span>
+0077    <span class="comment">% Categorical data variables</span>
+0078    <span class="comment">%  A categorical XDATAVAR or YDATAVAR whose categories are numbers is</span>
+0079    <span class="comment">%  converted to those numbers. One whose categories are names is drawn</span>
+0080    <span class="comment">%  by category ranking, with the categories as the tick labels, so an</span>
+0081    <span class="comment">%  ordinal variable keeps its order on the axis and SortBy sorts the</span>
+0082    <span class="comment">%  legend by that ranking.</span>
+0083    <span class="comment">%</span>
+0084    <span class="comment">% Positional order</span>
+0085    <span class="comment">%  scatter charts two continuous data variables in the built-in</span>
+0086    <span class="comment">%  scatter(x, y) order, so xdatavar comes before ydatavar. The cats</span>
+0087    <span class="comment">%  charts put ydatavar second because their second axis is a grouping,</span>
+0088    <span class="comment">%  not a data variable; there is no xgroupvar here to reconcile to.</span>
+0089    <span class="comment">%  cgroupvar is required. This order is deliberate.</span>
+0090    <span class="comment">%</span>
+0091    <span class="comment">% Dependencies</span>
+0092    <span class="comment">%  These matfunclib files ship inside the package, in private/:</span>
+0093    <span class="comment">%</span>
+0094    <span class="comment">%   defaultcolors, defaultmarkers (libplot)</span>
+0095    <span class="comment">%   dealout (functools)</span>
+0096    <span class="comment">%</span>
+0097    <span class="comment">% See also: boxchartcats, barchartcats, gscatter,</span>
+0098    <span class="comment">% groupstats.namelists.sortorder</span>
+0099 
+0100    <span class="comment">% PARSE INPUTS</span>
+0101    arguments
+0102       tbl tabular
+0103       xdatavar (1, 1) string { mustBeNonempty(xdatavar) }
+0104       ydatavar (1, 1) string { mustBeNonempty(ydatavar) }
+0105       cgroupvar (1, 1) string { mustBeNonempty(cgroupvar) }
+0106       <span class="comment">% One size grouping or none. A vector would name two groupings,</span>
+0107       <span class="comment">% which the marker has no second dimension for.</span>
+0108       sgroupvar string {mustBeScalarOrEmpty} = string.empty()
+0109       opts.CGroupMembers string = string.empty()
+0110       opts.SGroupMembers string = string.empty()
+0111       opts.RowSelectVar string = string.empty()
+0112       opts.RowSelectMembers string = string.empty()
+0113       <span class="comment">% Untyped because a cell array of string vectors is one valid shape.</span>
+0114       opts.MergeGroupMembers (:, 1) = string.empty()
+0115       opts.SortGroup (1, 1) string <span class="keyword">...</span>
+0116          {groupstats.namelists.mustBeMemberOf(opts.SortGroup, <span class="keyword">...</span>
+0117          &quot;sortgroupvar&quot;)} = &quot;cgroupvar&quot;
+0118       opts.SortVar (1, 1) string <span class="keyword">...</span>
+0119          {groupstats.namelists.mustBeMemberOf(opts.SortVar, <span class="keyword">...</span>
+0120          &quot;sortdatavar&quot;)} = &quot;xdatavar&quot;
+0121       opts.SortBy (1, 1) string <span class="keyword">...</span>
+0122          {groupstats.namelists.mustBeMemberOf(opts.SortBy, <span class="keyword">...</span>
+0123          &quot;sortorder&quot;)} = &quot;none&quot;
+0124       opts.CGroupOrder (:, 1) string = &quot;none&quot;
+0125       opts.SGroupOrder (:, 1) string = &quot;none&quot;
+0126       opts.Parent (1,1) { mustBeA(opts.Parent, <span class="keyword">...</span>
+0127          &quot;matlab.graphics.axis.AbstractAxes&quot;) } = gca
+0128       opts.Legend (1, 1) string <span class="keyword">...</span>
+0129          {groupstats.namelists.mustBeMemberOf(opts.Legend, <span class="keyword">...</span>
+0130          &quot;legendvisibility&quot;)} = &quot;on&quot;
+0131       opts.LegendString (:, 1) string = string.empty()
+0132       opts.LegendOrientation (1, 1) string <span class="keyword">...</span>
+0133          {groupstats.namelists.mustBeMemberOf(opts.LegendOrientation, <span class="keyword">...</span>
+0134          &quot;legendorientation&quot;)} = &quot;vertical&quot;
+0135       <span class="comment">% gscatter returns Line objects, not Scatter objects, so a Line</span>
+0136       <span class="comment">% property is what a caller can set here.</span>
+0137       props.?matlab.graphics.primitive.Line
+0138    <span class="keyword">end</span>
+0139 
+0140    <span class="comment">% H, L, and the axes are the outputs.</span>
+0141    nargoutchk(0, 3)
+0142 
+0143    <span class="comment">% import groupstats package</span>
+0144    import groupstats.groupselect
+0145    import groupstats.boxchartxdata
+0146    import groupstats.prepareTableGroups
+0147 
+0148    <span class="comment">%---------------------- validate inputs</span>
+0149    <span class="comment">% The size group variable takes the XGroup slot: scatter groups by marker</span>
+0150    <span class="comment">% size where the bar and box charts group along the x-axis.</span>
+0151    tbl = <a href="prepareTableGroups.html" class="code" title="function tbl = prepareTableGroups(tbl, ydatavar, opts)">prepareTableGroups</a>(tbl, ydatavar, <span class="keyword">...</span>
+0152       XDataVar = xdatavar, <span class="keyword">...</span>
+0153       XGroupVar = sgroupvar, <span class="keyword">...</span>
+0154       XGroupMembers = opts.SGroupMembers, <span class="keyword">...</span>
+0155       CGroupVar = cgroupvar, <span class="keyword">...</span>
+0156       CGroupMembers = opts.CGroupMembers, <span class="keyword">...</span>
+0157       RowSelectVar = opts.RowSelectVar, <span class="keyword">...</span>
+0158       RowSelectMembers = opts.RowSelectMembers);
+0159 
+0160    <span class="comment">% Merge after member filtering, so CGroupMembers reads original names</span>
+0161    <span class="comment">% and the legend below reads post-merge names. The shared helper</span>
+0162    <span class="comment">% validates the member names and relabels the rows. cgroupvar is a</span>
+0163    <span class="comment">% required argument, so no merge-without-group guard is needed here.</span>
+0164    <span class="keyword">if</span> ~isempty(opts.MergeGroupMembers)
+0165       tbl.(cgroupvar) = mergegroupmembers( <span class="keyword">...</span>
+0166          tbl.(cgroupvar), opts.MergeGroupMembers);
+0167    <span class="keyword">end</span>
+0168 
+0169    <span class="comment">% Assign the data to plot. prepareTableGroups converts a categorical</span>
+0170    <span class="comment">% data variable whose categories are numbers; one whose categories are</span>
+0171    <span class="comment">% names stays categorical, and gscatter draws onto held numeric axes,</span>
+0172    <span class="comment">% which reject it. Draw its category ranking instead, and label the</span>
+0173    <span class="comment">% ticks below. An ordinal variable then sorts the legend by ranking.</span>
+0174    [XData, xcats] = <a href="#_sub2" class="code" title="subfunction [data, labels] = rankcategories(data)">rankcategories</a>(tbl.(xdatavar));
+0175    [YData, ycats] = <a href="#_sub2" class="code" title="subfunction [data, labels] = rankcategories(data)">rankcategories</a>(tbl.(ydatavar));
+0176    CData = tbl.(cgroupvar);
+0177 
+0178    <span class="keyword">if</span> isempty(sgroupvar)
+0179       SData = true(size(YData));
+0180    <span class="keyword">else</span>
+0181       SData = tbl.(sgroupvar);
+0182    <span class="keyword">end</span>
+0183 
+0184    <span class="comment">% LegendString binds to the members in category order, read here</span>
+0185    <span class="comment">% before CGroupOrder, SGroupOrder, or SortBy move them. The legend</span>
+0186    <span class="comment">% looks each displayed member up in this list. A single symbol group</span>
+0187    <span class="comment">% gets no legend entry, so it gets no name here either.</span>
+0188    legendnames = string(categories(removecats(CData)));
+0189    <span class="keyword">if</span> iscategorical(SData) &amp;&amp; numel(categories(removecats(SData))) &gt; 1
+0190       legendnames = [legendnames; string(categories(removecats(SData)))];
+0191    <span class="keyword">end</span>
+0192 
+0193    <span class="comment">% Explicit member orders beat SortBy, the same rule the cats charts</span>
+0194    <span class="comment">% apply. Reordering the categories reorders the draw and legend order,</span>
+0195    <span class="comment">% and the colors and symbols follow the new positions. SData is logical</span>
+0196    <span class="comment">% when no sgroupvar was given, so there is nothing to order. The cats</span>
+0197    <span class="comment">% charts skip a group-less order the same way, with no error.</span>
+0198    <span class="keyword">if</span> iscategorical(CData) <span class="keyword">...</span>
+0199          &amp;&amp; ~(isscalar(opts.CGroupOrder) &amp;&amp; opts.CGroupOrder == &quot;none&quot;)
+0200       members = string(categories(removecats(CData)));
+0201       idx = reordergroupmembers(opts.CGroupOrder, members, <span class="keyword">...</span>
+0202          &quot;<a href="scatter.html" class="code" title="function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar,sgroupvar, opts, props)">scatter</a>&quot;, &quot;CGroupOrder&quot;);
+0203       CData = reordercats(CData, cellstr(members(idx)));
+0204    <span class="keyword">end</span>
+0205    <span class="keyword">if</span> iscategorical(SData) <span class="keyword">...</span>
+0206          &amp;&amp; ~(isscalar(opts.SGroupOrder) &amp;&amp; opts.SGroupOrder == &quot;none&quot;)
+0207       members = string(categories(removecats(SData)));
+0208       idx = reordergroupmembers(opts.SGroupOrder, members, <span class="keyword">...</span>
+0209          &quot;<a href="scatter.html" class="code" title="function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar,sgroupvar, opts, props)">scatter</a>&quot;, &quot;SGroupOrder&quot;);
+0210       SData = reordercats(SData, cellstr(members(idx)));
+0211    <span class="keyword">end</span>
+0212 
+0213    SGrps = unique(SData);
+0214    CGrps = unique(CData);
+0215 
+0216    <span class="comment">% Make the figure using gscatter</span>
+0217    [H, L] = <a href="#_sub1" class="code" title="subfunction [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, ">createGScatterPlot1</a>(XData, YData, CData, SData, CGrps, <span class="keyword">...</span>
+0218       SGrps, legendnames, opts);
+0219 
+0220    <span class="comment">% Apply any Line property the caller named. gscatter takes positional</span>
+0221    <span class="comment">% arguments only, so the properties go on the returned objects.</span>
+0222    varargs = namedargs2cell(props);
+0223    <span class="keyword">if</span> ~isempty(varargs)
+0224       set(H(isgraphics(H)), varargs{:});
+0225    <span class="keyword">end</span>
+0226 
+0227    <span class="comment">% Name the axes. createGScatterPlot1 restores the caller's current axes</span>
+0228    <span class="comment">% as it returns, so an unqualified call here labels whichever axes was</span>
+0229    <span class="comment">% current before, and leaves opts.Parent held.</span>
+0230    xlabel(opts.Parent, strrep(xdatavar, <span class="string">'_'</span>, <span class="string">' '</span>));
+0231    ylabel(opts.Parent, strrep(ydatavar, <span class="string">'_'</span>, <span class="string">' '</span>));
+0232 
+0233    <span class="comment">% A ranked categorical variable shows its categories at the ranks.</span>
+0234    <span class="keyword">if</span> ~isempty(xcats)
+0235       set(opts.Parent, <span class="string">'XTick'</span>, 1:numel(xcats), <span class="keyword">...</span>
+0236          <span class="string">'XTickLabel'</span>, xcats);
+0237    <span class="keyword">end</span>
+0238    <span class="keyword">if</span> ~isempty(ycats)
+0239       set(opts.Parent, <span class="string">'YTick'</span>, 1:numel(ycats), <span class="keyword">...</span>
+0240          <span class="string">'YTickLabel'</span>, ycats);
+0241    <span class="keyword">end</span>
+0242 
+0243    hold(opts.Parent, <span class="string">'off'</span>)
+0244 
+0245    <span class="comment">% The third output is the axes the chart was drawn into, matching the</span>
+0246    <span class="comment">% other charts' (H, L, ax) signature.</span>
+0247    ax = opts.Parent;
+0248    [varargout{1:nargout}] = dealout(H, L, ax);
+0249 <span class="keyword">end</span>
+0250 
+0251 <span class="comment">%%</span>
+0252 <a name="_sub1" href="#_subfunctions" class="code">function [H, L] = createGScatterPlot1(XData, YData, CData, SData, CGrps, </a><span class="keyword">...</span>
+0253       SGrps, legendnames, opts)
+0254 
+0255    [colors, symbols, sizes] = <a href="#_sub6" class="code" title="subfunction [colors, symbols, sizes] = getPlotDecorators(CGrps)">getPlotDecorators</a>(CGrps);
+0256 
+0257    H = gobjects(numel(CGrps), numel(SGrps));
+0258 
+0259    <span class="comment">% Make the caller's axes current. gscatter plots into gca and takes no</span>
+0260    <span class="comment">% Parent argument, and opening a figure here would ignore Parent and make</span>
+0261    <span class="comment">% every call a new window. Put the caller's current figure and axes back</span>
+0262    <span class="comment">% afterward, so a later unguarded plot lands where the caller expects.</span>
+0263    fig = ancestor(opts.Parent, <span class="string">'figure'</span>);
+0264    previousfigure = get(groot, <span class="string">'CurrentFigure'</span>);
+0265    previousaxes = get(fig, <span class="string">'CurrentAxes'</span>);
+0266    restore = onCleanup(@() <a href="#_sub5" class="code" title="subfunction restoreCurrent(previousfigure, fig, previousaxes)">restoreCurrent</a>(previousfigure, fig, previousaxes));
+0267 
+0268    set(groot, <span class="string">'CurrentFigure'</span>, fig);
+0269    set(fig, <span class="string">'CurrentAxes'</span>, opts.Parent);
+0270    hold(opts.Parent, <span class="string">'on'</span>);
+0271    <span class="keyword">for</span> m = 1:numel(SGrps)
+0272       I = ismember(SData, SGrps(m));
+0273 
+0274       h = <a href="#_sub4" class="code" title="subfunction h = gscatterOneGroup(XData, YData, CData, colors, symbol, size)">gscatterOneGroup</a>(XData(I), YData(I), CData(I), colors, <span class="keyword">...</span>
+0275          symbols{m}, sizes(m));
+0276 
+0277       <span class="keyword">if</span> numel(h) == numel(CGrps)
+0278          H(:, m) = h;
+0279       <span class="keyword">else</span>
+0280          <span class="comment">% gscatter returns one handle per category code, from code 1 up</span>
+0281          <span class="comment">% to the highest code the subset holds, with a data-less</span>
+0282          <span class="comment">% placeholder line for each unused lower code. Handle k is</span>
+0283          <span class="comment">% therefore category k, so align by code. A present-value mask</span>
+0284          <span class="comment">% here miscounted whenever an unused code sat below a used one.</span>
+0285          <span class="comment">% The remaining rows keep their preallocated placeholders.</span>
+0286          H(1:numel(h), m) = h;
+0287       <span class="keyword">end</span>
+0288    <span class="keyword">end</span>
+0289 
+0290    <span class="keyword">if</span> numel(SGrps) &gt; 1
+0291       [cleg, sleg] = <a href="#_sub7" class="code" title="subfunction [cleg, sleg] = legendhandles(CGrps, SGrps, colors, symbols, sizes)">legendhandles</a>(CGrps, SGrps, colors, symbols, sizes);
+0292    <span class="keyword">else</span>
+0293       cleg = H;
+0294       sleg = gobjects().empty;
+0295       SGrps = [];
+0296    <span class="keyword">end</span>
+0297 
+0298    order = <a href="#_sub3" class="code" title="subfunction order = legendOrder(XData, YData, CData, SData, opts)">legendOrder</a>(XData, YData, CData, SData, opts);
+0299 
+0300    <span class="keyword">if</span> opts.SortGroup == &quot;cgroupvar&quot;
+0301       L = <a href="#_sub8" class="code" title="subfunction L = groupLegend(cleg, sleg, CGrps, SGrps, legendnames, opts)">groupLegend</a>(cleg(order), sleg, CGrps(order), SGrps, <span class="keyword">...</span>
+0302          legendnames, opts);
+0303    <span class="keyword">elseif</span> opts.SortGroup == &quot;sgroupvar&quot;
+0304       L = <a href="#_sub8" class="code" title="subfunction L = groupLegend(cleg, sleg, CGrps, SGrps, legendnames, opts)">groupLegend</a>(cleg, sleg(order), CGrps, SGrps(order), <span class="keyword">...</span>
+0305          legendnames, opts);
+0306    <span class="keyword">end</span>
+0307 <span class="keyword">end</span>
+0308 
+0309 <span class="comment">%%</span>
+0310 <a name="_sub2" href="#_subfunctions" class="code">function [data, labels] = rankcategories(data)</a>
+0311    <span class="comment">%RANKCATEGORIES Replace a categorical data variable with its ranking.</span>
+0312    <span class="comment">%</span>
+0313    <span class="comment">% The ranking is the category index, so an ordinal variable keeps its</span>
+0314    <span class="comment">% order. LABELS holds the categories for the tick labels, and is empty</span>
+0315    <span class="comment">% for data that is not categorical.</span>
+0316 
+0317    labels = string.empty();
+0318    <span class="keyword">if</span> iscategorical(data)
+0319       labels = string(categories(data));
+0320       <span class="comment">% An undefined value has code 0, which would draw as a point at rank</span>
+0321       <span class="comment">% 0 and enter the legend sort. NaN is the missing value gscatter and</span>
+0322       <span class="comment">% groupsummary both skip.</span>
+0323       missing = ismissing(data);
+0324       data = double(data);
+0325       data(missing) = NaN;
+0326    <span class="keyword">end</span>
+0327 <span class="keyword">end</span>
+0328 
+0329 <span class="comment">%%</span>
+0330 <a name="_sub3" href="#_subfunctions" class="code">function order = legendOrder(XData, YData, CData, SData, opts)</a>
+0331 
+0332    <span class="keyword">if</span> opts.SortVar == &quot;ydatavar&quot;
+0333       <span class="comment">% order the legend from high to low along the y axis</span>
+0334       sortdata = YData;
+0335    <span class="keyword">elseif</span> opts.SortVar == &quot;xdatavar&quot;
+0336       <span class="comment">% order the legend from low to high along the x axis</span>
+0337       sortdata = XData;
+0338    <span class="keyword">end</span>
+0339 
+0340    <span class="keyword">if</span> opts.SortGroup == &quot;cgroupvar&quot;
+0341       <span class="comment">% order the legend according to the mean within CData groups</span>
+0342       sortgroup = CData;
+0343    <span class="keyword">elseif</span> opts.SortGroup == &quot;sgroupvar&quot;
+0344       <span class="comment">% order the legend according to the mean within SData groups</span>
+0345       sortgroup = SData;
+0346    <span class="keyword">end</span>
+0347 
+0348    <span class="comment">% Default order</span>
+0349    order = 1:numel(unique(sortgroup));
+0350 
+0351    <span class="comment">% SortBy &quot;none&quot;, the default, keeps the groups in the order they have.</span>
+0352    <span class="comment">% An explicit member order on the sorted grouping also wins over</span>
+0353    <span class="comment">% SortBy, the same rule the cats charts apply.</span>
+0354    orderedc = ~(isscalar(opts.CGroupOrder) &amp;&amp; opts.CGroupOrder == &quot;none&quot;);
+0355    ordereds = ~(isscalar(opts.SGroupOrder) &amp;&amp; opts.SGroupOrder == &quot;none&quot;);
+0356    <span class="keyword">if</span> opts.SortBy == &quot;none&quot; <span class="keyword">...</span>
+0357          || (opts.SortGroup == &quot;cgroupvar&quot; &amp;&amp; orderedc) <span class="keyword">...</span>
+0358          || (opts.SortGroup == &quot;sgroupvar&quot; &amp;&amp; ordereds)
+0359       <span class="keyword">return</span>
+0360    <span class="keyword">end</span>
+0361 
+0362    <span class="comment">% groupsummary is base MATLAB. grpstats computes the same group mean but</span>
+0363    <span class="comment">% needs a Statistics Toolbox license, which left this the only path a</span>
+0364    <span class="comment">% caller without that license could take. The data is numeric here: a</span>
+0365    <span class="comment">% categorical variable was ranked above, and a text one was converted</span>
+0366    <span class="comment">% by prepareTableGroups.</span>
+0367    <span class="comment">% A group whose sort data is all missing has a NaN mean and sorts last</span>
+0368    <span class="comment">% in either direction, as the cats charts place it.</span>
+0369    mu = <a href="groupsummary.html" class="code" title="function G = groupsummary(tbl, groupvars, methods, datavar,groupbins, opts)">groupsummary</a>(sortdata, sortgroup, &quot;mean&quot;);
+0370    [~, order] = sort(mu, opts.SortBy, <span class="string">'MissingPlacement'</span>, <span class="string">'last'</span>);
+0371 <span class="keyword">end</span>
+0372 
+0373 <span class="comment">%%</span>
+0374 <a name="_sub4" href="#_subfunctions" class="code">function h = gscatterOneGroup(XData, YData, CData, colors, symbol, size)</a>
+0375 
+0376    h = gscatter(XData, YData, CData, colors, symbol, size, <span class="string">'filled'</span>);
+0377 
+0378    repm = find(~ismember({h.Marker}, {<span class="string">'x'</span>, <span class="string">'+'</span>, <span class="string">'*'</span>}));
+0379    <span class="keyword">for</span> n = repm(:)'
+0380       h(n).MarkerEdgeColor = &quot;none&quot;;
+0381    <span class="keyword">end</span>
+0382 
+0383    legend off
+0384 <span class="keyword">end</span>
+0385 
+0386 <span class="comment">%%</span>
+0387 <a name="_sub5" href="#_subfunctions" class="code">function restoreCurrent(previousfigure, fig, previousaxes)</a>
+0388    <span class="comment">%RESTORECURRENT Put the caller's current figure and axes back.</span>
+0389    <span class="comment">%</span>
+0390    <span class="comment">% Called from an onCleanup object, so it runs whether the plotting</span>
+0391    <span class="comment">% succeeded or threw. A figure or axes the caller closed meanwhile is no</span>
+0392    <span class="comment">% longer valid, so check before setting either one.</span>
+0393 
+0394    <span class="keyword">if</span> isgraphics(fig) &amp;&amp; isgraphics(previousaxes)
+0395       set(fig, <span class="string">'CurrentAxes'</span>, previousaxes);
+0396    <span class="keyword">end</span>
+0397    <span class="keyword">if</span> isgraphics(previousfigure)
+0398       set(groot, <span class="string">'CurrentFigure'</span>, previousfigure);
+0399    <span class="keyword">end</span>
+0400 <span class="keyword">end</span>
+0401 
+0402 <span class="comment">%%</span>
+0403 <a name="_sub6" href="#_subfunctions" class="code">function [colors, symbols, sizes] = getPlotDecorators(CGrps)</a>
+0404 
+0405    <span class="comment">% The box and scatter charts read defaultcolors, so the k-th color</span>
+0406    <span class="comment">% group of either chart has the k-th palette color. Its list holds 21</span>
+0407    <span class="comment">% colors; more color groups than that wrap around.</span>
+0408    colors = defaultcolors();
+0409    colors = colors(mod((1:numel(CGrps)) - 1, size(colors, 1)) + 1, :);
+0410    [symbols, sizes] = defaultmarkers();
+0411 <span class="keyword">end</span>
+0412 
+0413 <span class="comment">%%</span>
+0414 <a name="_sub7" href="#_subfunctions" class="code">function [cleg, sleg] = legendhandles(CGrps, SGrps, colors, symbols, sizes)</a>
+0415 
+0416    <span class="comment">% Create dummy plots for CData legend entries (colors) and SData legend</span>
+0417    <span class="comment">% entries (symbols)</span>
+0418 
+0419    cleg = gobjects(numel(CGrps), 1);
+0420    sleg = gobjects(numel(SGrps), 1);
+0421 
+0422    hold on;
+0423    <span class="keyword">for</span> n = 1:numel(CGrps)
+0424       cleg(n) = patch(nan, nan, colors(n, :), <span class="string">'EdgeColor'</span>, <span class="string">'none'</span>);
+0425       <span class="keyword">for</span> m = 1:numel(SGrps)
+0426          sleg(m) = plot(nan, nan, <span class="string">'Marker'</span>, symbols{m}, <span class="string">'MarkerSize'</span>, sizes(m), <span class="keyword">...</span>
+0427             <span class="string">'LineStyle'</span>, <span class="string">'none'</span>, <span class="string">'MarkerFaceColor'</span>, <span class="string">'none'</span>, <span class="keyword">...</span>
+0428             <span class="string">'MarkerEdgeColor'</span>, <span class="string">'k'</span>);
+0429       <span class="keyword">end</span>
+0430    <span class="keyword">end</span>
+0431    hold off;
+0432 <span class="keyword">end</span>
+0433 
+0434 <span class="comment">%%</span>
+0435 <a name="_sub8" href="#_subfunctions" class="code">function L = groupLegend(cleg, sleg, CGrps, SGrps, legendnames, opts)</a>
+0436 
+0437    <span class="comment">% Return an empty handle rather than no value, so a caller that asks for</span>
+0438    <span class="comment">% the legend output gets something it can test.</span>
+0439    <span class="keyword">if</span> opts.Legend == &quot;off&quot;
+0440       L = gobjects(0);
+0441       <span class="keyword">return</span>
+0442    <span class="keyword">end</span>
+0443 
+0444    <span class="comment">% LegendString replaces the group member names. It must cover every entry,</span>
+0445    <span class="comment">% so a short list falls back to the names rather than mislabeling them.</span>
+0446    <span class="comment">% Each displayed member is looked up in the category-order name list,</span>
+0447    <span class="comment">% color names in the first block and symbol names in the second, so a</span>
+0448    <span class="comment">% reordered or sorted legend keeps every entry on its member.</span>
+0449    centries = string(CGrps(:));
+0450    sentries = string(SGrps(:));
+0451    <span class="keyword">if</span> numel(opts.LegendString) == numel(legendnames)
+0452       [~, cloc] = ismember(centries, legendnames(1:numel(centries)));
+0453       [~, sloc] = ismember(sentries, legendnames(numel(centries) + 1:end));
+0454       centries = opts.LegendString(cloc);
+0455       sentries = opts.LegendString(numel(centries) + sloc);
+0456    <span class="keyword">end</span>
+0457    entries = [centries; sentries];
+0458 
+0459    <span class="comment">% One combined legend holds the color entries then the symbol entries.</span>
+0460    L = legend(opts.Parent, [cleg(:); sleg(:)], entries, <span class="keyword">...</span>
+0461       <span class="string">'Location'</span>, <span class="string">'eastoutside'</span>, <span class="keyword">...</span>
+0462       <span class="string">'Orientation'</span>, opts.LegendOrientation);
+0463 <span class="keyword">end</span>
+0464 
+0465 <span class="comment">%% LICENSE</span>
+0466 
+0467 <span class="comment">% BSD 3-Clause License</span>
+0468 <span class="comment">%</span>
+0469 <span class="comment">% Copyright (c) 2023, Matt Cooper (mgcooper) All rights reserved.</span>
+0470 <span class="comment">%</span>
+0471 <span class="comment">% Redistribution and use in source and binary forms, with or without</span>
+0472 <span class="comment">% modification, are permitted provided that the following conditions are met:</span>
+0473 <span class="comment">%</span>
+0474 <span class="comment">% 1. Redistributions of source code must retain the above copyright notice, this</span>
+0475 <span class="comment">%    list of conditions and the following disclaimer.</span>
+0476 <span class="comment">%</span>
+0477 <span class="comment">% 2. Redistributions in binary form must reproduce the above copyright notice,</span>
+0478 <span class="comment">%    this list of conditions and the following disclaimer in the documentation</span>
+0479 <span class="comment">%    and/or other materials provided with the distribution.</span>
+0480 <span class="comment">%</span>
+0481 <span class="comment">% 3. Neither the name of the copyright holder nor the names of its</span>
+0482 <span class="comment">%    contributors may be used to endorse or promote products derived from this</span>
+0483 <span class="comment">%    software without specific prior written permission.</span>
+0484 <span class="comment">%</span>
+0485 <span class="comment">% THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot;</span>
+0486 <span class="comment">% AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE</span>
+0487 <span class="comment">% IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE</span>
+0488 <span class="comment">% DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE</span>
+0489 <span class="comment">% FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL</span>
+0490 <span class="comment">% DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR</span>
+0491 <span class="comment">% SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER</span>
+0492 <span class="comment">% CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,</span>
+0493 <span class="comment">% OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</span>
+0494 <span class="comment">% OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</span></pre></div>
+</body>
+</html>

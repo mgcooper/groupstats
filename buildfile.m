@@ -6,8 +6,12 @@ function plan = buildfile
    % Make the "test" task the default task in the plan
    plan.DefaultTasks = "test";
 
-   % Make the "release" task dependent on the "check" and "test" tasks
-   plan("release").Dependencies = ["check" "test"];
+   % Make the "release" task dependent on the "check", "test", and "docs"
+   % tasks, so a release ships pages built from the code it packages. The
+   % "dependencies" task is not a dependency: it copies files into the
+   % tree, so the maintainer runs it after a change adds or removes a call
+   % into matfunclib, then checks the result in.
+   plan("release").Dependencies = ["check" "test" "docs"];
 
    % Notes: buildplan accepts a cell vector of function handles. So you can
    % send localfunctions to it, or something like this:
@@ -147,6 +151,17 @@ function testTask(context)
 
    results = runner.run(suite);
    assertSuccess(results);
+end
+
+function docsTask(context)
+   % Publish the Help browser pages into toolbox/docs/html
+
+   % makedocs publishes the demos, so the toolbox and the examples must be
+   % on the path; the pages go to the help_location toolbox/info.xml names.
+   root = context.Plan.RootFolder;
+   addpath(fullfile(root, "toolbox"))
+   addpath(fullfile(root, "toolbox", "examples"))
+   groupstats.internal.makedocs()
 end
 
 function releaseTask(context)

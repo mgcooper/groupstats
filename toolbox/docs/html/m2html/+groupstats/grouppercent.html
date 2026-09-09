@@ -1,0 +1,336 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of grouppercent</title>
+  <meta name="keywords" content="grouppercent">
+  <meta name="description" content="GROUPPERCENT Compute group-wise frequencies (percents) including groupsets.">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../function_index.html">Home</a> &gt;  <a href="function_index.html">+groupstats</a> &gt; grouppercent.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../function_index.html"><img alt="<" border="0" src="../html_img/left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="function_index.html">Index for +groupstats&nbsp;<img alt=">" border="0" src="../html_img/right.png"></a></td></tr></table>-->
+
+<h1>grouppercent
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>GROUPPERCENT Compute group-wise frequencies (percents) including groupsets.</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>function G = grouppercent(tbl, groupvars, groupbins, opts) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre class="comment">GROUPPERCENT Compute group-wise frequencies (percents) including groupsets.
+
+  G = GROUPPERCENT(TBL, GROUPVARS)
+  G = GROUPPERCENT(TBL, GROUPVARS, GROUPBINS)
+  G = GROUPPERCENT(_, GroupSets=NAME)
+  G = GROUPPERCENT(_, RowSelectVar=NAME, RowSelectMembers=M)
+  G = GROUPPERCENT(_, IncludedEdge=EDGE)
+
+  The positional inputs are the ones the builtin groupcounts takes, in
+  its order. The groupstats-only controls are name-value options, the
+  same four groupstats.groupsummary has.
+
+ Description
+  This addresses the fact that groupsummary returns the counts for each
+  group but not the frequencies. It also adds the &quot;groupsets&quot; concept from
+  groupstats, so frequencies (and counts) are computed for &quot;ingroups&quot;.
+
+  TBL is either a raw data table, one row per observation, or a table that
+  a previous groupsummary or groupcounts call already summarized, one row
+  per group. A GroupCount variable is what tells the two apart: a raw
+  table has none, so this function calls groupcounts first.
+
+  G gains one Percent_&lt;groupvar&gt; variable per member of GroupSets. Each
+  one holds a within-group percent: for every member of that group
+  variable, the rows belonging to that member sum to 100. Omit GroupSets
+  or pass string.empty() to use GROUPVARS. The scalar string &quot;none&quot; is
+  not a GroupSets value and is rejected, so a table variable literally
+  named &quot;none&quot; cannot be selected this way.
+
+  RowSelectVar and RowSelectMembers keep only the rows whose RowSelectVar
+  value is one of RowSelectMembers, before counting. Give both together:
+  either one alone is an error, the same two errors
+  groupstats.prepareTableGroups raises. Row selection applies to a raw
+  table only. A table that already carries GroupCount is used as given,
+  so naming RowSelectVar with one is an error.
+
+ Errors
+  groupstats:grouppercent:rowSelectVarWithoutMembers - RowSelectVar
+  without RowSelectMembers.
+  groupstats:grouppercent:membersWithoutGroupVar - RowSelectMembers
+  without RowSelectVar.
+  groupstats:grouppercent:rowSelectOnSummarizedTable - row selection
+  named for a table that already carries GroupCount.
+  groupstats:grouppercent:multipleGroupSets - a raw table with more
+  than one GroupSets variable outside GROUPVARS. The counts for a set
+  variable outside GROUPVARS are made one set at a time, and one such
+  variable is all that path takes. Set variables that are in GROUPVARS,
+  and every set variable of a table that already carries GroupCount,
+  each get their Percent_ column.
+
+  Percent, which groupcounts produces, is a different quantity. It is each
+  row's share of every observation in the table, so the whole column sums
+  to 100.
+
+  When grouppercent computes the counts from a raw table, a binned group
+  variable keeps its original name in G: the disc_ prefix groupcounts
+  adds is removed. A table that already carries GroupCount is used as
+  given, so a disc_ name in it stays.
+
+  IncludedEdge, &quot;left&quot; (default) or &quot;right&quot;, is the bin edge a value on
+  an edge belongs to, passed to groupcounts for every binned group
+  variable. &quot;left&quot; puts a value on an edge in the bin that starts
+  there; &quot;right&quot; puts it in the bin that ends there. It is the option
+  groupstats.groupsummary passes down.
+
+ Example
+  tbl = table([&quot;a&quot;;&quot;a&quot;;&quot;b&quot;], [1;2;3], 'VariableNames', {'Group', 'Value'});
+  G = groupstats.grouppercent(tbl, &quot;Group&quot;);
+
+ See also: <a href="groupsummary.html" class="code" title="function G = groupsummary(tbl, groupvars, methods, datavar,groupbins, opts)">groupsummary</a>, groupcounts, groupstats.<a href="groupsummary.html" class="code" title="function G = groupsummary(tbl, groupvars, methods, datavar,groupbins, opts)">groupsummary</a></pre></div>
+
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+
+This function calls:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="grouppercent.html" class="code" title="function G = grouppercent(tbl, groupvars, groupbins, opts)">grouppercent</a>	GROUPPERCENT Compute group-wise frequencies (percents) including groupsets.</li>
+<li><a href="groupselect.html" class="code" title="function tbl = groupselect(tbl, groupvars, groupmembers)">groupselect</a>	GROUPSELECT Select rows of table by variable name and group members.</li></ul>
+
+
+This function is called by:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="grouppercent.html" class="code" title="function G = grouppercent(tbl, groupvars, groupbins, opts)">grouppercent</a>	GROUPPERCENT Compute group-wise frequencies (percents) including groupsets.</li></ul>
+<!-- crossreference -->
+
+
+
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function G = grouppercent(tbl, groupvars, groupbins, opts)</a>
+0002    <span class="comment">%GROUPPERCENT Compute group-wise frequencies (percents) including groupsets.</span>
+0003    <span class="comment">%</span>
+0004    <span class="comment">%  G = GROUPPERCENT(TBL, GROUPVARS)</span>
+0005    <span class="comment">%  G = GROUPPERCENT(TBL, GROUPVARS, GROUPBINS)</span>
+0006    <span class="comment">%  G = GROUPPERCENT(_, GroupSets=NAME)</span>
+0007    <span class="comment">%  G = GROUPPERCENT(_, RowSelectVar=NAME, RowSelectMembers=M)</span>
+0008    <span class="comment">%  G = GROUPPERCENT(_, IncludedEdge=EDGE)</span>
+0009    <span class="comment">%</span>
+0010    <span class="comment">%  The positional inputs are the ones the builtin groupcounts takes, in</span>
+0011    <span class="comment">%  its order. The groupstats-only controls are name-value options, the</span>
+0012    <span class="comment">%  same four groupstats.groupsummary has.</span>
+0013    <span class="comment">%</span>
+0014    <span class="comment">% Description</span>
+0015    <span class="comment">%  This addresses the fact that groupsummary returns the counts for each</span>
+0016    <span class="comment">%  group but not the frequencies. It also adds the &quot;groupsets&quot; concept from</span>
+0017    <span class="comment">%  groupstats, so frequencies (and counts) are computed for &quot;ingroups&quot;.</span>
+0018    <span class="comment">%</span>
+0019    <span class="comment">%  TBL is either a raw data table, one row per observation, or a table that</span>
+0020    <span class="comment">%  a previous groupsummary or groupcounts call already summarized, one row</span>
+0021    <span class="comment">%  per group. A GroupCount variable is what tells the two apart: a raw</span>
+0022    <span class="comment">%  table has none, so this function calls groupcounts first.</span>
+0023    <span class="comment">%</span>
+0024    <span class="comment">%  G gains one Percent_&lt;groupvar&gt; variable per member of GroupSets. Each</span>
+0025    <span class="comment">%  one holds a within-group percent: for every member of that group</span>
+0026    <span class="comment">%  variable, the rows belonging to that member sum to 100. Omit GroupSets</span>
+0027    <span class="comment">%  or pass string.empty() to use GROUPVARS. The scalar string &quot;none&quot; is</span>
+0028    <span class="comment">%  not a GroupSets value and is rejected, so a table variable literally</span>
+0029    <span class="comment">%  named &quot;none&quot; cannot be selected this way.</span>
+0030    <span class="comment">%</span>
+0031    <span class="comment">%  RowSelectVar and RowSelectMembers keep only the rows whose RowSelectVar</span>
+0032    <span class="comment">%  value is one of RowSelectMembers, before counting. Give both together:</span>
+0033    <span class="comment">%  either one alone is an error, the same two errors</span>
+0034    <span class="comment">%  groupstats.prepareTableGroups raises. Row selection applies to a raw</span>
+0035    <span class="comment">%  table only. A table that already carries GroupCount is used as given,</span>
+0036    <span class="comment">%  so naming RowSelectVar with one is an error.</span>
+0037    <span class="comment">%</span>
+0038    <span class="comment">% Errors</span>
+0039    <span class="comment">%  groupstats:grouppercent:rowSelectVarWithoutMembers - RowSelectVar</span>
+0040    <span class="comment">%  without RowSelectMembers.</span>
+0041    <span class="comment">%  groupstats:grouppercent:membersWithoutGroupVar - RowSelectMembers</span>
+0042    <span class="comment">%  without RowSelectVar.</span>
+0043    <span class="comment">%  groupstats:grouppercent:rowSelectOnSummarizedTable - row selection</span>
+0044    <span class="comment">%  named for a table that already carries GroupCount.</span>
+0045    <span class="comment">%  groupstats:grouppercent:multipleGroupSets - a raw table with more</span>
+0046    <span class="comment">%  than one GroupSets variable outside GROUPVARS. The counts for a set</span>
+0047    <span class="comment">%  variable outside GROUPVARS are made one set at a time, and one such</span>
+0048    <span class="comment">%  variable is all that path takes. Set variables that are in GROUPVARS,</span>
+0049    <span class="comment">%  and every set variable of a table that already carries GroupCount,</span>
+0050    <span class="comment">%  each get their Percent_ column.</span>
+0051    <span class="comment">%</span>
+0052    <span class="comment">%  Percent, which groupcounts produces, is a different quantity. It is each</span>
+0053    <span class="comment">%  row's share of every observation in the table, so the whole column sums</span>
+0054    <span class="comment">%  to 100.</span>
+0055    <span class="comment">%</span>
+0056    <span class="comment">%  When grouppercent computes the counts from a raw table, a binned group</span>
+0057    <span class="comment">%  variable keeps its original name in G: the disc_ prefix groupcounts</span>
+0058    <span class="comment">%  adds is removed. A table that already carries GroupCount is used as</span>
+0059    <span class="comment">%  given, so a disc_ name in it stays.</span>
+0060    <span class="comment">%</span>
+0061    <span class="comment">%  IncludedEdge, &quot;left&quot; (default) or &quot;right&quot;, is the bin edge a value on</span>
+0062    <span class="comment">%  an edge belongs to, passed to groupcounts for every binned group</span>
+0063    <span class="comment">%  variable. &quot;left&quot; puts a value on an edge in the bin that starts</span>
+0064    <span class="comment">%  there; &quot;right&quot; puts it in the bin that ends there. It is the option</span>
+0065    <span class="comment">%  groupstats.groupsummary passes down.</span>
+0066    <span class="comment">%</span>
+0067    <span class="comment">% Example</span>
+0068    <span class="comment">%  tbl = table([&quot;a&quot;;&quot;a&quot;;&quot;b&quot;], [1;2;3], 'VariableNames', {'Group', 'Value'});</span>
+0069    <span class="comment">%  G = groupstats.grouppercent(tbl, &quot;Group&quot;);</span>
+0070    <span class="comment">%</span>
+0071    <span class="comment">% See also: groupsummary, groupcounts, groupstats.groupsummary</span>
+0072 
+0073    arguments
+0074       tbl (:,:) tabular
+0075       groupvars (1,:) string
+0076       groupbins (1,:) = &quot;none&quot;
+0077       opts.GroupSets (1,:) string = string.empty()
+0078       opts.RowSelectVar (1,:) string = string.empty()
+0079       opts.RowSelectMembers (:,1) string = string.empty()
+0080       <span class="comment">% The bin edge a value on an edge belongs to, passed to groupcounts</span>
+0081       <span class="comment">% for every binned groupvar, as groupstats.groupsummary passes it.</span>
+0082       opts.IncludedEdge (1,1) string <span class="keyword">...</span>
+0083          {mustBeMember(opts.IncludedEdge, [&quot;left&quot;, &quot;right&quot;])} = &quot;left&quot;
+0084    <span class="keyword">end</span>
+0085 
+0086    <span class="comment">% Import the namespace function row selection calls.</span>
+0087    import groupstats.groupselect
+0088 
+0089    <span class="comment">% groupbins has no type constraint in the arguments block: it must accept</span>
+0090    <span class="comment">% the string &quot;none&quot; and numeric bin edges. The default &quot;none&quot; applies to</span>
+0091    <span class="comment">% every groupvar.</span>
+0092 
+0093    <span class="comment">% string.empty() is the one no-groupsets sentinel across the family. The</span>
+0094    <span class="comment">% shared validator rejects a scalar &quot;none&quot; with the rewrite.</span>
+0095    <span class="comment">% groupstats.groupsummary validates before its pass-down, so this repeat</span>
+0096    <span class="comment">% only guards direct callers. An empty GroupSets means: use groupvars.</span>
+0097    validategroupsets(opts.GroupSets)
+0098    groupsets = opts.GroupSets;
+0099    <span class="keyword">if</span> isempty(groupsets)
+0100       groupsets = groupvars;
+0101    <span class="keyword">end</span>
+0102 
+0103    <span class="comment">% Keep only the requested rows. Row selection needs both halves, and the</span>
+0104    <span class="comment">% shared check raises the same two errors prepareTableGroups raises,</span>
+0105    <span class="comment">% under this function's own identifiers. A summarized table has one row</span>
+0106    <span class="comment">% per group, not per observation, so selecting its rows would drop</span>
+0107    <span class="comment">% groups from a count already made. Report that rather than count on.</span>
+0108    validaterowselect(opts.RowSelectVar, opts.RowSelectMembers, <span class="keyword">...</span>
+0109       &quot;<a href="grouppercent.html" class="code" title="function G = grouppercent(tbl, groupvars, groupbins, opts)">grouppercent</a>&quot;, &quot;<a href="grouppercent.html" class="code" title="function G = grouppercent(tbl, groupvars, groupbins, opts)">grouppercent</a>&quot;)
+0110    <span class="keyword">if</span> ~isempty(opts.RowSelectMembers)
+0111       <span class="keyword">if</span> isvariable(<span class="string">'GroupCount'</span>, tbl)
+0112          error(<span class="string">'groupstats:grouppercent:rowSelectOnSummarizedTable'</span>, <span class="keyword">...</span>
+0113             [<span class="string">'RowSelectVar was given with a table that already carries '</span> <span class="keyword">...</span>
+0114             <span class="string">'GroupCount. Select the rows before counting, or pass the raw '</span> <span class="keyword">...</span>
+0115             <span class="string">'table.'</span>])
+0116       <span class="keyword">end</span>
+0117       tbl = <a href="groupselect.html" class="code" title="function tbl = groupselect(tbl, groupvars, groupmembers)">groupselect</a>(tbl, opts.RowSelectVar, opts.RowSelectMembers);
+0118    <span class="keyword">end</span>
+0119 
+0120    G = tbl;
+0121 
+0122    <span class="comment">% bySet: a groupsets variable is not among groupvars, so count each</span>
+0123    <span class="comment">% set's rows separately and stack them, instead of grouping directly.</span>
+0124    <span class="comment">% The set variables that are among groupvars need nothing extra: the</span>
+0125    <span class="comment">% count already carries them, and the percent loop below reads them.</span>
+0126    extrasets = setdiff(groupsets, groupvars, <span class="string">'stable'</span>);
+0127    bySet = ~isempty(extrasets);
+0128 
+0129    <span class="comment">% Check if G contains 'GroupCount' variable</span>
+0130    <span class="keyword">if</span> ~isvariable(<span class="string">'GroupCount'</span>, G)
+0131 
+0132       <span class="comment">% Assume input G is a data table and call groupcounts</span>
+0133       <span class="keyword">if</span> bySet
+0134 
+0135          <span class="comment">% Count within each set separately, then stack. groupcounts cannot</span>
+0136          <span class="comment">% group by a variable that is not in groupvars, so each set's rows go</span>
+0137          <span class="comment">% through it on their own and carry the set label back afterward.</span>
+0138          <span class="comment">%</span>
+0139          <span class="comment">% One set variable at a time. Two would need a grid over their</span>
+0140          <span class="comment">% members, and no caller has asked for that.</span>
+0141          setvar = extrasets(1);
+0142          <span class="keyword">if</span> ~isscalar(extrasets)
+0143             error(<span class="string">'groupstats:grouppercent:multipleGroupSets'</span>, <span class="keyword">...</span>
+0144                [<span class="string">'grouppercent counts by one groupsets variable outside '</span> <span class="keyword">...</span>
+0145                <span class="string">'groupvars at a time. Received %d: %s.'</span>], <span class="keyword">...</span>
+0146                numel(extrasets), strjoin(extrasets, <span class="string">', '</span>))
+0147          <span class="keyword">end</span>
+0148 
+0149          sets = unique(G.(setvar));
+0150          tmpG = cell(numel(sets), 1);
+0151          <span class="keyword">for</span> n = 1:numel(sets)
+0152             idx = ismember(G.(setvar), sets(n));
+0153             Gn = groupcounts(G(idx, :), groupvars, groupbins, <span class="keyword">...</span>
+0154                &quot;IncludedEdge&quot;, opts.IncludedEdge);
+0155             Gn.(setvar) = repmat(sets(n), height(Gn), 1);
+0156             tmpG{n} = Gn;
+0157          <span class="keyword">end</span>
+0158          G = stacktables(tmpG{:});
+0159 
+0160       <span class="keyword">else</span>
+0161 
+0162          G = groupcounts(G, groupvars, groupbins, <span class="keyword">...</span>
+0163             &quot;IncludedEdge&quot;, opts.IncludedEdge);
+0164       <span class="keyword">end</span>
+0165 
+0166       <span class="comment">% Restore each binned group variable's original name, so a caller reads</span>
+0167       <span class="comment">% the same name whether or not groupbins was used. Only a name built</span>
+0168       <span class="comment">% from one of groupvars is renamed; a blanket substring replace would</span>
+0169       <span class="comment">% also rewrite a variable the caller named disc_something.</span>
+0170       names = string(G.Properties.VariableNames);
+0171       binned = &quot;disc_&quot; + groupvars;
+0172       [isbinned, loc] = ismember(names, binned);
+0173       names(isbinned) = groupvars(loc(isbinned));
+0174       G.Properties.VariableNames = names;
+0175    <span class="keyword">end</span>
+0176 
+0177    <span class="comment">% If multiple groupvars, calculate the GroupPercent for each groupvar</span>
+0178    <span class="keyword">for</span> m = 1:numel(groupsets)
+0179       groupvar = groupsets(m);
+0180       grps = unique(G.(groupvar));
+0181 
+0182       <span class="comment">% Convert a cellstr group column to string; indexing grps(n) and the ==</span>
+0183       <span class="comment">% comparison below fail on a cell array. iscellstr reads no element,</span>
+0184       <span class="comment">% so an empty column, as in a zero-row summarized table, passes</span>
+0185       <span class="comment">% through to the empty loop below. A string column is left as it is.</span>
+0186       <span class="keyword">if</span> iscellstr(grps) || isstring(grps)
+0187          grps = string(grps);
+0188       <span class="keyword">end</span>
+0189 
+0190       <span class="comment">% Compute the within group percentages. Every member's rows sum to 100,</span>
+0191       <span class="comment">% including a member holding one row, which is then 100 percent of</span>
+0192       <span class="comment">% itself. Normalizing over the whole table instead would produce</span>
+0193       <span class="comment">% Percent, which is a different quantity groupcounts already returns.</span>
+0194       G.(&quot;Percent_&quot; + groupvar) = nan(height(G), 1);
+0195       <span class="keyword">for</span> n = 1:numel(grps)
+0196          idx = G.(groupvar) == grps(n);
+0197          G.(&quot;Percent_&quot; + groupvar)(idx) = <span class="keyword">...</span>
+0198             100 .* G.GroupCount(idx) ./ sum(G.GroupCount(idx));
+0199       <span class="keyword">end</span>
+0200    <span class="keyword">end</span>
+0201 
+0202    <span class="comment">% Move the Percent_&lt;ingroup&gt; columns to the start, after Percent</span>
+0203    <span class="keyword">for</span> n = numel(groupsets):-1:1
+0204       <span class="keyword">try</span>
+0205          <span class="comment">% if groupcounts was called in this function, G.Percent will exist</span>
+0206          G = movevars(G,&quot;Percent_&quot; + groupsets(n),&quot;After&quot;,&quot;Percent&quot;);
+0207       <span class="keyword">catch</span>
+0208          G = movevars(G,&quot;Percent_&quot; + groupsets(n),&quot;After&quot;,&quot;GroupCount&quot;);
+0209       <span class="keyword">end</span>
+0210    <span class="keyword">end</span>
+0211 <span class="keyword">end</span></pre></div>
+</body>
+</html>

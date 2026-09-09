@@ -1,0 +1,436 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of prepareTableGroups</title>
+  <meta name="keywords" content="prepareTableGroups">
+  <meta name="description" content="PREPARETABLEGROUPS Select rows and prepare group variables in a table.">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../function_index.html">Home</a> &gt;  <a href="function_index.html">+groupstats</a> &gt; prepareTableGroups.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../function_index.html"><img alt="<" border="0" src="../html_img/left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="function_index.html">Index for +groupstats&nbsp;<img alt=">" border="0" src="../html_img/right.png"></a></td></tr></table>-->
+
+<h1>prepareTableGroups
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>PREPARETABLEGROUPS Select rows and prepare group variables in a table.</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>function tbl = prepareTableGroups(tbl, ydatavar, opts) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre class="comment">PREPARETABLEGROUPS Select rows and prepare group variables in a table.
+
+  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR)
+  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR, XDataVar=NAME)
+  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR, XGroupVar=NAME, XGroupMembers=M)
+  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR, CGroupVar=NAME, CGroupMembers=M)
+  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR, RowSelectVar=NAME,
+                           RowSelectMembers=M)
+
+ Description
+  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR) validates that YDATAVAR names a
+  variable of TBL and converts it from categorical to double if it is
+  categorical. Every other step is opt-in.
+
+  The name-value arguments select rows and prepare group variables:
+
+   XDataVar         Name of the x-axis data variable. Converted to double
+                    from a categorical whose categories are numbers, or
+                    from text. A categorical whose categories are names
+                    stays categorical, for the chart to rank.
+   XGroupVar        Name of the x-axis group variable.
+   XGroupMembers    Members of XGroupVar to keep. Rows outside them go.
+   CGroupVar        Name of the color group variable.
+   CGroupMembers    Members of CGroupVar to keep. Rows outside them go.
+   RowSelectVar     Name of a variable used only to select rows.
+   RowSelectMembers Members of RowSelectVar to keep.
+   ConvertDataVar   Set false to keep YDATAVAR as it is. A categorical
+                    histogram needs its data variable to stay
+                    categorical, where a chart axis needs it numeric.
+
+  The chart functions in this toolbox route their group handling here so
+  they do not each re-implement member validation and row selection.
+
+ Data changes this function makes
+  It converts XGroupVar and CGroupVar to categorical when they are not
+  already, because the chart functions group and order by category. A
+  variable that is already categorical passes through untouched, so an
+  ordinal group keeps its order. It drops the categories that no surviving
+  row uses, so a legend lists only the groups that are plotted. It drops
+  the rows whose group value is missing or undefined, because a chart
+  cannot place them. It converts a categorical YDataVar, and a categorical
+  or text XDataVar, to double, because a chart needs numeric axis data.
+  Set ConvertDataVar false to keep a categorical YDataVar, which is what
+  a categorical histogram needs.
+
+ Limitations
+  A timetable's time dimension passes the variable-name check but cannot
+  be a group variable: dropcats rejects a name it cannot find among the
+  table variables. Group by an ordinary column instead.
+
+ Example
+  tbl = table(categorical([&quot;a&quot;;&quot;b&quot;;&quot;a&quot;]), [1;2;3], ...
+     'VariableNames', {'Group', 'Value'});
+  tbl = groupstats.prepareTableGroups(tbl, &quot;Value&quot;, ...
+     XGroupVar=&quot;Group&quot;, XGroupMembers=&quot;a&quot;);
+
+ Errors
+  groupstats:prepareTableGroups:membersWithoutGroupVar - Members were given
+  for a group variable that was not named.
+  groupstats:prepareTableGroups:rowSelectVarWithoutMembers - RowSelectVar
+  was named without RowSelectMembers.
+  groupstats:prepareTableGroups:unknownVariable - A named variable is not
+  a variable of the table. The message names the calling chart, and the
+  identifier stays the same for every caller, so a test can pin it.
+  groupstats:prepareTableGroups:multiColumnGroupVar - XGroupVar or
+  CGroupVar names a matrix variable, which has no single label per row.
+
+ Notes.
+
+ Empty members skip the member filter for that group variable; rows
+ whose group value is missing or undefined are still dropped. Members
+ cannot default to the full member list, because the group variable
+ itself may be absent, and resolving them to the full member list would
+ select the same rows, so this function does not call groupmembers.
+
+ See also: groupstats.<a href="groupselect.html" class="code" title="function tbl = groupselect(tbl, groupvars, groupmembers)">groupselect</a>, groupstats.<a href="dropcats.html" class="code" title="function tbl = dropcats(tbl, varnames)">dropcats</a>, groupmembers,
+ validatemember</pre></div>
+
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+
+This function calls:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="prepareTableGroups.html" class="code" title="function tbl = prepareTableGroups(tbl, ydatavar, opts)">prepareTableGroups</a>	PREPARETABLEGROUPS Select rows and prepare group variables in a table.</li></ul>
+
+
+This function is called by:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="barchartcats.html" class="code" title="function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">barchartcats</a>	BARCHARTCATS Bar chart by groups along x-axis and by color within groups.</li>
+<li><a href="boxchartcats.html" class="code" title="function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)">boxchartcats</a>	BOXCHARTCATS Box chart by groups along x-axis and by color within groups.</li>
+<li><a href="groupsamples.html" class="code" title="function S = groupsamples(tbl, groupvar, datavar, opts)">groupsamples</a>	GROUPSAMPLES Collect the data of each group member, reference first.</li>
+<li><a href="histogram.html" class="code" title="function varargout = histogram(tbl, datavar, groupvar, opts, props)">histogram</a>	HISTOGRAM Histogram grouped data.</li>
+<li><a href="prepareTableGroups.html" class="code" title="function tbl = prepareTableGroups(tbl, ydatavar, opts)">prepareTableGroups</a>	PREPARETABLEGROUPS Select rows and prepare group variables in a table.</li>
+<li><a href="scatter.html" class="code" title="function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar,sgroupvar, opts, props)">scatter</a>	SCATTER Scatter chart categorical table data.</li></ul>
+<!-- crossreference -->
+
+
+<h2><a name="_subfunctions"></a>SUBFUNCTIONS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="#_sub1" class="code">function requireGroupVar(GroupVar, GroupMembers, Caller, VarArg, MemberArg)</a></li>
+<li><a href="#_sub2" class="code">function requireVariable(VarName, VarNames, Caller, ArgName)</a></li>
+<li><a href="#_sub3" class="code">function requireColumn(tbl, VarName, Caller, ArgName)</a></li>
+<li><a href="#_sub4" class="code">function tbl = tryCategorical(tbl, GroupVar)</a></li></ul>
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function tbl = prepareTableGroups(tbl, ydatavar, opts)</a>
+0002    <span class="comment">%PREPARETABLEGROUPS Select rows and prepare group variables in a table.</span>
+0003    <span class="comment">%</span>
+0004    <span class="comment">%  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR)</span>
+0005    <span class="comment">%  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR, XDataVar=NAME)</span>
+0006    <span class="comment">%  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR, XGroupVar=NAME, XGroupMembers=M)</span>
+0007    <span class="comment">%  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR, CGroupVar=NAME, CGroupMembers=M)</span>
+0008    <span class="comment">%  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR, RowSelectVar=NAME,</span>
+0009    <span class="comment">%                           RowSelectMembers=M)</span>
+0010    <span class="comment">%</span>
+0011    <span class="comment">% Description</span>
+0012    <span class="comment">%  TBL = PREPARETABLEGROUPS(TBL, YDATAVAR) validates that YDATAVAR names a</span>
+0013    <span class="comment">%  variable of TBL and converts it from categorical to double if it is</span>
+0014    <span class="comment">%  categorical. Every other step is opt-in.</span>
+0015    <span class="comment">%</span>
+0016    <span class="comment">%  The name-value arguments select rows and prepare group variables:</span>
+0017    <span class="comment">%</span>
+0018    <span class="comment">%   XDataVar         Name of the x-axis data variable. Converted to double</span>
+0019    <span class="comment">%                    from a categorical whose categories are numbers, or</span>
+0020    <span class="comment">%                    from text. A categorical whose categories are names</span>
+0021    <span class="comment">%                    stays categorical, for the chart to rank.</span>
+0022    <span class="comment">%   XGroupVar        Name of the x-axis group variable.</span>
+0023    <span class="comment">%   XGroupMembers    Members of XGroupVar to keep. Rows outside them go.</span>
+0024    <span class="comment">%   CGroupVar        Name of the color group variable.</span>
+0025    <span class="comment">%   CGroupMembers    Members of CGroupVar to keep. Rows outside them go.</span>
+0026    <span class="comment">%   RowSelectVar     Name of a variable used only to select rows.</span>
+0027    <span class="comment">%   RowSelectMembers Members of RowSelectVar to keep.</span>
+0028    <span class="comment">%   ConvertDataVar   Set false to keep YDATAVAR as it is. A categorical</span>
+0029    <span class="comment">%                    histogram needs its data variable to stay</span>
+0030    <span class="comment">%                    categorical, where a chart axis needs it numeric.</span>
+0031    <span class="comment">%</span>
+0032    <span class="comment">%  The chart functions in this toolbox route their group handling here so</span>
+0033    <span class="comment">%  they do not each re-implement member validation and row selection.</span>
+0034    <span class="comment">%</span>
+0035    <span class="comment">% Data changes this function makes</span>
+0036    <span class="comment">%  It converts XGroupVar and CGroupVar to categorical when they are not</span>
+0037    <span class="comment">%  already, because the chart functions group and order by category. A</span>
+0038    <span class="comment">%  variable that is already categorical passes through untouched, so an</span>
+0039    <span class="comment">%  ordinal group keeps its order. It drops the categories that no surviving</span>
+0040    <span class="comment">%  row uses, so a legend lists only the groups that are plotted. It drops</span>
+0041    <span class="comment">%  the rows whose group value is missing or undefined, because a chart</span>
+0042    <span class="comment">%  cannot place them. It converts a categorical YDataVar, and a categorical</span>
+0043    <span class="comment">%  or text XDataVar, to double, because a chart needs numeric axis data.</span>
+0044    <span class="comment">%  Set ConvertDataVar false to keep a categorical YDataVar, which is what</span>
+0045    <span class="comment">%  a categorical histogram needs.</span>
+0046    <span class="comment">%</span>
+0047    <span class="comment">% Limitations</span>
+0048    <span class="comment">%  A timetable's time dimension passes the variable-name check but cannot</span>
+0049    <span class="comment">%  be a group variable: dropcats rejects a name it cannot find among the</span>
+0050    <span class="comment">%  table variables. Group by an ordinary column instead.</span>
+0051    <span class="comment">%</span>
+0052    <span class="comment">% Example</span>
+0053    <span class="comment">%  tbl = table(categorical([&quot;a&quot;;&quot;b&quot;;&quot;a&quot;]), [1;2;3], ...</span>
+0054    <span class="comment">%     'VariableNames', {'Group', 'Value'});</span>
+0055    <span class="comment">%  tbl = groupstats.prepareTableGroups(tbl, &quot;Value&quot;, ...</span>
+0056    <span class="comment">%     XGroupVar=&quot;Group&quot;, XGroupMembers=&quot;a&quot;);</span>
+0057    <span class="comment">%</span>
+0058    <span class="comment">% Errors</span>
+0059    <span class="comment">%  groupstats:prepareTableGroups:membersWithoutGroupVar - Members were given</span>
+0060    <span class="comment">%  for a group variable that was not named.</span>
+0061    <span class="comment">%  groupstats:prepareTableGroups:rowSelectVarWithoutMembers - RowSelectVar</span>
+0062    <span class="comment">%  was named without RowSelectMembers.</span>
+0063    <span class="comment">%  groupstats:prepareTableGroups:unknownVariable - A named variable is not</span>
+0064    <span class="comment">%  a variable of the table. The message names the calling chart, and the</span>
+0065    <span class="comment">%  identifier stays the same for every caller, so a test can pin it.</span>
+0066    <span class="comment">%  groupstats:prepareTableGroups:multiColumnGroupVar - XGroupVar or</span>
+0067    <span class="comment">%  CGroupVar names a matrix variable, which has no single label per row.</span>
+0068    <span class="comment">%</span>
+0069    <span class="comment">% Notes.</span>
+0070    <span class="comment">%</span>
+0071    <span class="comment">% Empty members skip the member filter for that group variable; rows</span>
+0072    <span class="comment">% whose group value is missing or undefined are still dropped. Members</span>
+0073    <span class="comment">% cannot default to the full member list, because the group variable</span>
+0074    <span class="comment">% itself may be absent, and resolving them to the full member list would</span>
+0075    <span class="comment">% select the same rows, so this function does not call groupmembers.</span>
+0076    <span class="comment">%</span>
+0077    <span class="comment">% See also: groupstats.groupselect, groupstats.dropcats, groupmembers,</span>
+0078    <span class="comment">% validatemember</span>
+0079 
+0080    arguments
+0081       tbl tabular
+0082       ydatavar (1, 1) string {mustBeNonempty}
+0083       opts.XDataVar string = string.empty()
+0084       opts.XGroupVar string = string.empty()
+0085       opts.CGroupVar string = string.empty()
+0086       opts.XGroupMembers (:, 1) string = string.empty()
+0087       opts.CGroupMembers (:, 1) string = string.empty()
+0088       opts.RowSelectVar string = string.empty()
+0089       opts.RowSelectMembers (:, 1) string = string.empty()
+0090       opts.ConvertDataVar (1, 1) logical = true
+0091    <span class="keyword">end</span>
+0092 
+0093    <span class="comment">% The caller's name goes in this function's own error messages, so a</span>
+0094    <span class="comment">% chart user reads the chart's name. The three local checks below</span>
+0095    <span class="comment">% (requireGroupVar, validaterowselect, requireVariable) keep their</span>
+0096    <span class="comment">% identifiers under prepareTableGroups, so tests can pin them whatever</span>
+0097    <span class="comment">% the caller.</span>
+0098    Caller = mcallername();
+0099 
+0100    <span class="comment">% Members are meaningless without the variable they belong to.</span>
+0101    <a href="#_sub1" class="code" title="subfunction requireGroupVar(GroupVar, GroupMembers, Caller, VarArg, MemberArg)">requireGroupVar</a>(opts.XGroupVar, opts.XGroupMembers, Caller, <span class="keyword">...</span>
+0102       <span class="string">'XGroupVar'</span>, <span class="string">'XGroupMembers'</span>)
+0103    <a href="#_sub1" class="code" title="subfunction requireGroupVar(GroupVar, GroupMembers, Caller, VarArg, MemberArg)">requireGroupVar</a>(opts.CGroupVar, opts.CGroupMembers, Caller, <span class="keyword">...</span>
+0104       <span class="string">'CGroupVar'</span>, <span class="string">'CGroupMembers'</span>)
+0105 
+0106    <span class="comment">% Row selection is stricter: each half alone is an error, because a</span>
+0107    <span class="comment">% variable with no members selects no rows and leaves an empty chart.</span>
+0108    <span class="comment">% The shared check keeps groupsummary's errors identical to these.</span>
+0109    validaterowselect(opts.RowSelectVar, opts.RowSelectMembers, <span class="keyword">...</span>
+0110       &quot;<a href="prepareTableGroups.html" class="code" title="function tbl = prepareTableGroups(tbl, ydatavar, opts)">prepareTableGroups</a>&quot;, Caller)
+0111 
+0112    <span class="comment">% Validate variable names by confirming that they are column names of tbl.</span>
+0113    VarNames = tbl.Properties.VariableNames;
+0114 
+0115    <span class="comment">% If a timetable is passed in, append the Time dimension</span>
+0116    <span class="keyword">if</span> istimetable(tbl)
+0117       VarNames = [tbl.Properties.DimensionNames(1) VarNames];
+0118    <span class="keyword">end</span>
+0119 
+0120    <span class="comment">% Validate YDataVar and (if provided) XDataVar and RowSelectVar.</span>
+0121    <a href="#_sub2" class="code" title="subfunction requireVariable(VarName, VarNames, Caller, ArgName)">requireVariable</a>(ydatavar, VarNames, Caller, <span class="string">'ydatavar'</span>);
+0122 
+0123    <span class="keyword">if</span> ~isempty(opts.XDataVar)
+0124       <a href="#_sub2" class="code" title="subfunction requireVariable(VarName, VarNames, Caller, ArgName)">requireVariable</a>(opts.XDataVar, VarNames, Caller, <span class="string">'XDataVar'</span>);
+0125    <span class="keyword">end</span>
+0126 
+0127    <span class="comment">% Downselect the table by rows if requested. The half-request errors were</span>
+0128    <span class="comment">% raised above, so members are known to be present here.</span>
+0129    <span class="keyword">if</span> ~isempty(opts.RowSelectVar)
+0130       <a href="#_sub2" class="code" title="subfunction requireVariable(VarName, VarNames, Caller, ArgName)">requireVariable</a>(opts.RowSelectVar, VarNames, Caller, <span class="string">'RowSelectVar'</span>);
+0131 
+0132       tbl = groupstats.groupselect(tbl, opts.RowSelectVar, <span class="keyword">...</span>
+0133          opts.RowSelectMembers);
+0134    <span class="keyword">end</span>
+0135 
+0136    <span class="comment">% Confirm each XGroupMember is a member of tbl.(XGroupVar)</span>
+0137    <span class="keyword">if</span> ~isempty(opts.XGroupVar)
+0138       <a href="#_sub2" class="code" title="subfunction requireVariable(VarName, VarNames, Caller, ArgName)">requireVariable</a>(opts.XGroupVar, VarNames, Caller, <span class="string">'XGroupVar'</span>);
+0139       <a href="#_sub3" class="code" title="subfunction requireColumn(tbl, VarName, Caller, ArgName)">requireColumn</a>(tbl, opts.XGroupVar, Caller, <span class="string">'XGroupVar'</span>);
+0140    <span class="keyword">end</span>
+0141    <span class="keyword">if</span> ~isempty(opts.XGroupMembers)
+0142       <span class="comment">% validatemember checks each requested member against the data column,</span>
+0143       <span class="comment">% so a requested member absent from the data errors.</span>
+0144       validatemember(opts.XGroupMembers, tbl.(opts.XGroupVar), Caller, <span class="keyword">...</span>
+0145          <span class="string">'XGroupMembers'</span>)
+0146       inxgroup = ismember(string(tbl.(opts.XGroupVar)), opts.XGroupMembers);
+0147    <span class="keyword">elseif</span> ~isempty(opts.XGroupVar)
+0148       <span class="comment">% Drop rows whose group value is missing or undefined. A chart cannot</span>
+0149       <span class="comment">% place them.</span>
+0150       <span class="comment">%</span>
+0151       <span class="comment">% Test string(), not the raw column, so the rule reads the same for</span>
+0152       <span class="comment">% every type. An undefined categorical, a missing string, and a NaN all</span>
+0153       <span class="comment">% convert to a missing string. An empty char does not, so its row</span>
+0154       <span class="comment">% stays.</span>
+0155       inxgroup = ~ismissing(string(tbl.(opts.XGroupVar)));
+0156    <span class="keyword">else</span>
+0157       inxgroup = true(height(tbl), 1);
+0158    <span class="keyword">end</span>
+0159 
+0160    <span class="comment">% Confirm each CGroupMember is a member of tbl.(CGroupVar)</span>
+0161    <span class="keyword">if</span> ~isempty(opts.CGroupVar)
+0162       <a href="#_sub2" class="code" title="subfunction requireVariable(VarName, VarNames, Caller, ArgName)">requireVariable</a>(opts.CGroupVar, VarNames, Caller, <span class="string">'CGroupVar'</span>);
+0163       <a href="#_sub3" class="code" title="subfunction requireColumn(tbl, VarName, Caller, ArgName)">requireColumn</a>(tbl, opts.CGroupVar, Caller, <span class="string">'CGroupVar'</span>);
+0164    <span class="keyword">end</span>
+0165    <span class="keyword">if</span> ~isempty(opts.CGroupMembers)
+0166       <span class="comment">% Same member check as the x-axis group above.</span>
+0167       validatemember(opts.CGroupMembers, tbl.(opts.CGroupVar), Caller, <span class="keyword">...</span>
+0168          <span class="string">'CGroupMembers'</span>)
+0169       incgroup = ismember(string(tbl.(opts.CGroupVar)), opts.CGroupMembers);
+0170    <span class="keyword">elseif</span> ~isempty(opts.CGroupVar)
+0171       <span class="comment">% Same rule as the x-axis group above.</span>
+0172       incgroup = ~ismissing(string(tbl.(opts.CGroupVar)));
+0173    <span class="keyword">else</span>
+0174       incgroup = true(height(tbl), 1);
+0175    <span class="keyword">end</span>
+0176 
+0177    <span class="comment">% If xgroupvar/cgroupvar are not categorical, try to convert them. The chart</span>
+0178    <span class="comment">% functions group and order by category, so a text or numeric group variable</span>
+0179    <span class="comment">% must become categorical first. A variable that cannot convert is left</span>
+0180    <span class="comment">% alone for the calling function to reject.</span>
+0181    tbl = <a href="#_sub4" class="code" title="subfunction tbl = tryCategorical(tbl, GroupVar)">tryCategorical</a>(tbl, opts.XGroupVar);
+0182    tbl = <a href="#_sub4" class="code" title="subfunction tbl = tryCategorical(tbl, GroupVar)">tryCategorical</a>(tbl, opts.CGroupVar);
+0183 
+0184    <span class="comment">%--------------------------------------</span>
+0185 
+0186    <span class="comment">% Subset rows that are in both xgroupuse and cgroupuse</span>
+0187    tbl = tbl(incgroup &amp; inxgroup, :);
+0188 
+0189    <span class="comment">% Remove cats that are not in xgroupuse</span>
+0190    <span class="keyword">if</span> ~isempty(opts.XGroupVar)
+0191       tbl = groupstats.dropcats(tbl, opts.XGroupVar);
+0192    <span class="keyword">end</span>
+0193 
+0194    <span class="comment">% Remove cats that are not in cgroupuse</span>
+0195    <span class="keyword">if</span> ~isempty(opts.CGroupVar)
+0196       tbl = groupstats.dropcats(tbl, opts.CGroupVar);
+0197    <span class="keyword">end</span>
+0198 
+0199    <span class="comment">% Check if YDataVar is categorical, and try to convert it if so</span>
+0200    <span class="keyword">if</span> opts.ConvertDataVar &amp;&amp; iscategorical(tbl.(ydatavar))
+0201       <span class="keyword">try</span>
+0202          tbl.(ydatavar) = cat2double(tbl.(ydatavar));
+0203       <span class="keyword">catch</span>
+0204          <span class="comment">% let the built-in error catching do the work.</span>
+0205       <span class="keyword">end</span>
+0206    <span class="keyword">end</span>
+0207 
+0208    <span class="comment">% Check if xdatavar is categorical, and try to convert it if provided</span>
+0209    <span class="keyword">if</span> ~isempty(opts.XDataVar) &amp;&amp; ~isnumeric(tbl.(opts.XDataVar))
+0210 
+0211       <span class="keyword">if</span> iscategorical(tbl.(opts.XDataVar))
+0212          <span class="comment">% Try to convert categorical to double. A categorical whose</span>
+0213          <span class="comment">% categories are names stays categorical, as YDataVar does, so the</span>
+0214          <span class="comment">% chart can draw its ranking; str2double would turn it into NaN.</span>
+0215          <span class="keyword">try</span>
+0216             tbl.(opts.XDataVar) = cat2double(tbl.(opts.XDataVar));
+0217          <span class="keyword">catch</span>
+0218             <span class="comment">% let the built-in error catching do the work.</span>
+0219          <span class="keyword">end</span>
+0220       <span class="keyword">else</span>
+0221          <span class="comment">% Try to convert string to double</span>
+0222          <span class="keyword">try</span>
+0223             tbl.(opts.XDataVar) = str2double(tbl.(opts.XDataVar));
+0224          <span class="keyword">catch</span>
+0225             <span class="comment">% let the built-in error catching do the work.</span>
+0226          <span class="keyword">end</span>
+0227       <span class="keyword">end</span>
+0228    <span class="keyword">end</span>
+0229 <span class="keyword">end</span>
+0230 
+0231 <a name="_sub1" href="#_subfunctions" class="code">function requireGroupVar(GroupVar, GroupMembers, Caller, VarArg, MemberArg)</a>
+0232    <span class="comment">%REQUIREGROUPVAR Reject members given without their group variable.</span>
+0233    <span class="comment">%</span>
+0234    <span class="comment">% Naming members but not the variable they belong to has no sensible</span>
+0235    <span class="comment">% reading. Name both arguments in the error so the caller sees the pair.</span>
+0236 
+0237    <span class="keyword">if</span> isempty(GroupVar) &amp;&amp; ~isempty(GroupMembers)
+0238       error(<span class="string">'groupstats:prepareTableGroups:membersWithoutGroupVar'</span>, <span class="keyword">...</span>
+0239          <span class="string">'%s: %s was given without %s. Name the group variable too.'</span>, <span class="keyword">...</span>
+0240          Caller, MemberArg, VarArg)
+0241    <span class="keyword">end</span>
+0242 <span class="keyword">end</span>
+0243 
+0244 <a name="_sub2" href="#_subfunctions" class="code">function requireVariable(VarName, VarNames, Caller, ArgName)</a>
+0245    <span class="comment">%REQUIREVARIABLE Require a name to be a variable of the table.</span>
+0246    <span class="comment">%</span>
+0247    <span class="comment">% The match is exact and case-sensitive, because the validated name</span>
+0248    <span class="comment">% indexes the table as tbl.(name) later, and that indexing is</span>
+0249    <span class="comment">% case-sensitive. The identifier is this function's own, so a test can</span>
+0250    <span class="comment">% pin it for every caller; the caller's name goes in the message.</span>
+0251 
+0252    <span class="keyword">if</span> ~ismember(string(VarName), string(VarNames))
+0253       error(<span class="string">'groupstats:prepareTableGroups:unknownVariable'</span>, <span class="keyword">...</span>
+0254          <span class="string">'%s: %s &quot;%s&quot; is not a variable of the table. Valid names: %s.'</span>, <span class="keyword">...</span>
+0255          Caller, ArgName, VarName, strjoin(string(VarNames), <span class="string">', '</span>))
+0256    <span class="keyword">end</span>
+0257 <span class="keyword">end</span>
+0258 
+0259 <a name="_sub3" href="#_subfunctions" class="code">function requireColumn(tbl, VarName, Caller, ArgName)</a>
+0260    <span class="comment">%REQUIRECOLUMN Require a group variable to hold one column.</span>
+0261    <span class="comment">%</span>
+0262    <span class="comment">% A matrix variable, such as an N-by-2 numeric, has no single label per</span>
+0263    <span class="comment">% row. string() and ismember on it misbehave or fail with a message that</span>
+0264    <span class="comment">% names no cause, so refuse it here, as the builtin group parsing does.</span>
+0265 
+0266    <span class="keyword">if</span> ~iscolumn(tbl.(VarName))
+0267       error(<span class="string">'groupstats:prepareTableGroups:multiColumnGroupVar'</span>, <span class="keyword">...</span>
+0268          [<span class="string">'%s: %s &quot;%s&quot; has %d columns. A group variable must hold one '</span> <span class="keyword">...</span>
+0269          <span class="string">'column, one label per row.'</span>], Caller, ArgName, VarName, <span class="keyword">...</span>
+0270          size(tbl.(VarName), 2))
+0271    <span class="keyword">end</span>
+0272 <span class="keyword">end</span>
+0273 
+0274 <a name="_sub4" href="#_subfunctions" class="code">function tbl = tryCategorical(tbl, GroupVar)</a>
+0275    <span class="comment">%TRYCATEGORICAL Convert a group variable to categorical where possible.</span>
+0276    <span class="comment">%</span>
+0277    <span class="comment">% A group variable that cannot convert, such as a cell array of mixed</span>
+0278    <span class="comment">% types, is left as it is. The calling function reports the problem when it</span>
+0279    <span class="comment">% tries to group by it.</span>
+0280 
+0281    <span class="comment">% An already-categorical variable is left as it is. Rewrapping it in</span>
+0282    <span class="comment">% categorical() resets its Ordinal flag and drops the categories no row</span>
+0283    <span class="comment">% uses, which costs an ordinal group its order and a legend its empty</span>
+0284    <span class="comment">% group.</span>
+0285    <span class="keyword">if</span> isempty(GroupVar) || iscategorical(tbl.(GroupVar))
+0286       <span class="keyword">return</span>
+0287    <span class="keyword">end</span>
+0288 
+0289    <span class="keyword">try</span>
+0290       tbl.(GroupVar) = categorical(tbl.(GroupVar));
+0291    <span class="keyword">catch</span>
+0292       <span class="comment">% let the built-in error catching do the work.</span>
+0293    <span class="keyword">end</span>
+0294 <span class="keyword">end</span></pre></div>
+</body>
+</html>

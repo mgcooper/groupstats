@@ -1,0 +1,383 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>demo_barchartcats</title>
+<meta name="generator" content="MATLAB 25.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2026-09-08">
+<meta name="DC.source" content="demo_barchartcats.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Grouped bar charts with groupstats.barchartcats</a>
+</li>
+<li>
+<a href="#2">The two basic shapes</a>
+</li>
+<li>
+<a href="#3">Restrict the groups</a>
+</li>
+<li>
+<a href="#4">Change the statistic</a>
+</li>
+<li>
+<a href="#5">Sort the x-groups</a>
+</li>
+<li>
+<a href="#6">Sort by one color group</a>
+</li>
+<li>
+<a href="#7">Name an explicit order</a>
+</li>
+<li>
+<a href="#8">Error bars</a>
+</li>
+<li>
+<a href="#9">Shade the x-groups</a>
+</li>
+<li>
+<a href="#10">Merge color groups</a>
+</li>
+<li>
+<a href="#11">Select rows before grouping</a>
+</li>
+<li>
+<a href="#12">Legend and graphics properties</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Grouped bar charts with groupstats.barchartcats</h2>
+<p>barchartcats summarizes one numeric variable over a categorical x-group, and optionally a second categorical that colors the bars within each x-group. Every option below changes what the chart shows, so run the sections and compare the figures.</p>
+<p>See also: groupstats.barchartcats, groupstats.boxchartcats, groupstats.test.generateTestData</p>
+<pre class="codeinput">data = groupstats.test.generateTestData(<span class="string">'info'</span>);
+Info = data.Info;
+scenarios = data.scenarios;
+</pre>
+<h2 id="2">The two basic shapes</h2>
+<pre class="codeinput">
+<span class="comment">% One bar per x-group. The bar height is the group mean.</span>
+figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>);
+title(<span class="string">"Mean peak by month"</span>)
+
+<span class="comment">% Adding a color group draws one bar per color group within each x-group.</span>
+figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>);
+title(<span class="string">"Mean peak by month and scenario"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_01.png" alt=""> <img vspace="5" hspace="5" src="demo_barchartcats_02.png" alt=""> <h2 id="3">Restrict the groups</h2>
+<p>XGroupMembers and CGroupMembers are name-value arguments. They select which members appear, and they also set the order the members are drawn in.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   XGroupMembers = [<span class="string">"Jan"</span>, <span class="string">"Feb"</span>, <span class="string">"Mar"</span>], <span class="keyword">...</span>
+   CGroupMembers = [<span class="string">"1980-2020-WRF-DIST"</span>, <span class="string">"SSP585-HOT-FAR"</span>]);
+title(<span class="string">"Three months, two scenarios"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_03.png" alt=""> <h2 id="4">Change the statistic</h2>
+<p>Method selects what the bar height means. "mean" is the default.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, Method = <span class="string">"median"</span>);
+title(<span class="string">"Median peak by month"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_04.png" alt=""> <h2 id="5">Sort the x-groups</h2>
+<p>SortBy orders the x-groups by their computed value rather than by category order. Compare against the first figure above, which is in month order.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, SortBy = <span class="string">"ascend"</span>);
+title(<span class="string">"Months sorted by ascending mean peak"</span>)
+
+figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, SortBy = <span class="string">"descend"</span>);
+title(<span class="string">"Months sorted by descending mean peak"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_05.png" alt=""> <img vspace="5" hspace="5" src="demo_barchartcats_06.png" alt=""> <h2 id="6">Sort by one color group</h2>
+<p>With a color group, SortGroupMembers names which series the sort reads. Here the x-order follows the SSP585-HOT-FAR bars alone.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   SortBy = <span class="string">"ascend"</span>, SortGroupMembers = <span class="string">"SSP585-HOT-FAR"</span>);
+title(<span class="string">"Sorted by the SSP585-HOT-FAR series only"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_07.png" alt=""> <h2 id="7">Name an explicit order</h2>
+<p>XGroupOrder and CGroupOrder move named members to the front and leave the rest in their existing order. Check that each bar keeps its own height: a defect here paired every bar with another group's value.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, XGroupOrder = [<span class="string">"Jul"</span>, <span class="string">"Jan"</span>]);
+title(<span class="string">"Jul and Jan moved to the front"</span>)
+
+figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   CGroupOrder = <span class="string">"SSP585-HOT-FAR"</span>);
+title(<span class="string">"SSP585-HOT-FAR drawn first"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_08.png" alt=""> <img vspace="5" hspace="5" src="demo_barchartcats_09.png" alt=""> <h2 id="8">Error bars</h2>
+<p>PlotError draws the spread of each group. For method "mean" that is the standard deviation, and for "median" the interquartile range. It needs one bar per x-tick, because a categorical axis puts every whisker on the tick center, so omit the color group.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, PlotError = true);
+title(<span class="string">"Mean peak with standard deviation whiskers"</span>)
+
+figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="keyword">...</span>
+   Method = <span class="string">"median"</span>, PlotError = true);
+title(<span class="string">"Median peak with interquartile whiskers"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_10.png" alt=""> <img vspace="5" hspace="5" src="demo_barchartcats_11.png" alt=""> <h2 id="9">Shade the x-groups</h2>
+<p>ShadeGroups puts an alternating band behind each x-group, which helps when several color groups make the group boundaries hard to see. It is on by default when a color group is given and off without one, on both cats charts, so this section turns it off.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   ShadeGroups = false);
+title(<span class="string">"Group shading turned off"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_12.png" alt=""> <img vspace="5" hspace="5" src="demo_barchartcats_13.png" alt=""> <h2 id="10">Merge color groups</h2>
+<p>MergeGroupMembers names the color-group members to pool, one cell per merge group. The merged bar is the statistic over the pooled member rows. Its label joins the member names with " and ", and it takes the first member's category position. MergeMethod = "membermean" instead averages the member bars' summary values.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   MergeGroupMembers = {scenarios(2:3)});
+title(<span class="string">"The two future scenarios merged into one bar"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_14.png" alt=""> <img vspace="5" hspace="5" src="demo_barchartcats_15.png" alt=""> <h2 id="11">Select rows before grouping</h2>
+<p>RowSelectVar and RowSelectMembers restrict the table before the summary, which is different from restricting the groups that get drawn.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   RowSelectVar = <span class="string">"basin"</span>, RowSelectMembers = <span class="string">"basinA"</span>);
+title(<span class="string">"basinA rows only"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_16.png" alt=""> <img vspace="5" hspace="5" src="demo_barchartcats_17.png" alt=""> <h2 id="12">Legend and graphics properties</h2>
+<p>Legend and LegendOrientation control the legend. Any Bar property passes through, so BarWidth and FaceAlpha reach the underlying bar call.</p>
+<pre class="codeinput">figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>, <span class="keyword">...</span>
+   LegendOrientation = <span class="string">"horizontal"</span>, BarWidth = 0.6);
+title(<span class="string">"Horizontal legend, narrower bars"</span>)
+
+figure
+groupstats.barchartcats(Info, <span class="string">"peak"</span>, <span class="string">"month"</span>, <span class="string">"scenario"</span>, Legend = <span class="string">"off"</span>);
+title(<span class="string">"Legend turned off"</span>)
+</pre>
+<img vspace="5" hspace="5" src="demo_barchartcats_18.png" alt=""> <img vspace="5" hspace="5" src="demo_barchartcats_19.png" alt=""> <p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Grouped bar charts with groupstats.barchartcats
+%
+% barchartcats summarizes one numeric variable over a categorical x-group,
+% and optionally a second categorical that colors the bars within each
+% x-group. Every option below changes what the chart shows, so run the
+% sections and compare the figures.
+%
+% See also: groupstats.barchartcats, groupstats.boxchartcats,
+% groupstats.test.generateTestData
+
+data = groupstats.test.generateTestData('info');
+Info = data.Info;
+scenarios = data.scenarios;
+
+%% The two basic shapes
+
+% One bar per x-group. The bar height is the group mean.
+figure
+groupstats.barchartcats(Info, "peak", "month");
+title("Mean peak by month")
+
+% Adding a color group draws one bar per color group within each x-group.
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario");
+title("Mean peak by month and scenario")
+
+%% Restrict the groups
+%
+% XGroupMembers and CGroupMembers are name-value arguments. They select which
+% members appear, and they also set the order the members are drawn in.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario", ...
+   XGroupMembers = ["Jan", "Feb", "Mar"], ...
+   CGroupMembers = ["1980-2020-WRF-DIST", "SSP585-HOT-FAR"]);
+title("Three months, two scenarios")
+
+%% Change the statistic
+%
+% Method selects what the bar height means. "mean" is the default.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", Method = "median");
+title("Median peak by month")
+
+%% Sort the x-groups
+%
+% SortBy orders the x-groups by their computed value rather than by category
+% order. Compare against the first figure above, which is in month order.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", SortBy = "ascend");
+title("Months sorted by ascending mean peak")
+
+figure
+groupstats.barchartcats(Info, "peak", "month", SortBy = "descend");
+title("Months sorted by descending mean peak")
+
+%% Sort by one color group
+%
+% With a color group, SortGroupMembers names which series the sort reads.
+% Here the x-order follows the SSP585-HOT-FAR bars alone.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario", ...
+   SortBy = "ascend", SortGroupMembers = "SSP585-HOT-FAR");
+title("Sorted by the SSP585-HOT-FAR series only")
+
+%% Name an explicit order
+%
+% XGroupOrder and CGroupOrder move named members to the front and leave the
+% rest in their existing order. Check that each bar keeps its own height: a
+% defect here paired every bar with another group's value.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", XGroupOrder = ["Jul", "Jan"]);
+title("Jul and Jan moved to the front")
+
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario", ...
+   CGroupOrder = "SSP585-HOT-FAR");
+title("SSP585-HOT-FAR drawn first")
+
+%% Error bars
+%
+% PlotError draws the spread of each group. For method "mean" that is the
+% standard deviation, and for "median" the interquartile range. It needs one
+% bar per x-tick, because a categorical axis puts every whisker on the tick
+% center, so omit the color group.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", PlotError = true);
+title("Mean peak with standard deviation whiskers")
+
+figure
+groupstats.barchartcats(Info, "peak", "month", ...
+   Method = "median", PlotError = true);
+title("Median peak with interquartile whiskers")
+
+%% Shade the x-groups
+%
+% ShadeGroups puts an alternating band behind each x-group, which helps
+% when several color groups make the group boundaries hard to see. It is
+% on by default when a color group is given and off without one, on both
+% cats charts, so this section turns it off.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario", ...
+   ShadeGroups = false);
+title("Group shading turned off")
+
+%% Merge color groups
+%
+% MergeGroupMembers names the color-group members to pool, one cell per
+% merge group. The merged bar is the statistic over the pooled member
+% rows. Its label joins the member names with " and ", and it takes the
+% first member's category position. MergeMethod = "membermean" instead
+% averages the member bars' summary values.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario", ...
+   MergeGroupMembers = {scenarios(2:3)});
+title("The two future scenarios merged into one bar")
+
+%% Select rows before grouping
+%
+% RowSelectVar and RowSelectMembers restrict the table before the summary,
+% which is different from restricting the groups that get drawn.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario", ...
+   RowSelectVar = "basin", RowSelectMembers = "basinA");
+title("basinA rows only")
+
+%% Legend and graphics properties
+%
+% Legend and LegendOrientation control the legend. Any Bar property passes
+% through, so BarWidth and FaceAlpha reach the underlying bar call.
+
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario", ...
+   LegendOrientation = "horizontal", BarWidth = 0.6);
+title("Horizontal legend, narrower bars")
+
+figure
+groupstats.barchartcats(Info, "peak", "month", "scenario", Legend = "off");
+title("Legend turned off")
+
+##### SOURCE END #####
+-->
+</body>
+</html>

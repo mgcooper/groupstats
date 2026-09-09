@@ -1,0 +1,144 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+                "http://www.w3.org/TR/REC-html40/loose.dtd">
+<html>
+<head>
+  <title>Description of groupselect</title>
+  <meta name="keywords" content="groupselect">
+  <meta name="description" content="GROUPSELECT Select rows of table by variable name and group members.">
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="generator" content="m2html v1.5 &copy; 2003-2005 Guillaume Flandin">
+  <meta name="robots" content="index, follow">
+  <link type="text/css" rel="stylesheet" href="../m2html.css">
+</head>
+<body>
+<a name="_top"></a>
+<div><a href="../function_index.html">Home</a> &gt;  <a href="function_index.html">+groupstats</a> &gt; groupselect.m</div>
+
+<!--<table width="100%"><tr><td align="left"><a href="../function_index.html"><img alt="<" border="0" src="../html_img/left.png">&nbsp;Master index</a></td>
+<td align="right"><a href="function_index.html">Index for +groupstats&nbsp;<img alt=">" border="0" src="../html_img/right.png"></a></td></tr></table>-->
+
+<h1>groupselect
+</h1>
+
+<h2><a name="_name"></a>PURPOSE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>GROUPSELECT Select rows of table by variable name and group members.</strong></div>
+
+<h2><a name="_synopsis"></a>SYNOPSIS <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="box"><strong>function tbl = groupselect(tbl, groupvars, groupmembers) </strong></div>
+
+<h2><a name="_description"></a>DESCRIPTION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre class="comment">GROUPSELECT Select rows of table by variable name and group members.
+
+  TBL = GROUPSELECT(TBL, GROUPVARS, GROUPMEMBERS)
+
+ Description
+  TBL = GROUPSELECT(TBL, GROUPVARS, GROUPMEMBERS) returns the rows of TBL
+  whose value in one of the GROUPVARS variables is a member of
+  GROUPMEMBERS. Exactly one of GROUPVARS must hold every member of
+  GROUPMEMBERS. That is the variable the rows are selected by.
+
+  Searching several variable names lets a caller pass a member list
+  without knowing which variable carries it.
+
+ Example
+  tbl = table([&quot;a&quot;;&quot;b&quot;;&quot;c&quot;], [1;2;3], 'VariableNames', {'Group','Value'});
+  groupstats.groupselect(tbl, &quot;Group&quot;, [&quot;a&quot; &quot;b&quot;])   % the first two rows
+
+ Errors
+  groupstats:groupselect:noMembersRequested - GROUPMEMBERS is empty.
+  groupstats:groupselect:noMatchingVariable - No variable holds every
+  requested member.
+  groupstats:groupselect:ambiguousVariable - More than one variable holds
+  every requested member, so the selection variable is ambiguous.
+
+ See also: groupstats.<a href="prepareTableGroups.html" class="code" title="function tbl = prepareTableGroups(tbl, ydatavar, opts)">prepareTableGroups</a>, ismember</pre></div>
+
+
+<!-- crossreference -->
+<h2><a name="_cross"></a>CROSS-REFERENCE INFORMATION <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+
+This function calls:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+</ul>
+
+
+This function is called by:
+<ul style="list-style-image:url(../html_img/matlabicon.gif)">
+
+<li><a href="grouppercent.html" class="code" title="function G = grouppercent(tbl, groupvars, groupbins, opts)">grouppercent</a>	GROUPPERCENT Compute group-wise frequencies (percents) including groupsets.</li>
+<li><a href="groupsummary.html" class="code" title="function G = groupsummary(tbl, groupvars, methods, datavar,groupbins, opts)">groupsummary</a>	GROUPSUMMARY Compute group-wise statistics</li></ul>
+<!-- crossreference -->
+
+
+
+
+
+
+<h2><a name="_source"></a>SOURCE CODE <a href="#_top"><img alt="^" border="0" src="../html_img/up.png"></a></h2>
+<div class="fragment"><pre>0001 <a name="_sub0" href="#_subfunctions" class="code">function tbl = groupselect(tbl, groupvars, groupmembers)</a>
+0002    <span class="comment">%GROUPSELECT Select rows of table by variable name and group members.</span>
+0003    <span class="comment">%</span>
+0004    <span class="comment">%  TBL = GROUPSELECT(TBL, GROUPVARS, GROUPMEMBERS)</span>
+0005    <span class="comment">%</span>
+0006    <span class="comment">% Description</span>
+0007    <span class="comment">%  TBL = GROUPSELECT(TBL, GROUPVARS, GROUPMEMBERS) returns the rows of TBL</span>
+0008    <span class="comment">%  whose value in one of the GROUPVARS variables is a member of</span>
+0009    <span class="comment">%  GROUPMEMBERS. Exactly one of GROUPVARS must hold every member of</span>
+0010    <span class="comment">%  GROUPMEMBERS. That is the variable the rows are selected by.</span>
+0011    <span class="comment">%</span>
+0012    <span class="comment">%  Searching several variable names lets a caller pass a member list</span>
+0013    <span class="comment">%  without knowing which variable carries it.</span>
+0014    <span class="comment">%</span>
+0015    <span class="comment">% Example</span>
+0016    <span class="comment">%  tbl = table([&quot;a&quot;;&quot;b&quot;;&quot;c&quot;], [1;2;3], 'VariableNames', {'Group','Value'});</span>
+0017    <span class="comment">%  groupstats.groupselect(tbl, &quot;Group&quot;, [&quot;a&quot; &quot;b&quot;])   % the first two rows</span>
+0018    <span class="comment">%</span>
+0019    <span class="comment">% Errors</span>
+0020    <span class="comment">%  groupstats:groupselect:noMembersRequested - GROUPMEMBERS is empty.</span>
+0021    <span class="comment">%  groupstats:groupselect:noMatchingVariable - No variable holds every</span>
+0022    <span class="comment">%  requested member.</span>
+0023    <span class="comment">%  groupstats:groupselect:ambiguousVariable - More than one variable holds</span>
+0024    <span class="comment">%  every requested member, so the selection variable is ambiguous.</span>
+0025    <span class="comment">%</span>
+0026    <span class="comment">% See also: groupstats.prepareTableGroups, ismember</span>
+0027 
+0028    arguments
+0029       tbl tabular
+0030       groupvars (:, 1) string
+0031       groupmembers (:, 1) string
+0032    <span class="keyword">end</span>
+0033 
+0034    <span class="comment">% all([]) is true, so an empty member set matches every variable. Report</span>
+0035    <span class="comment">% the empty request it is, rather than an ambiguous match between</span>
+0036    <span class="comment">% variables that hold nothing in common.</span>
+0037    <span class="keyword">if</span> isempty(groupmembers)
+0038       error(<span class="string">'groupstats:groupselect:noMembersRequested'</span>, <span class="keyword">...</span>
+0039          <span class="string">'Requested no members. Name at least one member to select rows by.'</span>)
+0040    <span class="keyword">end</span>
+0041 
+0042    <span class="comment">% Find which group variable contains every requested member</span>
+0043    tf = arrayfun(@(var) all(ismember(groupmembers, string(unique(tbl.(var))))), <span class="keyword">...</span>
+0044       groupvars);
+0045 
+0046    <span class="comment">% enforce one group variable for downselection</span>
+0047    <span class="keyword">if</span> sum(tf) &gt; 1
+0048       error(<span class="string">'groupstats:groupselect:ambiguousVariable'</span>, <span class="keyword">...</span>
+0049          [<span class="string">'only one group variable can be downselected using %s. '</span> <span class="keyword">...</span>
+0050          <span class="string">'These hold every requested member: %s.'</span>], <span class="keyword">...</span>
+0051          mfilename, strjoin(groupvars(tf), <span class="string">', '</span>))
+0052    <span class="keyword">end</span>
+0053 
+0054    <span class="comment">% Name the members and the variables searched, so the caller can see which</span>
+0055    <span class="comment">% side of the lookup was wrong.</span>
+0056    <span class="keyword">if</span> ~any(tf)
+0057       error(<span class="string">'groupstats:groupselect:noMatchingVariable'</span>, <span class="keyword">...</span>
+0058          [<span class="string">'No variable holds every member of the requested set. '</span> <span class="keyword">...</span>
+0059          <span class="string">'Requested: %s. Variables searched: %s.'</span>], <span class="keyword">...</span>
+0060          strjoin(groupmembers, <span class="string">', '</span>), strjoin(groupvars, <span class="string">', '</span>))
+0061    <span class="keyword">end</span>
+0062 
+0063    <span class="comment">% Keep the rows whose selected variable's value is a requested member</span>
+0064    tbl = tbl(ismember(string(tbl.(groupvars(tf))), groupmembers), :);
+0065 <span class="keyword">end</span></pre></div>
+</body>
+</html>

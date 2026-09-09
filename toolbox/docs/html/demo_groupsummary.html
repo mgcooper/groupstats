@@ -1,0 +1,390 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>demo_groupsummary</title>
+<meta name="generator" content="MATLAB 25.2">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2026-09-08">
+<meta name="DC.source" content="demo_groupsummary.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<h2>Contents</h2>
+<div>
+<ul>
+<li>
+<a href="#1">Table statistics with groupsummary, grouppercent, groupselect, and dropcats</a>
+</li>
+<li>
+<a href="#2">groupsummary: statistics per group</a>
+</li>
+<li>
+<a href="#3">groupsummary: bin a numeric group variable</a>
+</li>
+<li>
+<a href="#4">groupsummary: percents within a set</a>
+</li>
+<li>
+<a href="#5">groupsummary: select rows first</a>
+</li>
+<li>
+<a href="#6">grouppercent: frequencies within a set</a>
+</li>
+<li>
+<a href="#7">groupselect: keep the rows of named members</a>
+</li>
+<li>
+<a href="#8">dropcats: remove the categories no row uses</a>
+</li>
+<li>
+<a href="#9">prepareTableGroups: what every chart runs first</a>
+</li>
+<li>
+<a href="#10">Local function</a>
+</li>
+</ul>
+</div>
+<h2 id="1">Table statistics with groupsummary, grouppercent, groupselect, and dropcats</h2>
+<p>This demo shows the table statistics family on one event table: group-wise statistics with groupsummary, within-group percents with grouppercent, row selection with groupselect, unused-category removal with dropcats, and prepareTableGroups, the preparation step every chart in the toolbox runs first. Each section prints its result.</p>
+<p>See also: groupstats.groupsummary, groupstats.grouppercent, groupstats.groupselect, groupstats.dropcats, groupstats.prepareTableGroups, groupstats.test.generateTestData</p>
+<pre class="codeinput">
+<span class="comment">% The Info fixture holds one row per scenario, basin, and month, a numeric</span>
+<span class="comment">% peak, and one logical column per basin naming the basins that flood in</span>
+<span class="comment">% that row. The same table backs the chart demos.</span>
+data = groupstats.test.generateTestData(<span class="string">'info'</span>);
+Info = data.Info;
+</pre>
+<h2 id="2">groupsummary: statistics per group</h2>
+<p>groupsummary(tbl, groupvars, methods, datavar) is the builtin with three additions: a percent column for every group beside the builtin's count, a column named after each function-handle method, and the GroupSets and row-selection options shown below. The positional order is methods, then datavar, then groupbins; the groupsummary help explains why it differs from the builtin's.</p>
+<pre class="codeinput">G = groupstats.groupsummary(Info, [<span class="string">"scenario"</span>, <span class="string">"month"</span>], <span class="keyword">...</span>
+   [<span class="string">"mean"</span>, <span class="string">"max"</span>], <span class="string">"peak"</span>);
+disp(head(G, 6))
+
+<span class="comment">% A function handle names its own column, here spread_peak, after the</span>
+<span class="comment">% local function at the end of this script.</span>
+G = groupstats.groupsummary(Info, <span class="string">"scenario"</span>, {@spread}, <span class="string">"peak"</span>);
+disp(G)
+</pre>
+<pre class="codeoutput">         scenario         month    mean_peak    max_peak    GroupCount    Percent    Percent_scenario    Percent_month
+    __________________    _____    _________    ________    __________    _______    ________________    _____________
+    1980-2020-WRF-DIST     Jan       16.25           17         4         2.7778          8.3333            33.333    
+    1980-2020-WRF-DIST     Feb      15.714       16.464         4         2.7778          8.3333            33.333    
+    1980-2020-WRF-DIST     Mar       14.25           15         4         2.7778          8.3333            33.333    
+    1980-2020-WRF-DIST     Apr       12.25           13         4         2.7778          8.3333            33.333    
+    1980-2020-WRF-DIST     May       10.25           11         4         2.7778          8.3333            33.333    
+    1980-2020-WRF-DIST     Jun      8.7859       9.5359         4         2.7778          8.3333            33.333    
+</pre>
+<h2 id="3">groupsummary: bin a numeric group variable</h2>
+<p>groupbins takes one binning scheme per group variable. A binned variable keeps its own name in the result. Here the peaks are binned, and the mean of the logical Outlet column is the fraction of rows in each bin in which the outlet floods.</p>
+<pre class="codeinput">G = groupstats.groupsummary(Info, <span class="string">"peak"</span>, <span class="string">"mean"</span>, <span class="string">"Outlet"</span>, {[0 12 14 Inf]});
+disp(G)
+</pre>
+<pre class="codeoutput">      peak       mean_Outlet    GroupCount    Percent    Percent_peak
+    _________    ___________    __________    _______    ____________
+    [0, 12)        0.55357          56        38.889         100     
+    [12, 14)           0.5          22        15.278         100     
+    [14, Inf]      0.45455          66        45.833         100     
+</pre>
+<h2 id="4">groupsummary: percents within a set</h2>
+<p>GroupSets names the variable whose members define the sets. Within every scenario the Percent_scenario column then sums to 100, where the Percent column is each row's share of the whole table.</p>
+<pre class="codeinput">G = groupstats.groupsummary(Info, [<span class="string">"scenario"</span>, <span class="string">"basin"</span>], <span class="string">"mean"</span>, <span class="string">"peak"</span>, <span class="keyword">...</span>
+   GroupSets = <span class="string">"scenario"</span>);
+disp(head(G, 6))
+</pre>
+<pre class="codeoutput">         scenario         basin     mean_peak    GroupCount    Percent    Percent_scenario
+    __________________    ______    _________    __________    _______    ________________
+    1980-2020-WRF-DIST    Outlet      11.5           12        8.3333            25       
+    1980-2020-WRF-DIST    basinA        12           12        8.3333            25       
+    1980-2020-WRF-DIST    basinB      12.5           12        8.3333            25       
+    1980-2020-WRF-DIST    basinC        13           12        8.3333            25       
+    SSP245-WARM-NEAR      Outlet      12.5           12        8.3333            25       
+    SSP245-WARM-NEAR      basinA        13           12        8.3333            25       
+</pre>
+<h2 id="5">groupsummary: select rows first</h2>
+<p>RowSelectVar and RowSelectMembers keep only some rows before summarizing. Give both together; either one alone is an error.</p>
+<pre class="codeinput">G = groupstats.groupsummary(Info, <span class="string">"scenario"</span>, <span class="string">"mean"</span>, <span class="string">"peak"</span>, <span class="keyword">...</span>
+   RowSelectVar = <span class="string">"basin"</span>, RowSelectMembers = [<span class="string">"basinA"</span>, <span class="string">"basinB"</span>]);
+disp(G)
+</pre>
+<pre class="codeoutput">         scenario         mean_peak    GroupCount    Percent    Percent_scenario
+    __________________    _________    __________    _______    ________________
+    1980-2020-WRF-DIST      12.25          24        33.333           100       
+    SSP245-WARM-NEAR        13.25          24        33.333           100       
+    SSP585-HOT-FAR          14.25          24        33.333           100       
+</pre>
+<h2 id="6">grouppercent: frequencies within a set</h2>
+<p>grouppercent(tbl, groupvars) counts the rows of every group and adds a Percent_&lt;var&gt; column per GroupSets variable, each summing to 100 within that variable's members. It takes the same GroupSets and row-selection options as groupsummary.</p>
+<pre class="codeinput">P = groupstats.grouppercent(Info, [<span class="string">"scenario"</span>, <span class="string">"basin"</span>], <span class="keyword">...</span>
+   GroupSets = <span class="string">"scenario"</span>);
+disp(head(P, 6))
+
+<span class="comment">% A table that groupcounts already summarized is used as given: the</span>
+<span class="comment">% GroupCount column tells the two inputs apart.</span>
+counted = groupcounts(Info, <span class="string">"month"</span>);
+P = groupstats.grouppercent(counted, <span class="string">"month"</span>);
+disp(head(P, 4))
+</pre>
+<pre class="codeoutput">         scenario         basin     GroupCount    Percent    Percent_scenario
+    __________________    ______    __________    _______    ________________
+    1980-2020-WRF-DIST    Outlet        12        8.3333            25       
+    1980-2020-WRF-DIST    basinA        12        8.3333            25       
+    1980-2020-WRF-DIST    basinB        12        8.3333            25       
+    1980-2020-WRF-DIST    basinC        12        8.3333            25       
+    SSP245-WARM-NEAR      Outlet        12        8.3333            25       
+    SSP245-WARM-NEAR      basinA        12        8.3333            25       
+    month    GroupCount    Percent    Percent_month
+    _____    __________    _______    _____________
+     Jan         12        8.3333          100     
+     Feb         12        8.3333          100     
+     Mar         12        8.3333          100     
+     Apr         12        8.3333          100     
+</pre>
+<h2 id="7">groupselect: keep the rows of named members</h2>
+<p>groupselect(tbl, groupvars, groupmembers) keeps the rows whose group value is one of the members. It is what RowSelectVar and RowSelectMembers call.</p>
+<pre class="codeinput">two = groupstats.groupselect(Info, <span class="string">"basin"</span>, [<span class="string">"basinA"</span>, <span class="string">"basinB"</span>]);
+fprintf(<span class="string">'%d of %d rows kept\n'</span>, height(two), height(Info))
+</pre>
+<pre class="codeoutput">72 of 144 rows kept
+</pre>
+<h2 id="8">dropcats: remove the categories no row uses</h2>
+<p>Selecting rows leaves the categorical variable's category list as it was, so a later groupsummary or chart still sees every member. dropcats removes the categories no row uses.</p>
+<pre class="codeinput">fprintf(<span class="string">'basin categories after groupselect: %d\n'</span>, <span class="keyword">...</span>
+   numel(categories(two.basin)))
+two = groupstats.dropcats(two, <span class="string">"basin"</span>);
+fprintf(<span class="string">'basin categories after dropcats: %d\n'</span>, <span class="keyword">...</span>
+   numel(categories(two.basin)))
+</pre>
+<pre class="codeoutput">basin categories after groupselect: 4
+basin categories after dropcats: 2
+</pre>
+<h2 id="9">prepareTableGroups: what every chart runs first</h2>
+<p>The charts hand their table, data variable, and group arguments to prepareTableGroups. It checks that every name is a variable of the table, keeps the rows of the named members, converts a text or numeric group variable to categorical, drops the categories no row uses, and converts a categorical data variable to double. Calling it directly shows the table a chart draws from.</p>
+<pre class="codeinput">prepared = groupstats.prepareTableGroups(Info, <span class="string">"peak"</span>, <span class="keyword">...</span>
+   XGroupVar = <span class="string">"month"</span>, XGroupMembers = [<span class="string">"Jan"</span>, <span class="string">"Feb"</span>, <span class="string">"Mar"</span>], <span class="keyword">...</span>
+   CGroupVar = <span class="string">"scenario"</span>);
+fprintf(<span class="string">'%d rows, months kept: %s\n'</span>, height(prepared), <span class="keyword">...</span>
+   strjoin(categories(prepared.month), <span class="string">', '</span>))
+</pre>
+<pre class="codeoutput">36 rows, months kept: Jan, Feb, Mar
+</pre>
+<h2 id="10">Local function</h2>
+<p>A script may hold local functions after its sections. This one is the statistic the function-handle example summarizes with.</p>
+<pre class="codeinput">
+<span class="keyword">function</span> r = spread(x)
+   <span class="comment">%SPREAD The difference between the largest and the smallest value.</span>
+   r = max(x) - min(x);
+<span class="keyword">end</span>
+</pre>
+<pre class="codeoutput">         scenario         spread_peak    GroupCount    Percent    Percent_scenario
+    __________________    ___________    __________    _______    ________________
+    1980-2020-WRF-DIST        9.5            48        33.333           100       
+    SSP245-WARM-NEAR          9.5            48        33.333           100       
+    SSP585-HOT-FAR            9.5            48        33.333           100       
+</pre>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2025b</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+%% Table statistics with groupsummary, grouppercent, groupselect, and dropcats
+%
+% This demo shows the table statistics family on one event table:
+% group-wise statistics with groupsummary, within-group percents with
+% grouppercent, row selection with groupselect, unused-category removal
+% with dropcats, and prepareTableGroups, the preparation step every chart
+% in the toolbox runs first. Each section prints its result.
+%
+% See also: groupstats.groupsummary, groupstats.grouppercent,
+% groupstats.groupselect, groupstats.dropcats,
+% groupstats.prepareTableGroups, groupstats.test.generateTestData
+
+% The Info fixture holds one row per scenario, basin, and month, a numeric
+% peak, and one logical column per basin naming the basins that flood in
+% that row. The same table backs the chart demos.
+data = groupstats.test.generateTestData('info');
+Info = data.Info;
+
+%% groupsummary: statistics per group
+%
+% groupsummary(tbl, groupvars, methods, datavar) is the builtin with three
+% additions: a percent column for every group beside the builtin's count,
+% a column named after each function-handle method, and the GroupSets and
+% row-selection options shown below. The positional order is methods,
+% then datavar, then groupbins; the groupsummary help explains why it
+% differs from the builtin's.
+
+G = groupstats.groupsummary(Info, ["scenario", "month"], ...
+   ["mean", "max"], "peak");
+disp(head(G, 6))
+
+% A function handle names its own column, here spread_peak, after the
+% local function at the end of this script.
+G = groupstats.groupsummary(Info, "scenario", {@spread}, "peak");
+disp(G)
+
+%% groupsummary: bin a numeric group variable
+%
+% groupbins takes one binning scheme per group variable. A binned variable
+% keeps its own name in the result. Here the peaks are binned, and the
+% mean of the logical Outlet column is the fraction of rows in each bin
+% in which the outlet floods.
+
+G = groupstats.groupsummary(Info, "peak", "mean", "Outlet", {[0 12 14 Inf]});
+disp(G)
+
+%% groupsummary: percents within a set
+%
+% GroupSets names the variable whose members define the sets. Within
+% every scenario the Percent_scenario column then sums to 100, where the
+% Percent column is each row's share of the whole table.
+
+G = groupstats.groupsummary(Info, ["scenario", "basin"], "mean", "peak", ...
+   GroupSets = "scenario");
+disp(head(G, 6))
+
+%% groupsummary: select rows first
+%
+% RowSelectVar and RowSelectMembers keep only some rows before
+% summarizing. Give both together; either one alone is an error.
+
+G = groupstats.groupsummary(Info, "scenario", "mean", "peak", ...
+   RowSelectVar = "basin", RowSelectMembers = ["basinA", "basinB"]);
+disp(G)
+
+%% grouppercent: frequencies within a set
+%
+% grouppercent(tbl, groupvars) counts the rows of every group and adds a
+% Percent_<var> column per GroupSets variable, each summing to 100 within
+% that variable's members. It takes the same GroupSets and row-selection
+% options as groupsummary.
+
+P = groupstats.grouppercent(Info, ["scenario", "basin"], ...
+   GroupSets = "scenario");
+disp(head(P, 6))
+
+% A table that groupcounts already summarized is used as given: the
+% GroupCount column tells the two inputs apart.
+counted = groupcounts(Info, "month");
+P = groupstats.grouppercent(counted, "month");
+disp(head(P, 4))
+
+%% groupselect: keep the rows of named members
+%
+% groupselect(tbl, groupvars, groupmembers) keeps the rows whose group
+% value is one of the members. It is what RowSelectVar and
+% RowSelectMembers call.
+
+two = groupstats.groupselect(Info, "basin", ["basinA", "basinB"]);
+fprintf('%d of %d rows kept\n', height(two), height(Info))
+
+%% dropcats: remove the categories no row uses
+%
+% Selecting rows leaves the categorical variable's category list as it
+% was, so a later groupsummary or chart still sees every member. dropcats
+% removes the categories no row uses.
+
+fprintf('basin categories after groupselect: %d\n', ...
+   numel(categories(two.basin)))
+two = groupstats.dropcats(two, "basin");
+fprintf('basin categories after dropcats: %d\n', ...
+   numel(categories(two.basin)))
+
+%% prepareTableGroups: what every chart runs first
+%
+% The charts hand their table, data variable, and group arguments to
+% prepareTableGroups. It checks that every name is a variable of the
+% table, keeps the rows of the named members, converts a text or numeric
+% group variable to categorical, drops the categories no row uses, and
+% converts a categorical data variable to double. Calling it directly
+% shows the table a chart draws from.
+
+prepared = groupstats.prepareTableGroups(Info, "peak", ...
+   XGroupVar = "month", XGroupMembers = ["Jan", "Feb", "Mar"], ...
+   CGroupVar = "scenario");
+fprintf('%d rows, months kept: %s\n', height(prepared), ...
+   strjoin(categories(prepared.month), ', '))
+
+%% Local function
+%
+% A script may hold local functions after its sections. This one is the
+% statistic the function-handle example summarizes with.
+
+function r = spread(x)
+   %SPREAD The difference between the largest and the smallest value.
+   r = max(x) - min(x);
+end
+
+##### SOURCE END #####
+-->
+</body>
+</html>
