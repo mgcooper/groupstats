@@ -145,7 +145,8 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    %
    % Dependencies
    %
-   % These come from matfunclib and must be on the path:
+   % These ship in +groupstats/private, vendored from matfunclib and
+   % listed in toolbox/vendored.txt, so no separate path is needed:
    %
    %  defaultcolors (libplot)      colors the bars
    %  dealout (functools)          splits the outputs

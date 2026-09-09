@@ -27,8 +27,10 @@ classdef test_makedocs < matlab.unittest.TestCase
    methods (Test)
 
       function testDocpagesPublishesEveryDocsSource(testCase)
-         % One page per groupstats_*.m source in toolbox/docs/.
+         % One page per groupstats_*.m source in toolbox/docs/, and a page
+         % whose source no longer exists is removed.
 
+         plantStalePage(testCase.OutputFolder, "groupstats_gone.html")
          groupstats.internal.makedocs(Parts = "docpages", ...
             OutputFolder = testCase.OutputFolder);
 
@@ -51,6 +53,11 @@ classdef test_makedocs < matlab.unittest.TestCase
          testCase.assumeFalse(isMATLABReleaseOlderThan("R2025a"), ...
             "export reads plain-text live scripts from R2025a.");
 
+         % A page for a demo file that is gone, and a numbered figure the
+         % demo no longer draws, are stale outputs the build must remove.
+         plantStalePage(testCase.OutputFolder, "demo_gone.html")
+         plantStalePage(testCase.OutputFolder, "demo_gone_01.png")
+         plantStalePage(testCase.OutputFolder, "demo_groupmap_99.png")
          groupstats.internal.makedocs(Parts = "demos", ...
             Demos = "demo_groupmap", OutputFolder = testCase.OutputFolder);
 
@@ -59,6 +66,10 @@ classdef test_makedocs < matlab.unittest.TestCase
          pages = dir(fullfile(testCase.OutputFolder, '*.html'));
          returned = sort(string({pages.name}));
          testCase.verifyEqual(returned, expected);
+         stale = dir(fullfile(testCase.OutputFolder, '*gone*'));
+         testCase.verifyEmpty(stale);
+         testCase.verifyFalse(isfile(fullfile(testCase.OutputFolder, ...
+            "demo_groupmap_99.png")));
       end
 
       function testDemosNeedR2025aAndSaySo(testCase)
@@ -153,12 +164,14 @@ classdef test_makedocs < matlab.unittest.TestCase
             isfile(fullfile(m2htmlfolder, "m2html.m")), ...
             "GROUPSTATS_M2HTML does not name the m2html folder.");
 
+         % m2html mirrors the source folder, so the pages sit under
+         % m2html/+groupstats/, where docpath searches. A page for a
+         % function that is gone is stale and must be removed.
+         m2htmlpath = fullfile(testCase.OutputFolder, 'm2html');
+         plantStalePage(fullfile(m2htmlpath, '+groupstats'), "gone.html")
          groupstats.internal.makedocs(Parts = "functions", ...
             OutputFolder = testCase.OutputFolder);
 
-         % m2html mirrors the source folder, so the pages sit under
-         % m2html/+groupstats/, where docpath searches.
-         m2htmlpath = fullfile(testCase.OutputFolder, 'm2html');
          publicfiles = dir(fullfile(groupstats.internal.buildpath(), ...
             '+groupstats', '*.m'));
          expected = sort(string(erase({publicfiles.name}, ".m")) + ".html");
@@ -316,4 +329,17 @@ function restoreDatabase(htmlpath, keep, previous)
       copyfile(fullfile(keep, previous(n).name), ...
          fullfile(htmlpath, previous(n).name));
    end
+end
+
+function plantStalePage(folder, name)
+   %PLANTSTALEPAGE Write an empty output file that no source produces.
+   %
+   % The build must remove it, so a test writes it before the build and
+   % checks for it after. The folder is created when it does not exist.
+
+   if ~isfolder(folder)
+      mkdir(folder)
+   end
+   fid = fopen(fullfile(folder, name), 'w');
+   fclose(fid);
 end

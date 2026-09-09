@@ -36,10 +36,11 @@ function [stats, samples] = groupcompare(tbl, groupvar, datavar, opts)
    %                 The single point is the one cluster, and its p-value
    %                 is reported. When the point does not reach the cluster
    %                 threshold Alpha there is no cluster: P is NaN and H is
-   %                 false. permutest counts the possible permutations with
-   %                 nchoosek, which warns (MATLAB:nchoosek:LargeCoefficient)
-   %                 once the two samples together hold more than about 56
-   %                 values; the test still runs.
+   %                 false. permutest counts the possible permutations
+   %                 with the nchoosek warning off, and warns, with the two
+   %                 sample sizes and the count, only when the samples
+   %                 allow fewer permutations than NumPermutations; it
+   %                 then uses the count. Eight values a side allow 12870.
    %  Tail is read against the reference: "both" (default) the medians
    %  differ, "right" the reference median is greater, "left" it is less.
    %  Alpha is the significance level of every test and interval. H is

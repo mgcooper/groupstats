@@ -136,8 +136,8 @@ classdef test_groupcompare < matlab.unittest.TestCase
          % permutest finds one cluster. Two shifted samples reject and two
          % draws of the same distribution do not.
 
-         % Twenty-five values a side keep nchoosek(50, 25) exact, so
-         % permutest counts its permutations without a warning.
+         % Twenty-five values a side allow far more permutations than
+         % permutest draws, so it runs without its too-few warning.
          tbl = table(categorical([repmat("ref", 25, 1); repmat("far", 25, 1); ...
             repmat("same", 25, 1)]), [randn(25, 1); randn(25, 1) + 3; ...
             randn(25, 1)], 'VariableNames', {'Group', 'Value'});

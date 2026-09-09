@@ -172,9 +172,15 @@ classdef test_buildtasks < matlab.unittest.TestCase
          copyfile(fullfile(testCase.Root, "buildfile.m"), ...
             fullfile(scratch, "buildfile.m"))
          groupstats.test.copytoolbox(fullfile(scratch, "toolbox"));
+         % The deleted file is a listed license, which no scan resolves:
+         % with matfunclib on the path, a deleted function copy would
+         % resolve to the matfunclib file and fail check for that reason,
+         % not through the listed-file guard this test covers.
          listed = groupstats.internal.vendoredfiles( ...
             fullfile(scratch, "toolbox"));
-         delete(listed(1))
+         license = listed(endsWith(listed, "_LICENSE.txt"));
+         testCase.assertNotEmpty(license, "vendored.txt lists no license.");
+         delete(license(1))
 
          here = pwd;
          testCase.addTeardown(@() cd(here));

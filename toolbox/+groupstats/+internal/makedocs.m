@@ -183,7 +183,12 @@ function makedocs(opts)
    % the folder's contents.
    if any(opts.Parts == "docpages")
       sources = dir(fullfile(docspath, 'groupstats_*.m'));
+      stems = string(erase({sources.name}, ".m"));
+      % A source that was renamed or removed leaves its page behind, and
+      % the search database and the package would keep it.
+      removeOrphans(htmlpath, 'groupstats_*', stems)
       for n = 1:numel(sources)
+         removeOutputs(htmlpath, stems(n))
          publish(fullfile(sources(n).folder, sources(n).name), pubopts);
       end
    end
@@ -203,7 +208,15 @@ function makedocs(opts)
             'export reads from R2025a. This is %s.'], version('-release'))
       end
       figuresbefore = findall(groot, 'Type', 'figure');
+      % The outputs of a demo file that no longer exists go, whatever the
+      % selection: a page with no source is stale. Then each selected
+      % demo's page and figures go before it runs, so a demo that now
+      % draws fewer figures leaves no extra numbered ones.
+      [~, roster] = fileparts(groupstats.internal.demolist());
+      removeOrphans(htmlpath, 'demo_*', string(roster))
       for n = 1:numel(demos)
+         [~, stem] = fileparts(demos(n));
+         removeOutputs(htmlpath, stem)
          publish(demos(n), pubopts);
       end
       % publish leaves the figures a demo opened. Close those, and no
@@ -215,6 +228,7 @@ function makedocs(opts)
          ];
       for n = 1:numel(livescripts)
          [~, name] = fileparts(livescripts(n));
+         removeOutputs(htmlpath, name)
          export(livescripts(n), fullfile(htmlpath, name + ".html"), ...
             'Run', true);
       end
@@ -231,6 +245,12 @@ function makedocs(opts)
       m2htmlpath = fullfile(htmlpath, 'm2html');
       if ~isfolder(m2htmlpath)
          mkdir(m2htmlpath)
+      end
+      % m2html rewrites the page of every file it finds and leaves the
+      % page of a file that is gone, so the previous pages go first.
+      stale = dir(fullfile(m2htmlpath, '+groupstats', '*.html'));
+      for n = 1:numel(stale)
+         delete(fullfile(stale(n).folder, stale(n).name))
       end
       cdobj = withcd(tbxpath);
       m2html( ...
@@ -251,6 +271,41 @@ function makedocs(opts)
    % The search database, last, so it indexes every page built above.
    if any(opts.Parts == "docsearch")
       builddocsearchdb(char(htmlpath))
+   end
+end
+
+function removeOutputs(htmlpath, stem)
+   %REMOVEOUTPUTS Delete the page and figures one source wrote.
+   %
+   % publish writes <stem>.html, <stem>.png, and <stem>_NN.png, and a
+   % live-script export writes <stem>.html. Every output of the stem goes
+   % before the rebuild, so a source that now draws fewer figures leaves
+   % no extra numbered ones.
+
+   old = [
+      dir(fullfile(htmlpath, stem + ".html"))
+      dir(fullfile(htmlpath, stem + ".png"))
+      dir(fullfile(htmlpath, stem + "_*.png"))
+      ];
+   for n = 1:numel(old)
+      delete(fullfile(old(n).folder, old(n).name))
+   end
+end
+
+function removeOrphans(htmlpath, pattern, stems)
+   %REMOVEORPHANS Delete the outputs whose source no longer exists.
+   %
+   % PATTERN names the output files one part owns, and STEMS the sources
+   % that exist. An output whose stem, with any figure number removed, is
+   % not among them has no source, so it goes.
+
+   old = dir(fullfile(htmlpath, pattern));
+   old = old(~[old.isdir]);
+   for n = 1:numel(old)
+      stem = regexprep(old(n).name, '(_\d+)?\.(html|png)$', '');
+      if ~ismember(stem, stems)
+         delete(fullfile(old(n).folder, old(n).name))
+      end
    end
 end
 

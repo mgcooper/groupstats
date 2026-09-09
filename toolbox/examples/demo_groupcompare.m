@@ -47,10 +47,10 @@ disp(stats)
 % the one-sample sign-rank test of each group against the reference
 % median. "permutation" is the cluster-based permutation test of the
 % vendored permutest, on the two samples as independent trials of one data
-% point; NumPermutations sets how many permutations it draws. permutest
-% counts the possible permutations with nchoosek, which warns once the two
-% samples together hold more than about 56 values, so this section runs on
-% the outlet rows alone: twelve peaks per scenario.
+% point; NumPermutations sets how many permutations it draws, and
+% permutest warns when the samples allow fewer than that. This section
+% runs on the outlet rows alone, twelve peaks per scenario, which allow
+% more than the 2000 permutations asked for and keep the section fast.
 
 outlet = Info(Info.basin == "Outlet", :);
 for testname = ["ranksum", "signrank", "permutation"]
