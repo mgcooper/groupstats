@@ -17,7 +17,7 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the data variable"
          },
@@ -28,7 +28,7 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the table variable for grouping along the x axis"
          },
@@ -39,20 +39,20 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the table variable for grouped by color"
          },
          {
             "name":"XGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', xgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', xgroupvar)",
             "purpose":"the grouping variable members"
          },
          {
             "name":"CGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)",
             "purpose":"the color grouping variable members"
          },
          {
@@ -62,14 +62,14 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl)"]
+               ["choices=groupstats.internal.tablecompletions(tbl)"]
             ],
             "purpose":"the variable to down-select rows of input table"
          },
          {
             "name":"RowSelectMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl,'selectby',RowSelectVar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)",
             "purpose":"the group members to down-select rows of input table"
          },
          {
@@ -97,13 +97,13 @@
          {
             "name":"SortGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl,'selectby',cgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',cgroupvar)",
             "purpose":"the cgroup members to compute sortby order"
          },
          {
             "name":"MergeGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)",
             "purpose":"the color-group members to pool, one cell per merge group"
          },
          {
@@ -137,7 +137,7 @@
             "type":
             [
                ["char","string"],
-               ["choices=tablecompletions(tbl, 'selectby', xgroupvar)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'selectby', xgroupvar)"]
             ],
             "default":"'none'",
             "purpose":"the variables in the order they should be plotted"
@@ -148,10 +148,16 @@
             "type":
             [
                ["char","string"],
-               ["choices=tablecompletions(tbl, 'selectby', cgroupvar)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)"]
             ],
             "default":"'none'",
             "purpose":"the variables in the order they should be plotted"
+         },
+         {
+            "name":"Parent",
+            "kind":"namevalue",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes to plot into"
          },
          {
             "name":"Legend",
@@ -159,7 +165,6 @@
             "type":
             [
                ["char", "string", "cellstr"],
-               ["notempty"],
                ["choices=groupstats.namelists.legendvisibility()"]
             ],
             "default":"'on'",
@@ -170,8 +175,7 @@
             "kind":"namevalue",
             "type":
             [
-               ["char", "string", "cellstr"],
-               ["notempty"]
+               ["char", "string", "cellstr"]
             ],
             "purpose":"the legend string"
          },
@@ -215,7 +219,7 @@
       "inputs":
       [
          {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table to select rows from"},
-         {"name":"groupvars", "kind":"required", "type":[["cellstr","char","string"],["choices=tablecompletions(tbl)"]], "purpose":"the grouping variables"},
+         {"name":"groupvars", "kind":"required", "type":[["cellstr","char","string"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the grouping variables"},
          {"name":"groupmembers", "kind":"required", "type":[["cellstr","char","string"]], "purpose":"the members to keep"}
       ]
    },
@@ -225,23 +229,53 @@
       "inputs":
       [
          {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table of grouped data"},
-         {"name":"groupvars", "kind":"required", "type":[["cellstr","char","string"],["choices=tablecompletions(tbl)"]], "purpose":"the grouping variables"},
+         {"name":"groupvars", "kind":"required", "type":[["cellstr","char","string"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the grouping variables"},
          {"name":"groupbins", "kind":"ordered", "purpose":"the binning scheme for each grouping variable"},
-         {"name":"groupsets", "kind":"ordered", "type":[["cellstr","char","string"],["choices=tablecompletions(tbl)"]], "purpose":"the variables defining the set each percent is taken within"}
+         {"name":"GroupSets", "kind":"namevalue", "type":[["cellstr","char","string"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the variables whose members define the sets each percent is taken within"},
+         {"name":"RowSelectVar", "kind":"namevalue", "type":[["char","string"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the row-selection variable; give it together with RowSelectMembers"},
+         {"name":"RowSelectMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)", "purpose":"the members to keep; give it together with RowSelectVar"},
+         {"name":"IncludedEdge", "kind":"namevalue", "type":"choices={'left','right'}", "purpose":"the bin edge a value on an edge belongs to"}
       ]
    },
 
-   "groupstats.groupdifference":
+   "groupstats.groupcompare":
    {
       "inputs":
       [
          {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table of grouped data"},
-         {"name":"groupvar", "kind":"required", "type":[["cellstr","char","string"],["scalar"],["choices=tablecompletions(tbl)"]], "purpose":"the grouping variable"},
-         {"name":"datavar", "kind":"required", "type":[["cellstr","char","string"],["scalar"],["choices=tablecompletions(tbl)"]], "purpose":"the data variable to compare"},
-         {"name":"ReferenceGroup", "kind":"namevalue", "type":"choices=tablecompletions(tbl,'selectby',groupvar)", "purpose":"the member every other member is compared against"},
-         {"name":"conditionvar", "kind":"namevalue", "type":[["cellstr","char","string"],["scalar"],["choices=tablecompletions(tbl)"]], "purpose":"a second grouping variable, one comparison set per member"},
-         {"name":"pooled", "kind":"namevalue", "type":["logical","scalar"], "default":"false", "purpose":"compare the reference against every other member combined"},
-         {"name":"tail", "kind":"namevalue", "type":[["char","string"],["scalar"],["choices=groupstats.namelists.testtail()"]], "default":"'both'", "purpose":"which tail the rank test uses"}
+         {"name":"groupvar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the grouping variable"},
+         {"name":"datavar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the data variable compared"},
+         {"name":"ReferenceGroup", "kind":"namevalue", "type":[["char","string"],["choices=groupstats.internal.tablecompletions(tbl,'selectby',groupvar)"]], "purpose":"the member every other member is compared against"},
+         {"name":"ConditionVar", "kind":"namevalue", "type":[["char","string"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"a second grouping variable; the comparisons run once per member"},
+         {"name":"Pooled", "kind":"namevalue", "type":["logical","scalar"], "purpose":"compare the reference against every other member combined"},
+         {"name":"Test", "kind":"namevalue", "type":"choices=groupstats.namelists.comparetest()", "purpose":"the test to run"},
+         {"name":"Tail", "kind":"namevalue", "type":"choices=groupstats.namelists.testtail()", "purpose":"the tail, read against the reference"},
+         {"name":"Alpha", "kind":"namevalue", "type":["numeric","scalar"], "purpose":"the significance level"},
+         {"name":"Bootstrap", "kind":"namevalue", "type":["logical","scalar"], "purpose":"add the bootstrapped signed median difference"},
+         {"name":"NumBootstrap", "kind":"namevalue", "type":["numeric","scalar"], "purpose":"the number of bootstrap resamples"},
+         {"name":"NumPermutations", "kind":"namevalue", "type":["numeric","scalar"], "purpose":"the number of permutations for Test permutation"}
+      ],
+      "outputs":
+      [
+         {"name":"stats", "type":"tabular"},
+         {"name":"samples", "type":"double"}
+      ]
+   },
+
+   "groupstats.groupsamples":
+   {
+      "inputs":
+      [
+         {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table of grouped data"},
+         {"name":"groupvar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the grouping variable"},
+         {"name":"datavar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the data variable collected"},
+         {"name":"ReferenceGroup", "kind":"namevalue", "type":[["char","string"],["choices=groupstats.internal.tablecompletions(tbl,'selectby',groupvar)"]], "purpose":"the member listed first"},
+         {"name":"ConditionVar", "kind":"namevalue", "type":[["char","string"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"a second grouping variable; one block of rows per member"},
+         {"name":"Pooled", "kind":"namevalue", "type":["logical","scalar"], "purpose":"pool every member but the reference into one row"}
+      ],
+      "outputs":
+      [
+         {"name":"S", "type":"tabular"}
       ]
    },
 
@@ -250,7 +284,7 @@
       "inputs":
       [
          {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table to split"},
-         {"name":"groupvar", "kind":"required", "type":[["cellstr","char","string"],["scalar"],["choices=tablecompletions(tbl)"]], "purpose":"the variable to group by"},
+         {"name":"groupvar", "kind":"required", "type":[["cellstr","char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the variable to group by"},
          {"name":"fcn", "kind":"required", "type":["function_handle"], "purpose":"the function applied to each group"},
          {"name":"varargin", "kind":"ordered", "repeating":true, "purpose":"arguments passed to fcn after the group table"}
       ]
@@ -263,7 +297,7 @@
          {"name": "tbl", "kind": "required", "type": ["tabular"], "purpose": "the table of grouped data"},
          {"name": "groupA", "kind": "required", "purpose": "the first group, as labels or logical column names"},
          {"name": "groupB", "kind": "required", "purpose": "the second group, as labels or logical column names"},
-         {"name": "groupvar", "kind": "ordered", "type": [["cellstr", "char", "string"], ["scalar"], ["choices=tablecompletions(tbl)"]], "purpose": "the variable holding the group labels"},
+         {"name": "groupvar", "kind": "ordered", "type": [["cellstr", "char", "string"], ["scalar"], ["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose": "the variable holding the group labels"},
          {"name": "Population", "kind": "namevalue", "type": [["char", "string"], ["scalar"], ["choices=groupstats.namelists.populationoption()"]], "default": "'union'", "purpose": "which rows the marginal probabilities are out of"}
       ]
    },
@@ -285,7 +319,7 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the data variable"
          },
@@ -296,7 +330,7 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the table variable for grouping along the x axis"
          },
@@ -307,20 +341,20 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the table variable for grouped by color"
          },
          {
             "name":"XGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', xgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', xgroupvar)",
             "purpose":"the grouping variable members"
          },
          {
             "name":"CGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)",
             "purpose":"the color grouping variable members"
          },
          {
@@ -330,20 +364,20 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl)"]
+               ["choices=groupstats.internal.tablecompletions(tbl)"]
             ],
             "purpose":"the variable to down-select rows of input table"
          },
          {
             "name":"RowSelectMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl,'selectby',RowSelectVar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)",
             "purpose":"the group members to down-select rows of input table"
          },
          {
             "name":"MergeGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)",
             "purpose":"the color-group members to pool, one cell per merge group"
          },
          {
@@ -359,12 +393,18 @@
             "purpose":"the method used to order the boxes along the x-axis"
          },
          {
+            "name":"SortGroupMembers",
+            "kind":"namevalue",
+            "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',cgroupvar)",
+            "purpose":"the cgroup members whose rows compute the sortby order"
+         },
+         {
             "name":"XGroupOrder",
             "kind":"namevalue",
             "type":
             [
                ["char","string"],
-               ["choices=tablecompletions(tbl, 'selectby', xgroupvar)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'selectby', xgroupvar)"]
             ],
             "default":"'none'",
             "purpose":"the variables in the order they should be plotted"
@@ -375,10 +415,16 @@
             "type":
             [
                ["char","string"],
-               ["choices=tablecompletions(tbl, 'selectby', cgroupvar)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)"]
             ],
             "default":"'none'",
             "purpose":"the variables in the order they should be plotted"
+         },
+         {
+            "name":"Parent",
+            "kind":"namevalue",
+            "type":"matlab.graphics.axis.AbstractAxes",
+            "purpose":"the axes to plot into"
          },
          {
             "name":"ShadeGroups",
@@ -410,7 +456,6 @@
             "type":
             [
                ["char", "string", "cellstr"],
-               ["notempty"],
                ["choices=groupstats.namelists.legendvisibility()"]
             ],
             "default":"'on'",
@@ -421,8 +466,7 @@
             "kind":"namevalue",
             "type":
             [
-               ["char", "string", "cellstr"],
-               ["notempty"]
+               ["char", "string", "cellstr"]
             ],
             "purpose":"the legend string"
          },
@@ -477,13 +521,13 @@
             "type":
             [
                ["cellstr","char","string","vartype","pattern"],
-               ["choices=tablecompletions(tbl)"]
+               ["choices=groupstats.internal.tablecompletions(tbl)"]
             ],
             "purpose":"the grouping variables"
          },
          {
             "name":"methods", 
-            "kind":"required", 
+            "kind":"ordered",
             "type":
             [
                ["choices={'nummissing','nnz','mean','median','mode','var','std','min','max','range','sum','all'}"],
@@ -493,41 +537,46 @@
          },
          {
             "name":"datavar", 
-            "kind":"required", 
+            "kind":"ordered",
             "type":
             [
                ["cellstr","char","string","vartype","pattern"],
-               ["choices=tablecompletions(tbl)"]
+               ["choices=groupstats.internal.tablecompletions(tbl)"]
             ],
             "purpose":"the data variable"
          },
          {
             "name":"groupbins", 
-            "kind":"required", 
+            "kind":"ordered",
             "type":["char","string","numeric"], "purpose":"the grouping bins"
          },
          {
-            "name":"groupsets", 
-            "kind":"required", 
+            "name":"GroupSets",
+            "kind":"namevalue",
             "type":
             [
                ["cellstr","char","string","vartype","pattern"],
-               ["scalar"],
-               ["choices=tablecompletions(tbl)"]
+               ["choices=groupstats.internal.tablecompletions(tbl)"]
             ],
-            "purpose":"the grouping sets"
+            "purpose":"the variables whose members define the sets each percent is taken within"
          },
          {
             "name":"RowSelectVar",
             "kind":"namevalue",
-            "type":[["char","string"],["choices=tablecompletions(tbl)"]],
+            "type":[["char","string"],["choices=groupstats.internal.tablecompletions(tbl)"]],
             "purpose":"the row-selection variable; give it together with RowSelectMembers"
          },
          {
             "name":"RowSelectMembers",
             "kind":"namevalue",
-            "type":["char","string"],
+            "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)",
             "purpose":"the members to keep; give it together with RowSelectVar"
+         },
+         {
+            "name":"IncludedEdge",
+            "kind":"namevalue",
+            "type":"choices={'left','right'}",
+            "purpose":"the bin edge a value on an edge belongs to"
          }
       ],
       "outputs":
@@ -558,7 +607,7 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'vartype', 'categorical')"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'vartype', 'categorical')"]
             ],
             "purpose":"the data variable"
          }
@@ -572,6 +621,62 @@
          }
       ],
       "description":"Remove categorical data from table"
+   },
+   "groupstats.prepareTableGroups":
+   {
+      "inputs":
+      [
+         {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table to prepare"},
+         {"name":"ydatavar", "kind":"required", "type":[["cellstr","char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the data variable"},
+         {"name":"XDataVar", "kind":"namevalue", "type":[["cellstr","char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the x-axis data variable"},
+         {"name":"XGroupVar", "kind":"namevalue", "type":[["cellstr","char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the x-axis group variable"},
+         {"name":"XGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',XGroupVar)", "purpose":"the members of XGroupVar to keep"},
+         {"name":"CGroupVar", "kind":"namevalue", "type":[["cellstr","char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the color group variable"},
+         {"name":"CGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',CGroupVar)", "purpose":"the members of CGroupVar to keep"},
+         {"name":"RowSelectVar", "kind":"namevalue", "type":[["cellstr","char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the row-selection variable; give it together with RowSelectMembers"},
+         {"name":"RowSelectMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)", "purpose":"the members to keep; give it together with RowSelectVar"},
+         {"name":"ConvertDataVar", "kind":"namevalue", "type":["logical","scalar"], "default":"true", "purpose":"convert a categorical data variable to double"}
+      ],
+      "outputs":
+      [
+         {"name":"tbl", "type":"tabular", "purpose":"the prepared table"}
+      ],
+      "description":"Select rows and prepare group variables in a table"
+   },
+   "groupstats.help":
+   {
+      "inputs":
+      [
+         {"name":"docname", "kind":"ordered", "type":[["char","string"],["scalar"]], "default":"'groupstats_welcome'", "purpose":"the help page to open, a function or demo name"}
+      ],
+      "description":"Open a toolbox help page in the Help browser"
+   },
+   "groupstats.boxchartxdata":
+   {
+      "inputs":
+      [
+         {"name":"H", "kind":"required", "type":"matlab.graphics.chart.primitive.BoxChart", "purpose":"the box charts, one element per color group"}
+      ],
+      "outputs":
+      [
+         {"name":"xlocs", "type":"double", "purpose":"the box centers, one row per color group and one column per x-tick"},
+         {"name":"xleft", "type":"double", "purpose":"the left edge of each x-tick group"},
+         {"name":"xright", "type":"double", "purpose":"the right edge of each x-tick group"}
+      ],
+      "description":"Read the x coordinates boxchart drew"
+   },
+   "groupstats.boxchartydata":
+   {
+      "inputs":
+      [
+         {"name":"data", "kind":"required", "type":["numeric","vector"], "purpose":"the data one box summarizes"},
+         {"name":"varargin", "kind":"ordered", "repeating":true, "purpose":"arguments passed to median"}
+      ],
+      "outputs":
+      [
+         {"name":"ycoords", "type":"struct", "purpose":"the y coordinates boxchart draws"}
+      ],
+      "description":"Compute the y coordinates boxchart draws"
    },
    "groupstats.histogram":
    {
@@ -590,31 +695,31 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the data variable"
          },
          {
-            "name":"GroupVar",
-            "kind":"namevalue",
+            "name":"groupvar",
+            "kind":"ordered",
             "type":
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl)"]
+               ["choices=groupstats.internal.tablecompletions(tbl)"]
             ],
-            "purpose":"the grouping variables"
+            "purpose":"the grouping variable"
          },
          {
             "name":"GroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl,'selectby', GroupVar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby', groupvar)",
             "purpose":"the grouping variable members"
          },
          {
             "name":"MergeGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl)",
             "purpose":"the group members to merge"
          },
          {
@@ -623,7 +728,7 @@
             "type":
             [
                ["char","string"],
-               ["choices=tablecompletions(tbl, 'selectby', GroupVar)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'selectby', groupvar)"]
             ],
             "default":"'none'",
             "purpose":"a partial order of the group members"
@@ -647,14 +752,14 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl)"]
+               ["choices=groupstats.internal.tablecompletions(tbl)"]
             ],
             "purpose":"the variable to down-select rows of input table"
          },
          {
             "name":"RowSelectMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl,'selectby',RowSelectVar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)",
             "purpose":"the group members to down-select rows of input table"
          },
          {
@@ -680,8 +785,7 @@
             "kind":"namevalue",
             "type":
             [
-               ["char", "string", "cellstr"],
-               ["notempty"]
+               ["char", "string", "cellstr"]
             ],
             "purpose":"the legend string"
          },
@@ -737,7 +841,7 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the x-axis variable"
          },
@@ -748,7 +852,7 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the y-axis variable"
          },
@@ -759,7 +863,7 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the face color variable"
          },
@@ -770,20 +874,20 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl, 'rowtimes', true)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]
             ],
             "purpose":"the symbol size variable"
          },
          {
             "name":"CGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)",
             "purpose":"the color grouping variable members"
          },
          {
             "name":"SGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', sgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', sgroupvar)",
             "purpose":"the symbol size grouping variable members"
          },
          {
@@ -793,20 +897,20 @@
             [
                ["cellstr","char","string","vartype","pattern"],
                ["scalar"],
-               ["choices=tablecompletions(tbl)"]
+               ["choices=groupstats.internal.tablecompletions(tbl)"]
             ],
             "purpose":"the variable to down-select rows of input table"
          },
          {
             "name":"RowSelectMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl,'selectby',RowSelectVar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)",
             "purpose":"the group members to down-select rows of input table"
          },
          {
             "name":"MergeGroupMembers",
             "kind":"namevalue",
-            "type":"choices=tablecompletions(tbl, 'selectby', cgroupvar)",
+            "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)",
             "purpose":"the color-group members to pool, one cell per merge group"
          },
          {
@@ -835,7 +939,7 @@
             "type":
             [
                ["char","string"],
-               ["choices=tablecompletions(tbl, 'selectby', cgroupvar)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)"]
             ],
             "default":"'none'",
             "purpose":"a partial order of the color-group members"
@@ -846,7 +950,7 @@
             "type":
             [
                ["char","string"],
-               ["choices=tablecompletions(tbl, 'selectby', sgroupvar)"]
+               ["choices=groupstats.internal.tablecompletions(tbl, 'selectby', sgroupvar)"]
             ],
             "default":"'none'",
             "purpose":"a partial order of the symbol-group members"
@@ -883,8 +987,7 @@
             "kind":"namevalue",
             "type":
             [
-               ["char", "string", "cellstr"],
-               ["notempty"]
+               ["char", "string", "cellstr"]
             ],
             "purpose":"the legend string"
          },
