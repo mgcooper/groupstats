@@ -39,4 +39,8 @@ Run these from the repository root in MATLAB:
 `release/GroupStatsToolbox.mltbx` from the Package Toolbox task in the MATLAB
 Project, with the version read from `toolbox/version.txt`. The docs build
 and the packaging need R2025a or later; the toolbox itself runs from
-R2021a. `release/` is not part of the repository.
+R2021a. `release/` is not part of the repository, and neither are the
+built pages under `toolbox/docs/html` (only `helptoc.xml` there is a
+source): `buildtool docs` writes them, and `release` runs it first. A
+developer who rebuilds the docs needs R2025a or later and m2html (see
+the README); a user of the packaged toolbox needs neither.

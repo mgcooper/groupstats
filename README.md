@@ -100,7 +100,9 @@ buildtool release        % check, test, docs, then package release/GroupStatsToo
 `buildtool dependencies` resolves dependencies from a local [`matfunclib`](https://github.com/mgcooper/matfunclib)
 checkout using the `MATLAB_FUNCTION_PATH` environment variable.
 `buildtool docs` uses m2html from the `GROUPSTATS_M2HTML` environment variable,
-or from the path. To find missing dependencies, try:
+or from the path, and needs R2025a or later. The pages it writes are not in the
+repository; `buildtool release` builds them before it packages, and the
+packaged toolbox carries them. To find missing dependencies, try:
 
 ```matlab
 groupstats.internal.checkdependencies()
