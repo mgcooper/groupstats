@@ -1,62 +1,75 @@
 # Group Stats Toolbox
 
 `groupstats` is a MATLAB&reg; toolbox for grouped statistics on tables.
+Thanks for checking it out.
 
-## Getting Started
+If you're just getting started, here's what
+we recommend:
 
-Thanks for checking it out. If you're just getting started, here's what we recommend:
+- First, open the live script `toolbox/gettingStarted.m` for instructions
+  on installing the toolbox, or see [Installation](#installation).
+- Next, work through the examples, beginning with
+  `toolbox/examples/usingGroupStats.m`.
+- Use `groupstats.help()` to open the toolbox pages in the Help browser, or
+  pass a function name to see it's help page:
+  `groupstats.help("groupsummary")`. The help pages are under Supplemental
+  Software in the Help browser once the package is installed.
 
-* First, open the live script `gettingStarted.mlx` for instructions on installing the toolbox.
-* Next, work through the tutorials, beginning with `toolbox/examples/usingGroupStats.mlx`.
-* Then run the demos in `toolbox/examples/`. The chart demos open one figure
-  per option, so the effect of each option is visible side by side:
+## Why Group Stats?
 
-  ```matlab
-  addpath('toolbox'); addpath('toolbox/examples')
+Data often falls naturally into groups: measurements labeled by site, scenario,
+month, or treatment. MATLAB provides built-in tools to summarize and chart
+grouped data. GroupStats provides a consistent API around those tools, allowing
+you to quickly summarize and plot tabular data by group in fewer lines of code.
+Every function takes a table and the names of its grouping variables, and every
+function lives in the `+groupstats` namespace.
 
-  demo_barchartcats     % grouped bar charts, one figure per option
-  demo_boxchartcats     % grouped box charts
-  demo_scatter          % grouped scatter charts
-  demo_histogram        % grouped categorical histograms
+## Toolbox features
 
-  demo_all              % every demo, figures left open
-  demo_all("-close")    % every demo, closing between each
-  ```
+Grouped statistics for MATLAB tables:
 
-  The remaining demos print tables: `demo_groupmap`, `demo_groupbayes`,
-  `demo_bayes`, and `demo_pairwise_bayes`.
+- Group-wise summary statistics (`groupstats.groupsummary`)
+- Group-wise frequencies and percentages, including group sets
+  (`groupstats.grouppercent`)
+- Group-wise conditional (Bayesian) probabilities (`groupstats.groupbayes`)
+- Group comparison by rank-sum, sign-rank, or permutation test, with an
+  optional bootstrapped median difference (`groupstats.groupcompare`), and
+  the grouped samples it reads (`groupstats.groupsamples`)
+- Row selection by group membership (`groupstats.groupselect`)
+- Apply a function to each group in a table and recombine the results
+  (`groupstats.groupmap`)
 
-To get more help:
+Charts for categorical (grouped) table data:
 
-* `groupstats.help()`
+- Bar and box charts grouped along the x-axis and colored within groups
+  (`groupstats.barchartcats`, `groupstats.boxchartcats`)
+- Grouped scatter charts and histograms (`groupstats.scatter`,
+  `groupstats.histogram`)
 
-To contribute:
+## Requirements
 
-* Open an issue: https://github.com/mgcooper/groupstats/issues
-
-To run the test suite:
-
-* Tests are located in `tests/`
-* From a matlab command window, type `runtests('tests')` and press enter.
-
-* To build the toolbox installation file, run `buildtool release`. It is
-  written to `release/`, which is not part of the repository.
+- MATLAB R2021a or later. The code uses `arguments` blocks (R2019b),
+  `props.?Class` property validation (R2021a), and `name = value` syntax
+  (R2021a). The test suite passes on R2024b and R2025b, the same releases
+  the toolbox is developed on. Older releases are untested.
+- `groupstats.groupcompare` needs the Statistics and Machine Learning
+  Toolbox for `ranksum`, `signrank`, `tinv`, and `quantile`. Its
+  `Test="permutation"` option also needs the Image Processing
+  Toolbox.
+- `groupstats.scatter` needs the Statistics and Machine Learning Toolbox
+  for `gscatter`. The rest of the toolbox requires only base MATLAB.
 
 ## Installation
 
-Choose one:
+Use any of these methods to install the toolbox:
 
-* Add the `toolbox/` folder to the path:
+- Add the `toolbox/` folder to the path:
 
   ```matlab
   addpath(fullfile('/path/to/groupstats', 'toolbox'))
   ```
 
-* Or run `setupfile.m` from the repository root, which adds every folder and
-  sets the project environment variables.
-
-* Or build and install the toolbox package. `release/` is not in the
-  repository, so build it first:
+- [Build and install](#building) the toolbox package. From the repository root:
 
   ```matlab
   buildtool release
@@ -64,75 +77,47 @@ Choose one:
 
   Then double-click `release/GroupStatsToolbox.mltbx`.
 
-Call the functions by their namespace, such as `groupstats.groupsummary`.
+- Run `setupfile.m` from the repository root. It adds every folder to the path
+  and sets the project environment variables. It's a developer convenience,
+  most users won't need it.
 
-## Requirements
+## Building
 
-* MATLAB. The test suite passes on R2024b and R2025b, which are the releases
-  the toolbox is developed against. Older releases are untested. The shipped
-  code uses `arguments` blocks (R2019b), `props.?Class` property validation
-  (R2021a), and name-value syntax in the form `name = value` (R2021a).
-  R2021a is therefore the earliest release that can run it.
-* Building the toolbox needs more than running it does: `buildtool` (R2022b)
-  and `codeIssues` (R2023a). Packaging a release needs R2025a, which added
-  the Package Toolbox task `buildtool release` reads from the MATLAB
-  Project. Running the toolbox does not need R2025a.
-* `groupstats.groupdifference` needs the Statistics and Machine Learning
-  Toolbox, for `signrank` and `ranksum`. `groupstats.scatter` needs it too,
-  for `gscatter`. The rest of the toolbox needs no MathWorks toolbox beyond
-  MATLAB.
-* `toolbox/+groupstats/permutest/` is vendored third-party code, kept for a
-  permutation test. No function in this toolbox calls it yet.
+The build tasks are in `buildfile.m`, run it from the repository root.
+Building requirements: `buildtool` (R2022b), `codeIssues` (R2023a), and
+R2025a for `docs` and `release`. The docs build exports the plain-text
+live scripts, and the release reads the Package Toolbox task.
 
-Some functions call helpers from the author's other repositories, which must
-be on the path to use those functions:
+```matlab
+buildtool check          % run codeIssues on the code and the tests
+buildtool test           % run the test suite in tests/
+buildtool contents       % regenerate every Contents.m file
+buildtool dependencies   % refresh dependencies from a local checkout (developer only; see below)
+buildtool docs           % publish the Help browser pages into toolbox/docs/html
+buildtool release        % check, test, docs, then package release/GroupStatsToolbox.mltbx
+```
 
-All of them live in `matfunclib`:
-
-* `stacktables`, `dealout`, `mcallername`, `tablecompletions` (tab completion
-  reads it), `bootdiff` (`groupstats.groupdifference` calls it)
-* `defaultcolors` and `distinguishable_colors`, in `matfunclib/libplot`
-
-To list the ones that are missing:
+`buildtool dependencies` resolves dependencies from a local [`matfunclib`](https://github.com/mgcooper/matfunclib)
+checkout using the `MATLAB_FUNCTION_PATH` environment variable.
+`buildtool docs` uses m2html from the `GROUPSTATS_M2HTML` environment variable,
+or from the path. To find missing dependencies, try:
 
 ```matlab
 groupstats.internal.checkdependencies()
 ```
 
-## Toolbox Features
+To run the tests without `buildtool`:
 
-Grouped statistics for MATLAB tables:
-
-* Group-wise summary statistics (`groupstats.groupsummary`)
-* Group-wise frequencies and percentages, including groupsets (`groupstats.grouppercent`)
-* Group-wise conditional (Bayesian) probabilities (`groupstats.groupbayes`)
-* Group difference estimation by rank test and bootstrapped median difference (`groupstats.groupdifference`)
-* Row selection by group membership (`groupstats.groupselect`)
-* Apply a function to each group in a table and recombine the results (`groupstats.groupmap`)
-
-Charts for categorical (grouped) table data:
-
-* Bar and box charts grouped along the x-axis and colored within groups (`groupstats.barchartcats`, `groupstats.boxchartcats`)
-* Grouped scatter charts and histograms (`groupstats.scatter`, `groupstats.histogram`)
-
-Every option that takes a fixed set of values reads that set from
-`groupstats.namelists`, so the validators and the tab completions cannot
-disagree.
+```matlab
+addpath('toolbox'); results = runtests('tests'); assertSuccess(results)
+```
 
 ## Contributing
 
-Open an issue at https://github.com/mgcooper/groupstats/issues before sending a
-change, so the work can be discussed first.
-
-Before you send a change:
-
-* Run the tests: `runtests('tests')`, or `buildtool test`.
-* Run the static analysis: `buildtool check`. The bar is zero issues.
-* Regenerate the function listings if you added, renamed, or removed a
-  function: `buildtool contents`.
-
-The code style is in `STYLE.md` and `STYLE.local.md`.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Open an issue at
+<https://github.com/mgcooper/groupstats/issues> before sending a change.
+The changes in each release are described in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-The license is available in the license.txt file in this GitHub repository.
+See `license.txt` in this repository.
