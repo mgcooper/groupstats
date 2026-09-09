@@ -9,6 +9,12 @@ classdef test_barchartcats < matlab.unittest.TestCase
    %  3. SortBy accepted "order", which nothing implemented.
    %  4. ShadeGroups, PlotError, and CGroupOrder were declared and never
    %     read. Each is implemented, and covered below.
+   %  5. ShadeGroups defaulted on even without cgroupvar, where the
+   %     shading has nothing to tell apart. It now defaults on only when
+   %     cgroupvar is given. Separately, shadebarchartgroups read
+   %     H.XEndPoints in data order rather than left-to-right display
+   %     order, so SortBy or XGroupOrder shaded the wrong ticks with the
+   %     wrong width; it now sorts by position first.
    %
    % Every case plots into an invisible figure, so the suite runs headless.
    %
@@ -49,6 +55,96 @@ classdef test_barchartcats < matlab.unittest.TestCase
 
          returned = findobj(gca, 'Type', 'patch');
          testCase.verifyEmpty(returned);
+      end
+
+      function testShadeGroupsDefaultsOffWithoutCGroupVar(testCase)
+         % The shading tells one x-tick group of colored bars from the
+         % next, so it is pointless with one bar per tick. Without
+         % cgroupvar, ShadeGroups must default off.
+
+         groupstats.barchartcats(testCase.Tbl, "Value", "Grp");
+
+         returned = findobj(gca, 'Type', 'patch');
+         testCase.verifyEmpty(returned);
+      end
+
+      function testShadeGroupsDefaultsOnWithCGroupVar(testCase)
+         % With cgroupvar each x-tick holds several colored bars, so
+         % ShadeGroups must default on.
+
+         groupstats.barchartcats(testCase.Tbl, "Value", "Grp", "Sub");
+
+         returned = findobj(gca, 'Type', 'patch');
+         testCase.verifyNotEmpty(returned);
+      end
+
+      function testShadeGroupsExplicitTrueShadesSingleSeries(testCase)
+         % An explicit ShadeGroups=true is not the auto-default sentinel,
+         % so it must still shade a chart with no color group.
+
+         groupstats.barchartcats(testCase.Tbl, "Value", "Grp", ...
+            ShadeGroups = true);
+
+         returned = findobj(gca, 'Type', 'patch');
+         testCase.verifyNotEmpty(returned);
+      end
+
+      function testShadeGroupsSortDescendAlignsWithDisplayOrder(testCase)
+         % H.XEndPoints lists each x-group in the row order XData held
+         % before reordercats, not in left-to-right display order.
+         % SortBy="descend" changes the display order, so the shaded
+         % regions must be computed from the sorted (display) positions:
+         % one region per alternating tick, each as wide as the tick
+         % spacing.
+
+         [H, ~, ax] = groupstats.barchartcats(testCase.Tbl, "Value", ...
+            "Grp", SortBy = "descend", ShadeGroups = true);
+
+         xends = sort(H.XEndPoints);
+         spacing = mean(diff(xends));
+
+         P = findobj(ax, 'Type', 'patch');
+         testCase.verifyNotEmpty(P);
+
+         returned = P.XData(2, :) - P.XData(1, :);
+         expected = repmat(spacing, 1, numel(returned));
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-9);
+
+         % Every other tick is shaded, starting at the first in display
+         % order, so the patch centers land on the odd-indexed sorted
+         % positions.
+         returned = mean(P.XData(1:2, :), 1);
+         expected = xends(1:2:end);
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-9);
+      end
+
+      function testShadeGroupsSortDescendWithCGroupAlignsWithDisplayOrder( ...
+            testCase)
+         % The same display-order fix must hold with a color group, where
+         % each x-tick's bounds are the leftmost and rightmost bar center
+         % across every series.
+
+         [H, ~, ax] = groupstats.barchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub", SortBy = "descend");
+
+         xends = vertcat(H.XEndPoints);
+         xleft = min(xends, [], 1);
+         xright = max(xends, [], 1);
+         [xleft, order] = sort(xleft);
+         xright = xright(order);
+         centers = (xleft + xright) / 2;
+         spacing = mean(diff(centers));
+
+         P = findobj(ax, 'Type', 'patch');
+         testCase.verifyNotEmpty(P);
+
+         returned = P.XData(2, :) - P.XData(1, :);
+         expected = repmat(spacing, 1, numel(returned));
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-9);
+
+         returned = mean(P.XData(1:2, :), 1);
+         expected = centers(1:2:end);
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-9);
       end
 
       function testPlotErrorDrawsWhiskersForOneSeries(testCase)
@@ -509,6 +605,51 @@ classdef test_barchartcats < matlab.unittest.TestCase
          end
       end
 
+      function testAMemberNamedAllCanBeTheSortMember(testCase)
+         % Empty is the no-selection sentinel, so a member that happens to
+         % be named "all" is a name like any other.
+
+         xg = categorical(["p"; "p"; "q"; "q"]);
+         cg = categorical(["all"; "y"; "all"; "y"]);
+         tbl = table(xg, cg, [1; 10; 5; 2], ...
+            'VariableNames', {'xg', 'cg', 'val'});
+
+         H = groupstats.barchartcats(tbl, "val", "xg", "cg", ...
+            SortBy = "ascend", SortGroupMembers = "all");
+
+         % Over member "all" alone p is 1 and q is 5, so p leads; over
+         % every bar q would lead.
+         returned = string(categories(H(1).XData));
+         expected = ["p"; "q"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSortGroupMembersWithoutCGroupVarErrors(testCase)
+         % The option names color-group members, so it needs cgroupvar.
+
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", SortBy = "ascend", SortGroupMembers = "x"), ...
+            'groupstats:barchartcats:sortGroupMembersWithoutGroupVar');
+      end
+
+      function testUnknownSortGroupMemberErrors(testCase)
+         % A name that matches no member would select no column and sort
+         % nothing, so it is reported.
+
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", "Sub", SortBy = "ascend", ...
+            SortGroupMembers = "nosuchmember"), ...
+            'groupstats:validatemember:notAMember');
+      end
+
+      function testTwoColorGroupVariablesAreRejected(testCase)
+         % cgroupvar names one grouping or none.
+
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", ["Sub", "Set"]), ...
+            'MATLAB:validators:mustBeScalarOrEmpty');
+      end
+
       function testGraphicsPropertiesPassThrough(testCase)
          % A Bar property named in the call reaches the Bar object.
 
@@ -519,6 +660,239 @@ classdef test_barchartcats < matlab.unittest.TestCase
          expected = 0.5;
          testCase.verifyEqual(returned, expected);
       end
+
+      function testMissingCombinationLeavesAnEmptyBar(testCase)
+         % groupsummary returns no row for an (x-group, color-group) pair
+         % with no rows. A reshape of that shorter list failed, or moved
+         % every later value onto another pair's bar. Each value must land
+         % on its own bar and the absent pair must draw no bar.
+
+         xg = categorical(["x1"; "x1"; "x2"]);
+         cg = categorical(["a"; "b"; "a"]);
+         tbl = table(xg, cg, [1; 2; 3], 'VariableNames', {'xg', 'cg', 'y'});
+
+         H = groupstats.barchartcats(tbl, "y", "xg", "cg");
+
+         % Series 1 is "a": x1 = 1, x2 = 3. Series 2 is "b": x1 = 2, x2
+         % has no rows.
+         returned = vertcat(H.YData);
+         expected = [1, 3; 2, NaN];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testMissingCombinationLeavesAnEmptyWhisker(testCase)
+         % The spread lands in the same slots as the height, so the
+         % whisker of an absent pair is missing too.
+
+         xg = categorical(["x1"; "x1"; "x2"; "x2"; "x2"]);
+         cg = categorical(["a"; "a"; "a"; "a"; "b"]);
+         tbl = table(xg, cg, [1; 3; 2; 4; 5], ...
+            'VariableNames', {'xg', 'cg', 'y'});
+
+         [H, ~, ax] = groupstats.barchartcats(tbl, "y", "xg", "cg", ...
+            XGroupMembers = "x2", CGroupMembers = "b", PlotError = true);
+
+         whisker = findobj(ax, 'Type', 'ErrorBar');
+         returned = [H.YData; whisker.YNegativeDelta];
+         expected = [5; 0];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testASummaryTableIsSummarizedAgain(testCase)
+         % A table that groupsummary already summarized has one row per
+         % pair. Naming its summary column as ydatavar summarizes those
+         % rows again, so each bar is the mean of the summary rows in its
+         % group, one row here.
+
+         G = groupsummary(testCase.Tbl, ["Grp", "Sub"], "mean", "Value");
+
+         H = groupstats.barchartcats(G, "mean_Value", "Grp", "Sub");
+
+         expected = groupsummary(G, ["Sub", "Grp"], "mean", "mean_Value");
+         returned = reshape(vertcat(H.YData)', [], 1);
+         testCase.verifyEqual(returned, expected.mean_mean_Value, ...
+            'AbsTol', 1e-12);
+      end
+
+      function testLegendStringFollowsCGroupOrder(testCase)
+         % LegendString(i) names the i-th member in category order, and
+         % CGroupOrder permutes the entries with the series, so an entry
+         % stays on its member.
+
+         cg = categorical(["Zeta"; "Alpha"; "Zeta"; "Alpha"]);
+         xg = categorical(["x1"; "x1"; "x2"; "x2"]);
+         tbl = table(xg, cg, [10; 1; 12; 3], ...
+            'VariableNames', {'xg', 'cg', 'y'});
+
+         [~, L] = groupstats.barchartcats(tbl, "y", "xg", "cg", ...
+            CGroupOrder = "Zeta", LegendString = ["alpha"; "zeta"]);
+
+         returned = string(L.String(:));
+         expected = ["zeta"; "alpha"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testLegendStringIsUnmovedBySortBy(testCase)
+         % SortBy orders the x-groups, not the series, so the legend keeps
+         % the category-order binding.
+
+         [~, L] = groupstats.barchartcats(testCase.Tbl, "Value", "Sub", ...
+            "Grp", SortBy = "descend", LegendString = ["s1"; "s2"; "s3"]);
+
+         returned = string(L.String(:));
+         expected = ["s1"; "s2"; "s3"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testLegendStringNamesThePostMergeMembers(testCase)
+         % After a merge there is one entry per post-merge member, in the
+         % post-merge category order.
+
+         [~, L] = groupstats.barchartcats(testCase.Tbl, "Value", "Sub", ...
+            "Grp", MergeGroupMembers = ["a", "b"], CGroupOrder = "c", ...
+            LegendString = ["merged"; "third"]);
+
+         returned = string(L.String(:));
+         expected = ["third"; "merged"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testBarColorsFollowDefaultcolors(testCase)
+         % The k-th color group takes the k-th defaultcolors row, the
+         % palette boxchartcats and scatter read, with no colormap path.
+
+         defaultcolors = groupstats.internal.privatefunction( ...
+            'defaultcolors');
+         palette = defaultcolors();
+
+         H = groupstats.barchartcats(testCase.Tbl, "Value", "Grp", "Sub");
+
+         returned = vertcat(H.FaceColor);
+         expected = palette(1:numel(H), :);
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+
+         returned = vertcat(H.EdgeColor);
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
+      function testBarColorsWrapPastThePalette(testCase)
+         % More series than palette rows start over from the first row.
+
+         defaultcolors = groupstats.internal.privatefunction( ...
+            'defaultcolors');
+         palette = defaultcolors();
+         ngroups = size(palette, 1) + 1;
+
+         cg = categorical(string(1:ngroups)', string(1:ngroups));
+         xg = categorical(repmat("x", ngroups, 1));
+         tbl = table(xg, cg, (1:ngroups)', ...
+            'VariableNames', {'xg', 'cg', 'y'});
+
+         H = groupstats.barchartcats(tbl, "y", "xg", "cg");
+
+         returned = H(end).FaceColor;
+         expected = palette(1, :);
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
+      function testParentDrawsEverythingIntoTheNamedAxes(testCase)
+         % The bars, the whiskers, the shading, the legend, and the axis
+         % formatting go into Parent, and the current axes stays empty and
+         % unheld. This chart has no cgroupvar, so ShadeGroups now
+         % defaults off; pass it explicitly to keep exercising the
+         % shading's Parent routing.
+
+         target = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(target, 'figure'));
+         other = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(other, 'figure'));
+
+         [H, L, ax] = groupstats.barchartcats(testCase.Tbl, "Value", ...
+            "Grp", Parent = target, PlotError = true, ShadeGroups = true);
+
+         returned = {ax; H.Parent; L.Axes; ...
+            findobj(target, 'Type', 'ErrorBar').Parent; ...
+            findobj(target, 'Type', 'Patch').Parent};
+         expected = repmat({target}, 5, 1);
+         testCase.verifyEqual(returned, expected);
+
+         returned = [string(target.YGrid); string(target.Box)];
+         expected = ["on"; "on"];
+         testCase.verifyEqual(returned, expected);
+
+         returned = [numel(other.Children); ishold(other); ...
+            isequal(gca, other)];
+         expected = [0; false; true];
+         testCase.verifyEqual(returned, expected);
+      end
+
+
+      function testMissingCombinationDoesNotBreakTheSort(testCase)
+         % The sort statistic reads the bars that exist, so an absent pair
+         % does not turn its x-group's mean into NaN. Here x2 has one bar
+         % of 3 and x1 has bars of 1 and 2, so x1 leads ascending.
+
+         xg = categorical(["x1"; "x1"; "x2"]);
+         cg = categorical(["a"; "b"; "a"]);
+         tbl = table(xg, cg, [1; 2; 3], 'VariableNames', {'xg', 'cg', 'y'});
+
+         H = groupstats.barchartcats(tbl, "y", "xg", "cg", ...
+            SortBy = "descend");
+
+         returned = string(categories(H(1).XData));
+         expected = ["x2"; "x1"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testXGroupWithNoSelectedBarSortsLast(testCase)
+         % An x-group with none of the SortGroupMembers bars has no
+         % statistic and sorts last in either direction.
+
+         xg = categorical(["x1"; "x1"; "x2"]);
+         cg = categorical(["a"; "b"; "a"]);
+         tbl = table(xg, cg, [1; 2; 3], 'VariableNames', {'xg', 'cg', 'y'});
+
+         H = groupstats.barchartcats(tbl, "y", "xg", "cg", ...
+            SortBy = "descend", SortGroupMembers = "b");
+
+         returned = string(categories(H(1).XData));
+         expected = ["x1"; "x2"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+
+      function testMembermeanMergeSkipsAnAbsentMember(testCase)
+         % A merged member with no rows in an x-group holds NaN there. The
+         % merged bar is the mean of the members that exist, and NaN only
+         % where none do.
+
+         xg = categorical(["x1"; "x1"; "x2"; "x1"; "x2"]);
+         cg = categorical(["a"; "b"; "a"; "c"; "c"]);
+         tbl = table(xg, cg, [1; 3; 5; 7; 9], ...
+            'VariableNames', {'xg', 'cg', 'y'});
+
+         H = groupstats.barchartcats(tbl, "y", "xg", "cg", ...
+            MergeGroupMembers = ["a", "b"], MergeMethod = "membermean");
+
+         % x1: a = 1 and b = 3 average 2. x2: a = 5 alone. c is 7 and 9.
+         returned = vertcat(H.YData);
+         expected = [2, 5; 7, 9];
+         testCase.verifyEqual(returned, expected);
+      end
+
+
+      function testCallerCDataColorsTheBars(testCase)
+         % CData shows only under flat coloring, so a caller's CData turns
+         % the palette default into "flat" and keeps its own colors.
+
+         H = groupstats.barchartcats(testCase.Tbl, "Value", "Grp", ...
+            CData = [1 0 0; 0 1 0; 0 0 1]);
+
+         returned = {string(H.FaceColor); string(H.EdgeColor); H.CData};
+         expected = {"flat"; "flat"; [1 0 0; 0 1 0; 0 0 1]};
+         testCase.verifyEqual(returned, expected);
+      end
+
    end
 end
 

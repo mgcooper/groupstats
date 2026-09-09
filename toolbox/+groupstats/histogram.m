@@ -1,11 +1,10 @@
-function varargout = histogram(tbl, datavar, opts, props)
+function varargout = histogram(tbl, datavar, groupvar, opts, props)
    %HISTOGRAM Histogram grouped data.
    %
-   % h = groupstats.histogram(data)
    % h = groupstats.histogram(data, categories)
    % h = groupstats.histogram(tbl, datavar)
    % h = groupstats.histogram(tbl, categoricalvar)
-   % h = groupstats.histogram(_, GroupVar = groupvar)
+   % h = groupstats.histogram(tbl, datavar, groupvar)
    % h = groupstats.histogram(_, GroupMembers = members)
    % h = groupstats.histogram(_, RowSelectVar = varname)
    % h = groupstats.histogram(_, RowSelectMembers = members)
@@ -33,10 +32,12 @@ function varargout = histogram(tbl, datavar, opts, props)
    % one histogram. In this mode, GROUPSTATS.HISTOGRAM behaves exactly like
    % built-in HISTOGRAM(ydata) where ydata = tbl.(datavar).
    %
-   % h = groupstats.histogram(tbl, datavar, GroupVar = groupvar) groups the
-   % data in the vector tbl.(datavar) according to the unique values of
+   % h = groupstats.histogram(tbl, datavar, groupvar) groups the data in
+   % the vector tbl.(datavar) according to the unique values of
    % tbl.(groupvar) and plots each group of data as separate (possibly
    % overlapping) histograms. One Histogram object comes back per group.
+   % groupvar is the optional third positional argument, the position the
+   % first grouping variable takes in barchartcats and boxchartcats.
    %
    % h = groupstats.histogram(_, GroupMembers = members) plots one histogram
    % for each group member specified by MEMBERS. Use this option to
@@ -65,10 +66,10 @@ function varargout = histogram(tbl, datavar, opts, props)
    % datavar: The name of the variable in the table tbl that contains the data
    % values for the histogram.
    %
-   % GroupVar: The name of the categorical variable in the table tbl used to
-   % define groups.
+   % groupvar: The name of the categorical variable in the table tbl used to
+   % define groups. Optional; omit it for one histogram of every row.
    %
-   % GroupMembers: The categories of GroupVar to keep.
+   % GroupMembers: The categories of groupvar to keep.
    %
    % Parent: The axes to plot into. The default is gca.
    %
@@ -80,14 +81,16 @@ function varargout = histogram(tbl, datavar, opts, props)
    % by the group mean of the data variable, or by the category counts in
    % categorical mode. "none" keeps the order the groups already have.
    %
-   % Legend: "on" or "off". The default is "on", except with no GroupVar and
+   % Legend: "on" or "off". The default is "on", except with no groupvar and
    % no LegendString, where the built-in shows no legend either. That
    % unset-by-default state is deliberate: an ungrouped histogram has one
    % series and needs no legend.
    %
-   % data, categories: the call shape the built-in takes. HISTOGRAM(data) and
-   % HISTOGRAM(data, categories) work here, so a caller does not have to
-   % build a table for the simple case.
+   % data, categories: the call shape the built-in takes for categorical
+   % data. HISTOGRAM(data, categories) works here, so a caller does not have
+   % to build a table to keep a few categories. The one-argument
+   % HISTOGRAM(data) is the built-in's own; this function needs its second
+   % argument. See the note on datavar below.
    %
    % Output Arguments
    %
@@ -97,17 +100,32 @@ function varargout = histogram(tbl, datavar, opts, props)
    %
    % Example
    %
-   % Plot a histogram of the Value variable, grouped by CategoryX, for three
-   % of its categories.
+   % Plot a histogram of the peak variable, grouped by scenario, for two of
+   % its members.
    %
-   % tbl = readtable('data.csv');
-   % h = groupstats.histogram(tbl, "Value", GroupVar = "CategoryX", ...
-   %    GroupMembers = ["Cat1", "Cat2", "Cat3"]);
+   %  data = groupstats.test.generateTestData('info');
+   %  h = groupstats.histogram(data.Info, "peak", "scenario", ...
+   %     GroupMembers = data.scenarios(1:2));
    %
    % Plot one bar per category of a categorical variable. The variable stays
    % categorical, so the bars are discrete rather than binned.
    %
-   % h = groupstats.histogram(tbl, "CategoryX");
+   %  h = groupstats.histogram(data.Info, "month");
+   %
+   % Errors
+   %
+   % groupstats:histogram:membersWithoutGroupVar - GroupMembers was given
+   % without groupvar, outside categorical mode.
+   % groupstats:histogram:mergeWithoutGroupVar - MergeGroupMembers was given
+   % without groupvar, outside categorical mode.
+   % groupstats:histogram:groupVarWithArrayInput - groupvar was given with
+   % the built-in's array call shape, HISTOGRAM(data, categories), which has
+   % no table for groupvar to name.
+   % groupstats:histogram:numericBinsNotSupported - the built-in's array call
+   % shape was given a numeric second argument, which the built-in reads as
+   % bin counts or bin edges, not categories.
+   % groupstats:histogram:categoriesGivenTwice - the built-in's array call
+   % shape was given categories both positionally and as GroupMembers.
    %
    % Matt Cooper, https://github.com/mgcooper
    %
@@ -116,8 +134,16 @@ function varargout = histogram(tbl, datavar, opts, props)
 
    arguments
       tbl
-      datavar = string.empty()
-      opts.GroupVar string = string.empty()
+      % datavar is required, not optional. MATLAB reads an optional
+      % positional text argument as a possible name-value name, so an
+      % optional datavar followed by groupvar would turn
+      % histogram(tbl, "Data", "g") into DataTipTemplate = "g" with no
+      % error, and "t" or "v" into an ambiguous-name error. A required
+      % argument is never read as a name.
+      datavar
+      % One grouping variable or none. A vector would name two groupings,
+      % which this chart has no second axis for.
+      groupvar string {mustBeScalarOrEmpty} = string.empty()
       opts.GroupMembers string = string.empty()
       opts.RowSelectVar string = string.empty()
       opts.RowSelectMembers string = string.empty()
@@ -143,11 +169,11 @@ function varargout = histogram(tbl, datavar, opts, props)
    import groupstats.prepareTableGroups
 
    % Accept the built-in's call shape as well as a table and a variable
-   % name: histogram(Info.month) and histogram(Info.month, members). Wrap the
-   % array in a one-variable table, and read the second argument as the
-   % categories to keep, which is what the built-in does with it.
+   % name: histogram(Info.month, members). Wrap the array in a one-variable
+   % table, and read the second argument as the categories to keep, which
+   % is what the built-in does with it.
    if ~istabular(tbl)
-      [tbl, datavar, opts] = wrapArrayInput(tbl, datavar, opts);
+      [tbl, datavar, opts] = wrapArrayInput(tbl, datavar, groupvar, opts);
    end
 
    mustBeNonempty(datavar)
@@ -156,41 +182,41 @@ function varargout = histogram(tbl, datavar, opts, props)
    % H, L, and the axes are the outputs.
    nargoutchk(0, 3)
 
-   % A categorical data variable with no GroupVar is the categorical
+   % A categorical data variable with no groupvar is the categorical
    % histogram, where GroupMembers names the categories to keep. Anywhere
    % else the pair needs both, and prepareTableGroups would report it as
    % XGroupVar and XGroupMembers, which name nothing documented here.
-   if ~iscategorical(tbl.(datavar)) && isempty(opts.GroupVar) ...
+   if ~iscategorical(tbl.(datavar)) && isempty(groupvar) ...
          && ~isempty(opts.GroupMembers)
       error('groupstats:histogram:membersWithoutGroupVar', ...
-         ['GroupMembers was given without GroupVar. Name the group ' ...
+         ['GroupMembers was given without groupvar. Name the group ' ...
          'variable too, or leave both out.'])
    end
 
    % Merging pools members of the group variable, so without one there is
    % nothing to pool, and the request would have no effect. The categorical
    % histogram is the exception: its data variable is the group variable.
-   if ~iscategorical(tbl.(datavar)) && isempty(opts.GroupVar) ...
+   if ~iscategorical(tbl.(datavar)) && isempty(groupvar) ...
          && ~isempty(opts.MergeGroupMembers)
       error('groupstats:histogram:mergeWithoutGroupVar', ...
-         ['MergeGroupMembers was given without GroupVar. Name the group ' ...
+         ['MergeGroupMembers was given without groupvar. Name the group ' ...
          'variable whose members are pooled.'])
    end
 
    props = namedargs2cell(props);
 
-   % A categorical data variable with no GroupVar selects categorical mode.
+   % A categorical data variable with no groupvar selects categorical mode.
    makeCategoricalHistogram = iscategorical(tbl.(datavar)) && ...
-      isempty(opts.GroupVar);
+      isempty(groupvar);
 
    if makeCategoricalHistogram
-      % Equivalent to GroupVar=datavar with GroupMembers
-      opts.GroupVar = datavar;
+      % Equivalent to groupvar = datavar with GroupMembers
+      groupvar = datavar;
    end
 
    % Prepare input data.
    tbl = prepareTableGroups(tbl, datavar, ...
-      XGroupVar = opts.GroupVar, ...
+      XGroupVar = groupvar, ...
       XGroupMembers = opts.GroupMembers, ...
       RowSelectVar = opts.RowSelectVar, ...
       RowSelectMembers = opts.RowSelectMembers, ...
@@ -218,9 +244,9 @@ function varargout = histogram(tbl, datavar, opts, props)
       H = histogram(tbl.(datavar), props{:}, 'Parent', opts.Parent);
    else
 
-      % With no GroupVar there is one group holding every row, which is
+      % With no groupvar there is one group holding every row, which is
       % what histogram(x) means. The chart family does the same.
-      if isempty(opts.GroupVar)
+      if isempty(groupvar)
          XData = true(height(tbl), 1);
 
          % One group needs no legend, and the built-in shows none. A caller
@@ -229,7 +255,7 @@ function varargout = histogram(tbl, datavar, opts, props)
             opts.Legend = "off";
          end
       else
-         XData = tbl.(opts.GroupVar);
+         XData = tbl.(groupvar);
       end
 
       % Assign the data to plot
@@ -244,7 +270,7 @@ function varargout = histogram(tbl, datavar, opts, props)
       % Order the groups after any merge, so GroupOrder and SortBy read
       % post-merge names, and before the legend default below reads the
       % order. SortBy orders the groups by the group mean of the data.
-      % With no GroupVar, XData is logical and there is nothing to order.
+      % With no groupvar, XData is logical and there is nothing to order.
       if iscategorical(XData)
          XData = orderGroups(XData, opts.GroupOrder, opts.SortBy, YData);
       end
@@ -255,7 +281,7 @@ function varargout = histogram(tbl, datavar, opts, props)
       % objects in creation order, so read the entries from the same call and
       % a merged group's label lands on its own bars. A caller who named
       % LegendString keeps it.
-      if ~isempty(opts.GroupVar) && isempty(opts.LegendString)
+      if ~isempty(groupvar) && isempty(opts.LegendString)
          opts.LegendString = string(unique(XData));
       end
 
@@ -411,12 +437,21 @@ end
 % OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 % OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-function [tbl, datavar, opts] = wrapArrayInput(data, categories, opts)
+function [tbl, datavar, opts] = wrapArrayInput(data, categories, ...
+      groupvar, opts)
    %WRAPARRAYINPUT Read the built-in's call shape into this function's shape.
    %
-   % histogram(x) and histogram(x, categories) name no table, so build one.
-   % The second argument is the category list the built-in keeps, which is
-   % GroupMembers here.
+   % histogram(x, categories) names no table, so build one. The second
+   % argument is the category list the built-in keeps, which is
+   % GroupMembers here. An empty list keeps every category.
+
+   % The third positional argument names a table variable, and an array
+   % call has no table. Say so, rather than fail on a missing variable.
+   if ~isempty(groupvar)
+      error('groupstats:histogram:groupVarWithArrayInput', ...
+         ['A grouping variable was given with array data. groupvar names ' ...
+         'a variable of a table, so pass a table as the first argument.'])
+   end
 
    datavar = "Data";
    tbl = table(data(:), 'VariableNames', {char(datavar)});

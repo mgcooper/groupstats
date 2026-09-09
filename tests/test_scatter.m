@@ -298,6 +298,40 @@ classdef test_scatter < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+      function testTwoSizeGroupVariablesAreRejected(testCase)
+         % sgroupvar names one grouping or none.
+
+         testCase.verifyError(@() groupstats.scatter(testCase.Tbl, ...
+            "X", "Value", "Grp", ["Sub", "Set"]), ...
+            'MATLAB:validators:mustBeScalarOrEmpty');
+      end
+
+      function testColorsFollowDefaultcolorsAndWrap(testCase)
+         % Every chart in the family reads defaultcolors, so the k-th color
+         % group takes its k-th row, and a chart with more groups than
+         % rows starts over from the first row.
+
+         defaultcolors = groupstats.internal.privatefunction( ...
+            'defaultcolors');
+         palette = defaultcolors();
+         ngroups = size(palette, 1) + 2;
+
+         g = categorical(repelem(string(1:ngroups)', 2, 1), ...
+            string(1:ngroups));
+         x = (1:2 * ngroups)';
+         tbl = table(x, x, g, 'VariableNames', {'x', 'y', 'g'});
+
+         H = groupstats.scatter(tbl, "x", "y", "g");
+
+         returned = vertcat(H(1:size(palette, 1)).Color);
+         expected = palette;
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+
+         returned = vertcat(H(end - 1:end).Color);
+         expected = palette(1:2, :);
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
       function testSGroupOrderOrdersTheSymbolGroups(testCase)
          % SGroupOrder does the same for the symbol grouping.
 
@@ -312,6 +346,163 @@ classdef test_scatter < matlab.unittest.TestCase
          expected = members(end);
          testCase.verifyEqual(returned, expected);
       end
+
+      function testOrdinalSortVarSortsByRanking(testCase)
+         % A categorical data variable whose categories are names is drawn
+         % by ranking, so an ordinal SortVar sorts the legend by that
+         % ranking instead of keeping the default order.
+
+         level = categorical(["low"; "mid"; "high"; "low"; "high"; "mid"], ...
+            ["low", "mid", "high"], 'Ordinal', true);
+         grp = categorical(["p"; "p"; "q"; "q"; "r"; "r"]);
+         tbl = table((1:6)', level, grp, ...
+            'VariableNames', {'X', 'Level', 'Grp'});
+
+         % Mean rankings: p = 1.5, q = 2, r = 2.5.
+         [~, L] = groupstats.scatter(tbl, "X", "Level", "Grp", ...
+            SortVar = "ydatavar", SortBy = "descend");
+         returned = string(L.String(:));
+         expected = ["r"; "q"; "p"];
+         testCase.verifyEqual(returned, expected);
+
+         [~, L] = groupstats.scatter(tbl, "X", "Level", "Grp", ...
+            SortVar = "ydatavar", SortBy = "ascend");
+         returned = string(L.String(:));
+         expected = ["p"; "q"; "r"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testRankedDataLabelsTheTicksWithTheCategories(testCase)
+         % The ranked axis shows the categories at the ranks.
+
+         level = categorical(["low"; "mid"; "high"], ...
+            ["low", "mid", "high"], 'Ordinal', true);
+         tbl = table((1:3)', level, categorical(["p"; "p"; "q"]), ...
+            'VariableNames', {'X', 'Level', 'Grp'});
+
+         [H, ~, ax] = groupstats.scatter(tbl, "X", "Level", "Grp");
+
+         returned = {ax.YTick(:); string(ax.YTickLabel(:)); H(1).YData(:)};
+         expected = {[1; 2; 3]; ["low"; "mid"; "high"]; [1; 2]};
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testLegendStringFollowsSortBy(testCase)
+         % LegendString(i) names the i-th color member in category order,
+         % and SortBy moves the entries with the groups, so an entry stays
+         % on its member.
+
+         G = groupsummary(testCase.Tbl, "Grp", "mean", "Value");
+         [~, order] = sort(G.mean_Value, "descend");
+         names = "label " + string(G.Grp);
+
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+            SortVar = "ydatavar", SortBy = "descend", LegendString = names);
+
+         returned = string(L.String(:));
+         expected = names(order);
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testLegendStringFollowsCGroupOrder(testCase)
+         % CGroupOrder moves the entries with the groups the same way.
+
+         members = string(categories(testCase.Tbl.Grp));
+         names = "label " + members;
+
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+            CGroupOrder = members(end), LegendString = names);
+
+         returned = string(L.String(:));
+         expected = [names(end); names(1:end - 1)];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testLegendStringCoversTheSymbolGroupsToo(testCase)
+         % With a size grouping the entries are the color members then the
+         % symbol members, and SGroupOrder moves the symbol block.
+
+         cmembers = string(categories(testCase.Tbl.Grp));
+         smembers = string(categories(testCase.Tbl.Sub));
+         names = ["c " + cmembers; "s " + smembers];
+
+         [~, L] = groupstats.scatter(testCase.Tbl, "X", "Value", "Grp", ...
+            "Sub", SGroupOrder = smembers(end), LegendString = names);
+
+         returned = string(L.String(:));
+         expected = ["c " + cmembers; "s " + smembers(end); ...
+            "s " + smembers(1:end - 1)];
+         testCase.verifyEqual(returned, expected);
+      end
+
+
+      function testOrdinalXDataIsRankedToo(testCase)
+         % The x data variable takes the same path: a categorical whose
+         % categories are names is ranked, its ticks are labeled, and
+         % SortVar "xdatavar" sorts the legend by the ranking.
+
+         level = categorical(["low"; "mid"; "high"; "low"; "high"; "mid"], ...
+            ["low", "mid", "high"], 'Ordinal', true);
+         grp = categorical(["p"; "p"; "q"; "q"; "r"; "r"]);
+         tbl = table(level, (1:6)', grp, ...
+            'VariableNames', {'Level', 'Y', 'Grp'});
+
+         % Mean rankings: p = 1.5, q = 2, r = 2.5.
+         [H, L, ax] = groupstats.scatter(tbl, "Level", "Y", "Grp", ...
+            SortVar = "xdatavar", SortBy = "descend");
+
+         returned = {string(L.String(:)); ax.XTick(:); ...
+            string(ax.XTickLabel(:)); H(1).XData(:)};
+         expected = {["r"; "q"; "p"]; [1; 2; 3]; ["low"; "mid"; "high"]; ...
+            [1; 2]};
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testUndefinedCategoryIsMissingNotRankZero(testCase)
+         % An undefined value has category code 0. It must draw no point
+         % and stay out of the legend sort, so it becomes NaN.
+
+         level = categorical(["low"; "high"; "high"; "low"; "low"; ""], ...
+            ["low", "high"], 'Ordinal', true);
+         grp = categorical(["p"; "p"; "q"; "q"; "q"; "q"]);
+         tbl = table((1:6)', level, grp, ...
+            'VariableNames', {'X', 'Level', 'Grp'});
+
+         % With the undefined row as rank 0, q would average 1 and p 1.5.
+         % Without it q averages 4/3 and p 1.5, so p still leads descending
+         % and the undefined row draws nothing.
+         [H, L] = groupstats.scatter(tbl, "X", "Level", "Grp", ...
+            SortVar = "ydatavar", SortBy = "ascend");
+
+         returned = {string(L.String(:)); nnz(isnan(H(2).YData))};
+         expected = {["q"; "p"]; 1};
+         testCase.verifyEqual(returned, expected);
+      end
+
+
+      function testGroupWithNoSortDataSortsLastInBothDirections(testCase)
+         % A group whose sort data is all undefined has no mean, so it
+         % sorts last whichever direction is asked for.
+
+         level = categorical(["low"; "high"; ""; ""], ["low", "high"], ...
+            'Ordinal', true);
+         grp = categorical(["p"; "q"; "r"; "r"]);
+         tbl = table((1:4)', level, grp, ...
+            'VariableNames', {'X', 'Level', 'Grp'});
+
+         [~, L] = groupstats.scatter(tbl, "X", "Level", "Grp", ...
+            SortVar = "ydatavar", SortBy = "descend");
+         returned = string(L.String(:));
+         expected = ["q"; "p"; "r"];
+         testCase.verifyEqual(returned, expected);
+
+         [~, L] = groupstats.scatter(tbl, "X", "Level", "Grp", ...
+            SortVar = "ydatavar", SortBy = "ascend");
+         returned = string(L.String(:));
+         expected = ["p"; "q"; "r"];
+         testCase.verifyEqual(returned, expected);
+      end
+
    end
 end
 

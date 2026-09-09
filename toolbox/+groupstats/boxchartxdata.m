@@ -7,7 +7,8 @@ function [xlocs,xleft,xright] = boxchartxdata(H)
    %  boxcharts per xtick in the figure.
    %
    % Inputs:
-   %  H = BoxChart graphics object (one group per element of H)
+   %  H = BoxChart graphics object (one group per element of H). Every
+   %      element must share one Notch setting.
    %
    % Outputs:
    %  xlocs = array of xtick locations for each boxchart group in H
@@ -24,17 +25,28 @@ function [xlocs,xleft,xright] = boxchartxdata(H)
    % size(xlocs) = M x N (number of boxcharts per xtick BY number of xticks)
    %
    %
-   % See also boxchartcats
+   % Example
+   %
+   % Label every box with its median, placed at the box's x coordinate:
+   %
+   %  data = groupstats.test.generateTestData('info');
+   %  [H, ~, ax] = groupstats.boxchartcats(data.Info, "peak", "month", ...
+   %     "scenario", XGroupMembers = ["Jan", "Feb", "Mar"]);
+   %  xlocs = groupstats.boxchartxdata(H);
+   %  text(ax, xlocs(1, :), [12 12 12], "median", ...
+   %     HorizontalAlignment = "center")
+   %
+   % See also boxchartcats, groupstats.boxchartydata
 
-   % Each element of H is a set of boxcharts for one cgroup. The fifth element
-   % of H.NodeChildren is a "Quadrilateral" that defines the box chart face.
-   % There are 8 nodes per box (need to confirm if this is the case with notch
-   % on and off
-
-   % This might be helpful, but it's notch on that matters
-   % any(arrayfun(@(n) iscategorical(H(n).XData),1:numel(H)))
+   % Each element of H is one color group's boxes. H(m).NodeChildren(5) is
+   % the Quadrilateral primitive that draws the box faces. A notched box
+   % has 8 vertices and a plain one 4. One count serves every element, so
+   % every chart in H must share one Notch setting; boxchartcats sets
+   % Notch once for all of its boxes. A mixed H would read the notched
+   % charts with the wrong stride.
+   % drawnow makes the primitive's vertex data current before it is read,
+   % and the warning it can raise on the way is not the caller's.
    withwarnoff('MATLAB:handle_graphics:exceptions:SceneNode');
-   % withwarnoff('MATLAB:structOnObject')
    drawnow;
 
    % Data dimensions
@@ -46,114 +58,47 @@ function [xlocs,xleft,xright] = boxchartxdata(H)
       numVertsPerBox = 4;
    end
 
-   % Functions to retrieve box vertices, count them, and reshape to per-box vals
+   % Functions to retrieve box vertices and reshape them to per-box columns
    Fverts = @(m) H(m).NodeChildren(5).VertexData(1,:);
-   Fcount = @(m) numel(Fverts(m)) / numVertsPerBox;
    Fshape = @(m) reshape(Fverts(m), numVertsPerBox, []);
 
-   % Count the # of box vertices for all charts
-   N = arrayfun(Fcount,1:M);
-
-   % If every xtick had the same number of boxcharts:
-   % N = numel(H(1).NodeChildren(5).VertexData(1,:))/numVertsPerBox;
-
-   % Part 1 - Get the x-coordinates of the center of each boxchart
-   xlocs = nan(M,max(N));
-   xleft = nan(1,max(N));
-   xright = nan(1,max(N));
+   % Part 1 - Get the x-coordinates of the center of each boxchart. A box's
+   % center is the mean of its two x vertices. On boxchart's categorical
+   % ruler the ticks sit at the integers, and a group's boxes spread less
+   % than half a tick to either side. The rounded center is therefore the
+   % tick the box belongs to, and it indexes the box's column.
+   xverts = cell(M, 1);
+   centers = cell(M, 1);
    for m = 1:M
+      xverts{m} = double(Fshape(m));
+      centers{m} = mean(xverts{m}(1:2, :), 1);
+   end
 
-      xverts = double(Fshape(m));
-      %xlocs(m,1:N(m)) = mean(xverts(1:2,:));
+   % One column per tick up to the highest tick any group reaches. The box
+   % count of one group can be smaller than that, so sizing by the count
+   % would let a later assignment grow the matrix with zeros. A tick with
+   % no box of a group keeps NaN in that column.
+   ticks = round([centers{:}]);
+   xlocs = nan(M, max([ticks, 0]));
+   xleft = nan(1, max([ticks, 0]));
+   xright = nan(1, max([ticks, 0]));
+   for m = 1:M
+      xlocs(m, round(centers{m})) = centers{m};
 
-      % above works, but instead of 1:N(m), get the actual indices
-      % I think this only works b/c the x-axis data is already numeric in this
-      xlocs(m,round(mean(xverts(1:2,:)))) = mean(xverts(1:2,:));
-
-      % NOTE: this actually almost solved the case where boxchartcats is called
-      % repeatedly, say its called once with no cgroupdata, then the xaxis is
-      % centered on 1, and the xgroups are left and right of 1. Then it's called
-      % again identically, now for some reason the xaxis is between 0 and 1, and
-      % the xticks are (for a four-member xgroup) 0.2, 0.4, 0.6, and 0.8. So, I
-      % think I may have a 'hold on' somewhere that i need to turn off so repeeated
-      % calls overwrite it, ratehr than deal with it here.
-      % This might be needed, where xmean=round(mean(xverts(1:2,:)))
-      % Find which x-coordinates are close to the rounded mean. I think this would
-      % deal with the case where the boxcharts extend over the halfway mark b/w
-      % xticks, but I don't think that's possible
-      % xmean = round(mean(xverts(1:2,:)));
-      % xidx = abs(xverts(1,:) - xmean) < 0.5;
-      % xlocs(m,xidx) = mean(xverts(1:2,:));
-      % Then xidx would be used like: xlocs(m,xidx) = mean(xverts(1:2,:))
-
-      % Part 2 - Get the min/max bounds of each boxchart group
+      % Part 2 - Get the min/max bounds of each boxchart group: the left
+      % edge of the first group's boxes and the right edge of the last
+      % group's, placed by the same tick index.
       switch m
          case 1
-            xleft(round(mean(xverts(1:2,:)))) = xverts(1,:);
-            %xleft = xverts(1,:);
+            xleft(round(centers{m})) = xverts{m}(1, :);
          case M
-            xright(round(mean(xverts(1:2,:)))) = xverts(2,:);
-            %xright = xverts(2,:);
+            xright(round(centers{m})) = xverts{m}(2, :);
       end
    end
 
+   % With one color group the first group is also the last, and the switch
+   % above took only the first case.
    if M == 1
-      xright(round(mean(xverts(1:2,:)))) = xverts(2,:);
-      %xright = xverts(2,:);
+      xright(round(centers{M})) = xverts{M}(2, :);
    end
 end
-%%
-%
-% Moved this into the loop for convencience
-%
-% Part 2 - Get the min/max bounds of each boxchart group (the x-coordinate of
-% the left side of the leftmost box and the x-coordinate of the right side of
-% the rightmost box, for each set of boxcharts, one set per xtick). This is
-% useful for adding shaded regions to distinguish groups.
-
-% for m = 1, xVertexData(1,:) is the xlocs for the first boxchart in each xgroup
-% for m = M, xVertexData(2,:) is the xlocs for the last boxchart in each xgroup
-
-% xverts1 = double(reshape(H(1).NodeChildren(5).VertexData(1,:),8,[]));
-% xvertsM = double(reshape(H(M).NodeChildren(5).VertexData(1,:),8,[]));
-% xleft = xverts1(1,:);
-% xright = xvertsM(2,:);
-
-
-% Part 1 without initialization (work backwards):
-% for n = numel(H):-1:1
-%    xVertexData = double(reshape(H(n).NodeChildren(5).VertexData(1,:),8,[]));
-%    xlocs(n,:) = mean(xVertexData(1:2,:));
-% end
-
-% Better to leave in matrix form for plotting against grouped data
-% xlocs = xlocs(:);
-
-
-%% For reference, using fun
-
-% % This gets the xverts
-% xverts = arrayfun( @(m) ...
-%    double(reshape(H(m).NodeChildren(5).VertexData(1,:),8,[])), ...
-%    1:M,'uni',0);
-%
-% % This gets the xlocs
-% xlocs = cellfun(@(x) mean(x(1:2,:)), xverts ,'uni',0);
-%
-% % This gets the indices
-% xnodes = cellfun(@(x) unique(round(x)), xlocs, 'uni', 0);
-%
-% % This is a blank 1:9 vector that could be used to fill in
-% V = (1:max(N))';
-%
-% % This gets the indices without computing 'xnodes' above
-% I = cellfun(@(x) ismember((1:max(N))',x'), cellfun(@(x) ...
-%    unique(round(x)), xlocs,'uni',0),'uni',0);
-% I = horzcat(I{:});
-%
-% % This gets the indices in one 'line'
-% I = cellfun(@(x) ismember((1:max(N))',x'), ...
-%    cellfun(@(x) unique(round(mean(x(1:2,:)))), arrayfun( @(m) ...
-%    double(reshape(H(m).NodeChildren(5).VertexData(1,:),8,[])), ...
-%    1:M,'uni',0),'uni',0),'uni',0);
-% I = horzcat(I{:});
