@@ -10,7 +10,7 @@ function names = testtail()
    %    right - the first median is greater.
    %    left  - the first median is less.
    %
-   % See also: groupstats.groupdifference, signrank, ranksum
+   % See also: groupstats.groupcompare, signrank, ranksum
 
    names = [
       "both"

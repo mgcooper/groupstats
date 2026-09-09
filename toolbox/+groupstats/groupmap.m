@@ -6,7 +6,11 @@ function out = groupmap(tbl, groupvar, fcn, varargin)
    %
    %   Inputs:
    %       TBL      - Input table
-   %       GROUPVAR - Name of the grouping variable in TBL (string or char)
+   %       GROUPVAR - Name of the grouping variable in TBL (string or char).
+   %                  One variable. A vector of names is a possible
+   %                  extension: it would add one leading categorical
+   %                  column per variable to OUT, changing its leading
+   %                  columns, so it is not accepted today.
    %       FCN      - Function handle to apply to each group. Should accept a
    %                  table as its first argument and return a table or array.
    %       ...      - Additional arguments passed to FCN
@@ -40,17 +44,25 @@ function out = groupmap(tbl, groupvar, fcn, varargin)
    %       variable whose name matches GROUPVAR. Inserting the group column
    %       would drop that variable's data.
    %
-   %   Example:
-   %       % Group by 'Category' and calculate mean of 'Value' for each group
-   %       tbl = table({'A';'B';'A';'C'}, [1;2;3;4], 'VariableNames', {'Category', 'Value'});
+   %   Example
+   %
+   %       % Group by 'Category' and take the mean of 'Value' in each group
+   %       tbl = table({'A';'B';'A';'C'}, [1;2;3;4], ...
+   %          'VariableNames', {'Category', 'Value'});
    %       fcn = @(t) mean(t.Value);
-   %       result = groupmap(tbl, 'Category', fcn);
+   %       result = groupstats.groupmap(tbl, 'Category', fcn);
    %
    %   See also: GROUPBY, SPLITAPPLY, STACKTABLES
 
-   % if contains(func2str(fcn), 'tbl')
-   %    fcn = str2func(strrep(func2str(fcn), 'tbl', 'tt'));
-   % end
+   arguments
+      tbl tabular
+      groupvar (1, 1) string {mustBeNonempty}
+      fcn (1, 1) function_handle
+   end
+   arguments (Repeating)
+      % Forwarded to FCN after the group subset.
+      varargin
+   end
 
    members = unique(tbl.(groupvar));
    out = cell(numel(members), 1);

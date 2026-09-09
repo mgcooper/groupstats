@@ -14,17 +14,12 @@ function [tf, vi] = isvariable(varname, tbl)
    %
    % See also: ismember, table
 
-   % Reconciled 2026 across the icemodel and groupstats vendored copies:
-   % groupstats' ismember implementation (correct multi-name semantics) with
-   % the tabular class spec so timetables keep working. icemodel keeps its
-   % own validateattributes variant for codegen, which is an icemodel-only
-   % requirement.
+   % ismember gives one logical per name, so a name list works, and the
+   % tabular class keeps timetables working.
    arguments
       varname (:,1) string
       tbl (:,:) tabular
    end
    [tf, loc] = ismember(varname, string(tbl.Properties.VariableNames));
    vi = loc(tf);
-
-   % tf = any(varname == string(tbl.Properties.VariableNames))
 end

@@ -92,7 +92,18 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
    % Pairwise=true suppresses it for a declared, intentional overlap.
    % groupstats:groupbayes:jointProbabilityOutOfRange - a joint probability
    % fell outside 0 to 1. A probability with no denominator is NaN, and this
-   % check passes over those.
+   % check passes over those. No valid input can trigger it: a joint
+   % count never exceeds the population count. It guards the arithmetic
+   % above it.
+   %
+   % Example
+   %
+   % Given a flood at a subbasin, how likely is one at the outlet? The Info
+   % fixture holds one row per event with one logical column per basin.
+   %
+   %  data = groupstats.test.generateTestData('info');
+   %  P = groupstats.groupbayes(data.Info, "Outlet", data.basins, "basin");
+   %  P(:, ["GroupA", "GroupB", "P_A_GIVEN_B", "P_B_GIVEN_A"])
    %
    % See also: groupstats.groupmap, groupstats.grouppercent,
    % groupstats.namelists.populationoption
@@ -101,7 +112,9 @@ function P = groupbayes(tbl, groupA, groupB, groupvar, opts)
       tbl tabular
       groupA
       groupB
-      groupvar string = string.empty()
+      % One label variable or none. A vector would name two label columns,
+      % and the counts read one.
+      groupvar string {mustBeScalarOrEmpty} = string.empty()
       opts.Population (1, 1) string ...
          {groupstats.namelists.mustBeMemberOf(opts.Population, ...
          "populationoption")} = "union"

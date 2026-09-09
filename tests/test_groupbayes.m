@@ -37,6 +37,16 @@ classdef test_groupbayes < matlab.unittest.TestCase
 
    methods (Test)
 
+      function testTwoGroupVariablesAreRejected(testCase)
+         % groupvar names one label column or none.
+
+         data = groupstats.test.generateTestData('groupbayes');
+
+         testCase.verifyError(@() groupstats.groupbayes(data.tbl, ...
+            data.groupA, data.groupB, ["Group", "A1"]), ...
+            'MATLAB:validators:mustBeScalarOrEmpty');
+      end
+
       function testMarginalPA(testCase)
          % P_A is the marginal probability of each groupA member.
 
@@ -69,5 +79,25 @@ classdef test_groupbayes < matlab.unittest.TestCase
          expected = numel(testCase.groupA) * numel(testCase.groupB);
          testCase.verifyEqual(returned, expected);
       end
+
+      function testJointCountReadsGroupBLabelsOnGroupARows(testCase)
+         % The documented counting rule: rows define the event A and
+         % columns define "and B". Three a rows all flagged b against two b
+         % rows all flagged a gives 3, not the 2 the reverse direction
+         % counts, and no warning: an event table can hold a many-to-one
+         % pairing (the icom-msd table does on 25 of 36 basin pairs), so
+         % the difference is not a defect the function reports.
+
+         hand = table(categorical(["a"; "a"; "a"; "b"; "b"]), true(5, 1), ...
+            true(5, 1), 'VariableNames', {'basin', 'a', 'b'});
+
+         P = testCase.verifyWarningFree(@() groupstats.groupbayes(hand, ...
+            "a", "b", "basin"));
+
+         returned = P.N_A_AND_B;
+         expected = 3;
+         testCase.verifyEqual(returned, expected);
+      end
+
    end
 end

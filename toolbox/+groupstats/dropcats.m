@@ -24,17 +24,11 @@ function tbl = dropcats(tbl, varnames)
       varnames (1, :) string = tbl(:, vartype('categorical')).Properties.VariableNames;
    end
 
-   % I might just return rather than error on the first if, and in the else,
-   % only error if ALL categorical ... actually I think I should keep the else
-   % errors because if varnames is default, they are guaranteed not to trigger,
-   % so they are useful for understanding how the function is designed to work,
-   % if a user wants all cats dropped, just call dropcats(tbl), also it will
-   % provide an error if the user thinks a var is categorical but it isnt', but
-   % need to confirm what happens when a table is constructed with a categorical
-   % variable then that variable is converted to a string and/or cats are
-   % removed, are the cats still a property of the table?
-
-   % If varnames is not provided, find all categorical variables
+   % The default varnames names every categorical variable. The two
+   % checks in the else branch then cannot fire. A table with no
+   % categorical variable stops at the first check instead. With a
+   % caller's list, the else branch catches a name that is not in the
+   % table and a variable that is not categorical.
    if isempty(varnames)
       msg = 'No categorical variables found in the table.';
       eid = 'groupstats:dropcats:nonCategoricalVar';
@@ -55,33 +49,12 @@ function tbl = dropcats(tbl, varnames)
       end
    end
 
-   % I realized I can just call removecats with no oldcats input, since
-   % removecats removes unused cats by default. But I kept the loop because I
-   % could add an 'oldcats' input option to mimic removecats
-
-   % Iterate through the categorical variables and remove unused categories
+   % removecats with no category list removes every category no row
+   % uses, one variable at a time.
    for var = varnames(:)'
       tbl.(var) = removecats(tbl.(var));
    end
-
-   %    % Iterate through the categorical variables and remove unused categories
-   %    for var = varnames(:)'
-   %       % Retrieve the categories in the given variable
-   %       allcats = categories(tbl.(var));
-   %
-   %       % Find categories that are not present in the actual data
-   %       oldcats = allcats(~ismember(allcats, tbl.(var)));
-   %
-   %       % Remove the unused categories
-   %       tbl.(var) = removecats(tbl.(var), oldcats);
-   %    end
 end
-
-%% TESTS
-
-%!test
-
-% ## add octave tests here
 
 %% LICENSE
 
