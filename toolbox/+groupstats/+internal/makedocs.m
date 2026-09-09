@@ -149,14 +149,14 @@ function makedocs(opts)
    % rendered detail. Measured: a tick-label glyph band went from 64 px to
    % 124 px tall at FIGURESCALE below.
    %
-   % The trade-off is size: the published PNG, and its width on the docs
-   % page, grow by the same factor. There is no CSS max-width on the
-   % page's <img> elements. FIGURESCALE = 2 was chosen so the widest
-   % current demo image (704 px) becomes about 1400 px. That is a
-   % reasonable width for a modern docs page, not so large the pages
-   % become unwieldy. Restore every
-   % scaled default on cleanup, so a build never changes them for the
-   % rest of the session.
+   % The published PNG grows by the same factor, and a browser shows a
+   % PNG at its pixel width unless told otherwise: publish writes its
+   % <img> elements with no width, and the Help browser is narrower than
+   % the scaled 1400 px, so the figures spilled off its pages. fitimages
+   % (private/) gives each image its unscaled width and caps it at the page
+   % width, so the extra pixels go to sharpness on a high-dpi screen and
+   % nothing else changes. Restore every scaled default on cleanup, so a
+   % build never changes them for the rest of the session.
    figurescale = 2;
    oldfiguredefaults = struct( ...
       'FigurePosition', get(groot, 'defaultFigurePosition'), ...
@@ -190,6 +190,7 @@ function makedocs(opts)
       for n = 1:numel(sources)
          removeOutputs(htmlpath, stems(n))
          publish(fullfile(sources(n).folder, sources(n).name), pubopts);
+         fitimages(fullfile(htmlpath, stems(n) + ".html"), figurescale)
       end
    end
 
@@ -218,6 +219,7 @@ function makedocs(opts)
          [~, stem] = fileparts(demos(n));
          removeOutputs(htmlpath, stem)
          publish(demos(n), pubopts);
+         fitimages(fullfile(htmlpath, stem + ".html"), figurescale)
       end
       % publish leaves the figures a demo opened. Close those, and no
       % figure the caller had open before.
@@ -231,6 +233,7 @@ function makedocs(opts)
          removeOutputs(htmlpath, name)
          export(livescripts(n), fullfile(htmlpath, name + ".html"), ...
             'Run', true);
+         fitimages(fullfile(htmlpath, name + ".html"), figurescale)
       end
    end
 

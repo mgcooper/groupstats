@@ -133,6 +133,77 @@ classdef test_makedocs < matlab.unittest.TestCase
          returned = info.Width;
          expected = 1200;
          testCase.verifyGreaterThanOrEqual(returned, expected);
+
+         % The page shows the PNG at half its pixel width (the unscaled
+         % size), capped at the page width, on both page kinds: the
+         % published demo page and the exported live script.
+         for name = ["demo_groupcompare", "usingGroupStats"]
+            page = fileread(fullfile(testCase.OutputFolder, name + ".html"));
+            testCase.verifySubstring(page, ...
+               "img { max-width: 100%; height: auto; }");
+            tags = regexp(page, '<img\s[^>]*>', 'match');
+            testCase.verifyNotEmpty(tags);
+            testCase.verifyEmpty(regexp(tags{1}, 'width: 100%', 'once'));
+         end
+         tag = regexp(fileread(fullfile(testCase.OutputFolder, ...
+            "demo_groupcompare.html")), '<img\s[^>]*>', 'match', 'once');
+         returned = str2double(regexp(tag, 'width="(\d+)"', 'tokens', 'once'));
+         expected = round(info.Width / 2);
+         testCase.verifyEqual(returned, expected);
+
+         % The exported page embeds its PNGs, so every image's width is
+         % checked against the width in the PNG header it carries (the
+         % big-endian uint32 at bytes 17 to 20, decoded here on its own).
+         tags = regexp(fileread(fullfile(testCase.OutputFolder, ...
+            "usingGroupStats.html")), '<img\s[^>]*>', 'match');
+         for n = 1:numel(tags)
+            encoded = regexp(tags{n}, 'base64,([A-Za-z0-9+/]{44})', ...
+               'tokens', 'once');
+            header = matlab.net.base64decode(encoded{1});
+            pixels = double(typecast(uint8(header(20:-1:17)), 'uint32'));
+            returned = str2double(regexp(tags{n}, 'width="(\d+)"', ...
+               'tokens', 'once'));
+            expected = round(pixels / 2);
+            testCase.verifyEqual(returned, expected);
+         end
+      end
+
+      function testFitimagesAcceptsEveryAttributeForm(testCase)
+         % fitimages rewrites the <img> tags of a page. The generated
+         % pages use lowercase names, double quotes, and no space around
+         % the equals sign; a page that differs in any of those must be
+         % rewritten the same way: the old style and width go, the new
+         % width is the PNG width over the scale, and the rule is added.
+
+         folder = testCase.applyFixture( ...
+            matlab.unittest.fixtures.TemporaryFolderFixture).Folder;
+         imwrite(zeros(10, 24, 3), fullfile(folder, "x.png"))
+         page = fullfile(folder, "page.html");
+         % The multiplication sign stands for the non-ASCII text the
+         % exported pages carry; it must come back intact.
+         html = ['<html><head><title>t</title></head><body>' newline ...
+            '<p>2' char(215) '2</p>' newline ...
+            '<IMG Style = ''width: 100%'' SRC = ''x.png''>' newline ...
+            '<img width="9" src="x.png" alt="">' newline ...
+            '<img src="x.png" style="width: 100%;">' newline ...
+            '</body></html>' newline];
+         fid = fopen(page, 'w', 'n', 'UTF-8');
+         fprintf(fid, '%s', html);
+         fclose(fid);
+
+         fitimages = groupstats.internal.privatefunction('fitimages');
+         fitimages(page, 2)
+
+         rewritten = fileread(page);
+         returned = regexp(rewritten, '<img\s[^>]*>', 'match', 'ignorecase');
+         expected = {'<img width="12" SRC = ''x.png''>', ...
+            '<img width="12" src="x.png" alt="">', ...
+            '<img width="12" src="x.png">'};
+         testCase.verifyEqual(returned, expected);
+         testCase.verifySubstring(rewritten, ...
+            ['<style>img { max-width: 100%; height: auto; }</style>' ...
+            newline '</head>']);
+         testCase.verifySubstring(rewritten, ['<p>2' char(215) '2</p>']);
       end
 
       function testDemolistDefaultsToEveryDemoFile(testCase)
