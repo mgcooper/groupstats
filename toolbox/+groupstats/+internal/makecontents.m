@@ -1,4 +1,4 @@
-function makecontents(varargin)
+function makecontents(option, opts)
    %MAKECONTENTS Make contents.m for each folder including package folders.
    %
    %  Run this after adding, renaming, or removing a function.
@@ -15,25 +15,28 @@ function makecontents(varargin)
    %  written beside the original would be a callable member of that package
    %  and would ship inside the .mltbx.
    %
+   %  makecontents(_, Folder=PATH) works on the toolbox folder PATH instead
+   %  of this file's own, so a test can run it on a scratch copy.
+   %
    % See also: updatecontents
 
-   narginchk(0, 1)
+   arguments
+      option (1, 1) string ...
+         {mustBeMember(option, ["-backup", "-nobackup"])} = "-nobackup"
+      % "" means this file's own toolbox folder, resolved below.
+      opts.Folder (1, 1) string = ""
+   end
 
    % Get the toolbox path and set the backup option
-   tbxpath = toolboxpath(); % call private/toolboxpath function
-   if nargin == 1
-      option = validatestring(varargin{1}, {'-backup', '-nobackup'});
-   else
-      option = '-nobackup';
+   tbxpath = opts.Folder;
+   if strlength(tbxpath) == 0
+      tbxpath = toolboxpath(); % call private/toolboxpath function
    end
-   dobackup = strcmp(option, '-backup');
+   dobackup = option == "-backup";
 
    if ~isfolder(tbxpath)
       error('toolbox folder not found')
    end
-
-   % toolbox contents
-   % tbxlist = what(tbxpath);
 
    % package and subpackage folders
    pkglist = mpackagefolders(tbxpath, "aspathlist", true, "asstring", true);
@@ -74,8 +77,12 @@ function processOnePackage(thispkg, dobackup)
       % Try to update the Contents file.
       success = true;
       try
-         cdobj = withcd(thispkg); %#ok<NASGU>
+         % The cleanup object holds the working folder at thispkg until it
+         % is deleted, which happens here on success and at scope exit on
+         % an error.
+         cdobj = withcd(thispkg);
          updatecontents();
+         delete(cdobj)
       catch
          success = false;
          fprintf(2, ...
@@ -129,43 +136,3 @@ end
 function cleanupfun(tmpfile, destinationfile)
    movefile(tmpfile, destinationfile);
 end
-%% oncleanup object
-
-% To use this, it might work to put the object creation after the try-catch and
-% pass it the success flag, but i think it would require storing all objects so
-% they all execute at the end, which should work in this case since each object
-% would know the full path to the files and the success state.
-
-% Create a cleanup object to restore the original file in case of error
-% onCleanupObj = onCleanup(@() cleanupfun(success, tmpfile, originalfile, backupfile));
-
-% % finish the backup
-% function cleanupfun(success, tmpfile, ogfile, bkfile)
-% if success
-%     % successful - move the temporary backup to the backup file
-%     movefile(tmpfile, bkfile);
-% else
-%     % unsuccessful - restore the original file
-%     movefile(tmpfile, ogfile);
-% end
-
-%% Notes
-
-% runreport('contentsrpt')
-% contentsrpt(thispkg)
-% this is in the FSDA toolbox
-% makecontentsfileFS('dirpath',thispkg,'NameOutputFile','Contents.m');
-
-% % this would back up to the top-level internal/ dir, but then we need to track
-% % whcih package or folder the Contents.m came from, so decided to not use it
-% dstfolder = tbx.internal.projectpath('toolbox/internal');
-%
-% if ~isfolder(dstfolder)
-%    fprintf( ...
-%       ['%s expected %s to exist,\n' ...
-%       'backing up %s to top level project folder\n'], ...
-%       upper(funcname), dstfolder, filelist(ifile))
-%    newfile = fullfile(tbx.internal.projectpath('toolbox'), newfile);
-% else
-%    newfile = fullfile(dstfolder, newfile);
-% end

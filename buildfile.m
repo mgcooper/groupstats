@@ -23,13 +23,11 @@ function plan = buildfile
    % often called the H1 line, of the task function as the task description. The
    % code in the task function corresponds to the action performed when the task
    % runs.
-   %
-   % I am not sure if projectfile can be adapted using buildplan
 
 end
 
 function checkTask(context)
-   % Identify code issues
+   % Identify code issues and confirm the toolbox is self-contained
    %
    % Checks every file the toolbox ships, including the demos, and the
    % tests. A repo-root sweep also reads sandbox/ scratch, which this
@@ -38,19 +36,68 @@ function checkTask(context)
    % The bar is zero issues. Keep it there: fix what a change introduces
    % rather than adding a suppression.
    %
+   % The last assertion is that no shipped file calls a function outside
+   % the package. Run the dependencies task to vendor a new call.
+   %
    root = context.Plan.RootFolder;
+   toolboxfolder = fullfile(root, "toolbox");
    files = [
-      listMFiles(fullfile(root, "toolbox"))
+      listMFiles(toolboxfolder)
       listMFiles(fullfile(root, "tests"))
       ];
 
    % permutest is vendored third-party code with its own license.
-   files = files(~contains(files, fullfile("+groupstats", "permutest")));
+   files = files(~endsWith(files, fullfile("+groupstats", "private", ...
+      "permutest.m")));
+
+   % The vendored matfunclib copies are byte-identical to their source and
+   % are not restyled here, the same rule permutest follows. The
+   % dependencies task lists them.
+   addpath(toolboxfolder)
+   files = files(~ismember(files, ...
+      groupstats.internal.vendoredfiles(toolboxfolder)));
 
    issues = codeIssues(files);
 
    assert(isempty(issues.Issues), formattedDisplayText( ...
       issues.Issues(:, ["Location" "Severity" "Description"])))
+
+   % A suppression hides an issue instead of fixing it, so none is
+   % allowed in the files checked above.
+   suppressed = files(arrayfun(@(f) any(contains(readlines(f), "%#ok")), ...
+      files));
+   assert(isempty(suppressed), "These files carry a %#ok suppression: " ...
+      + strjoin(suppressed, ", "))
+
+   % A file the package needs and does not ship would fail on a clean
+   % path. checkdependencies scans toolbox/ against itself.
+   missing = groupstats.internal.checkdependencies();
+   assert(isempty(missing), ...
+      "The toolbox calls files it does not ship. Run " + ...
+      "buildtool dependencies. Missing: " + strjoin(missing, ", "))
+end
+
+function dependenciesTask(context)
+   % Vendor the matfunclib files the toolbox calls
+   %
+   % Copies each required file from the local matfunclib checkout into the
+   % private folder its callers reach, with no network, and writes
+   % toolbox/vendored.txt, the list the check task excludes from lint.
+   % groupstats.internal.vendordependencies does the work and documents
+   % the three destinations. Run this task after a change adds or removes
+   % a call into matfunclib, then run check, and commit the copies with
+   % the change.
+
+   arguments
+      context (1, 1) matlab.buildtool.TaskContext
+   end
+
+   toolboxfolder = fullfile(context.Plan.RootFolder, "toolbox");
+   addpath(toolboxfolder)
+
+   installed = groupstats.internal.vendordependencies(toolboxfolder);
+   fprintf("Vendored %d files; see %s\n", numel(installed), ...
+      fullfile(toolboxfolder, "vendored.txt"))
 end
 
 function contentsTask(context)

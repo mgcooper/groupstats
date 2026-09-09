@@ -193,18 +193,15 @@ function [targetFiles, referenceFiles, requirementsFileName, ...
          fullfile(toolboxpath(), "dependencies", "requirements.mat");
    end
 
-   % This works for files/folders passed as char or cellstr lists
-   % 3/21/2026 - merged newer changes from icemodel, this was removed there
-   % likely b/c arguments parsing casts to string, retained here until confirmed
+   % string() accepts a char, a cellstr, or a string list, so every list
+   % below is one type.
    targetList = string(targetList);
    ignoreList = string(ignoreList);
    referenceList = string(referenceList);
 
-   % Validate each member of the target file / folder list
+   % Validate each member of the target file / folder list. The ignore
+   % list is not validated: a folder that does not exist ignores nothing.
    targetList = string(cellfun(@validateFileList, targetList, 'Uniform', false));
-
-   % Decided this does not need to be validated.
-   % ignoreList = string(cellfun(@validateFileList, ignoreList, 'Uniform', false));
 
    % If target is a folder, convert to file list
    [targetFiles, referenceFiles] = prepareFileLists(...
@@ -248,10 +245,6 @@ function [targetFiles, referenceFiles, ignoreFiles] = prepareFileLists(...
    % Add the target to the the reference list, so it isn't included in the
    % missing requirements.
    referenceFiles = vertcat(referenceFiles, targetFiles);
-
-   % filenames to ignore - not implemented
-   % ignore = {'readme','test','temp'};
-   % target = target(~contains(target, ignore));
 end
 
 function fileList = fileListFromFolderList(folderList)

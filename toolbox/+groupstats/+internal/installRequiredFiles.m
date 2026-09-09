@@ -1,5 +1,6 @@
-function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwargs)
-   %INSTALLREQUIREDFILES Install required files from Github.
+function [requirementsList, urlList, failedList, skippedList] = ...
+      installRequiredFiles(requiredFiles, kwargs)
+   %INSTALLREQUIREDFILES Install required files from GitHub or a local checkout.
    %
    %  INSTALLREQUIREDFILES(REQUIREDFILES)
    %  INSTALLREQUIREDFILES(PROJECTPATH=PATHNAME)
@@ -8,18 +9,22 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
    %  INSTALLREQUIREDFILES(_, INSTALLPATH=PATHNAME)
    %  INSTALLREQUIREDFILES(_, LOCALSOURCEPATH=PATHNAME)
    %  INSTALLREQUIREDFILES(_, IGNOREFOLDER=FOLDERNAME)
+   %  INSTALLREQUIREDFILES(_, REFERENCELIST=PATHNAME)
    %  INSTALLREQUIREDFILES(_, REMOTEREPONAME=REPONAME)
    %  INSTALLREQUIREDFILES(_, REMOTEBRANCH=BRANCHNAME)
    %  INSTALLREQUIREDFILES(_, GITHUBUSERNAME=USERNAME)
+   %  INSTALLREQUIREDFILES(_, SOURCE="local")
    %  INSTALLREQUIREDFILES(_, DRYRUN=TRUE)
    %
    % Description
    %
    %  The use case for this function is to install a list of required files
-   %  from GitHub. The list could be shipped with a toolbox, and third party
+   %  from GitHub, or from a local checkout of the repository that holds
+   %  them. The list could be shipped with a toolbox, and third party
    %  users run an install script which reads the requirements list and installs
    %  them from GitHub. Alternatively, the toolbox maintainer can use this
-   %  function to package the requirements with the toolbox.
+   %  function to package the requirements with the toolbox, copying them
+   %  from the checkout beside it with SOURCE="local".
    %
    % Input Arguments
    %
@@ -63,6 +68,11 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
    %  or testbed/ or sandbox/ or examples/ folder which is not under source
    %  control and is not distributed with the toolbox or project.
    %
+   %  REFERENCELIST - (optional, name-value) a folder whose files count as
+   %  satisfied, so they are never installed. The default is PROJECTPATH.
+   %  Name a folder above PROJECTPATH to vendor the requirements of one
+   %  subfolder while the rest of the toolbox counts as present.
+   %
    %  These arguments control how the requirements are found and/or resolved:
    %
    %  LOCALSOURCEPATH - folder with local versions of the required files.
@@ -74,9 +84,39 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
    %
    %  INSTALLPATH - full path to location where files are installed. The default
    %  value is a folder named "dependencies" in the toolbox folder.
+   %  SOURCE - "remote" (default) downloads each file from the GitHub
+   %  repository with websave, which needs GITHUBUSERNAME. "local" copies
+   %  each file with copyfile from the working copy under LOCALSOURCEPATH,
+   %  with no network and no GITHUBUSERNAME. A maintainer vendors a
+   %  toolbox's requirements this way from the checkout beside it.
    %  DRYRUN - logical flag controlling whether files are installed. If true,
-   %  nothing is downloaded; the resolved file and url lists are returned and
-   %  printed to the screen. The default value is false (files are installed).
+   %  nothing is downloaded; the resolved file and url lists are returned,
+   %  and printed to the screen when no output is requested. The default
+   %  value is false (files are installed).
+   %
+   % Output Arguments
+   %
+   %  REQUIREMENTSLIST - the file names installed, one per row. A file
+   %  whose install failed is warned about and left out. With DRYRUN, the
+   %  files that would be installed.
+   %  URLLIST - the source of each file: its GitHub raw URL for
+   %  SOURCE="remote", or its path under LOCALSOURCEPATH for SOURCE="local".
+   %  FAILEDLIST - the file names whose install failed, one per row, so a
+   %  caller can treat an incomplete install as an error.
+   %  SKIPPEDLIST - the required file names that resolved nowhere under
+   %  LOCALSOURCEPATH, or in several places, one per row. Each was warned
+   %  about and left out. A MATLAB file under matlabroot is not listed.
+   %
+   % Resolving a file under LOCALSOURCEPATH
+   %
+   %  A required file whose resolved path lies under LOCALSOURCEPATH is used
+   %  from there. One resolved elsewhere on the path, such as a copy in
+   %  another library that shadows the LOCALSOURCEPATH copy, or one given as
+   %  a bare name with no path, is looked up by name under LOCALSOURCEPATH.
+   %  One match is used. A name with no match under LOCALSOURCEPATH is
+   %  skipped, with a warning unless it is a MATLAB file under matlabroot,
+   %  and a name with several matches is skipped with a warning that lists
+   %  them.
    %
    % See also: getRequiredFiles
 
@@ -93,6 +133,11 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
 
       kwargs.ignoreFolder (1, :) string ...
          = "testbed"
+
+      % "" means projectPath; the default is resolved below, after
+      % projectPath is known.
+      kwargs.referenceList (1, :) string {mustBeTextScalar} ...
+         = ""
 
       %%% The following arguments control how requirements are found:
       kwargs.localSourcePath (1, :) {mustBeFolder} ...
@@ -115,6 +160,11 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
       kwargs.installPath (1, :) string {mustBeTextScalar} ...
          = ""
 
+      % "remote" keeps the websave download; "local" copies the working
+      % copy under localSourcePath.
+      kwargs.Source (1, 1) string ...
+         {mustBeMember(kwargs.Source, ["remote", "local"])} = "remote"
+
       kwargs.dryrun (1, 1) logical {mustBeNumericOrLogical} ...
          = false
    end
@@ -133,34 +183,92 @@ function [requirementsList, urlList] = installRequiredFiles(requiredFiles, kwarg
       if strlength(requirementsFile) > 0
          requiredFiles = readRequirementsFile(requirementsFile);
       else
-         % referenceList is the project itself: its own files count as
-         % satisfied, independent of which manager project is active.
+         % referenceList is the project itself unless the caller named a
+         % folder: its files count as satisfied, independent of which
+         % manager project is active.
+         referenceList = kwargs.referenceList;
+         if strlength(referenceList) == 0
+            referenceList = projectPath;
+         end
          requiredFiles = getRequiredFiles(projectPath, ...
-            "ignoreList", ignoreFolder, "referenceList", projectPath);
+            "ignoreList", ignoreFolder, "referenceList", referenceList);
          requiredFiles = requiredFiles.missingFiles;
       end
    end
 
-   % Build a url list for the remote files
-   [requirementsList, urlList] = remoteDependencyList( ...
-      requiredFiles, projectPath, localSourcePath, remoteSourcePath);
+   % Build the source list: a url per file for the remote files, and the
+   % local path per file under localSourcePath.
+   [requirementsList, urlList, localList, skippedList] = ...
+      remoteDependencyList(requiredFiles, projectPath, localSourcePath, ...
+      remoteSourcePath);
+
+   % The second output names where each file came from, so a local install
+   % reports the paths it copied.
+   if kwargs.Source == "local"
+      urlList = localList;
+   end
 
    % Option to install the missing requirement locally
    fileList = installPath + filesep + requirementsList;
+   failedList = strings(0, 1);
    if not(kwargs.dryrun)
 
       if ~isfolder(installPath)
          mkdir(installPath)
       end
+      % A file landed when this call wrote it and a file is there
+      % afterwards. A destination that existed before and survived a
+      % failed overwrite is not this call's, so the existence test alone
+      % would report it.
+      landed = false(size(requirementsList));
       for n = 1:numel(requirementsList)
+         wrote = false;
          try
-            websave(fileList(n), urlList(n));
+            % copyfile and websave write into a folder of the destination
+            % name, which would leave a nested copy nothing lists, so a
+            % folder in the way is a failure before any write.
+            assert(~isfolder(fileList(n)), ...
+               'a folder is in the way at %s', fileList(n))
+
+            % A local copy needs no network. copyfile keeps the source
+            % file read-only when it is, so clear that on the copy.
+            if kwargs.Source == "local"
+               copyfile(localList(n), fileList(n), 'f');
+               wrote = true;
+               fileattrib(fileList(n), '+w');
+            else
+               websave(fileList(n), urlList(n));
+               wrote = true;
+            end
+            landed(n) = isfile(fileList(n));
+            reason = "no file at the destination";
          catch ME
-            warning('Failed to download file: %s\nReason: %s', ...
-               requirementsList(n), ME.message);
+            reason = ME.message;
+
+            % A write that succeeded before a later step failed leaves a
+            % file the caller is told did not land, so remove it.
+            if wrote && isfile(fileList(n))
+               delete(fileList(n))
+            end
+         end
+
+         % The file test after the call catches a write that raised no
+         % error and still left no file.
+         if ~landed(n)
+            warning('installRequiredFiles:installFailed', ...
+               'Failed to install file: %s\nReason: %s', ...
+               requirementsList(n), reason);
          end
       end
-   else
+
+      % Report what landed, not what was planned: a file that failed was
+      % warned about above and must not be listed as installed.
+      failedList = reshape(requirementsList(~landed), [], 1);
+      requirementsList = reshape(requirementsList(landed), [], 1);
+      urlList = reshape(urlList(landed), [], 1);
+   elseif nargout == 0
+      % A dry run with no output requested is a report for the screen. A
+      % caller that takes the lists reads them instead.
       fprintf(1, "\n Files will be installed to: \n %s \n", installPath)
       fprintf(1, "\n The following files will be installed: \n")
       disp(urlList)
@@ -174,19 +282,32 @@ end
 function [projectPath, ignoreFolder, localSourcePath, ...
       remoteSourcePath, requirementsFile, installPath] = parseargs(kwargs)
 
-   % Retrieve the Github user name
-   if isempty(kwargs.GitHubUserName)
+   % Retrieve the Github user name. A local install never reads it, so
+   % it is required for a remote install only.
+   if isempty(kwargs.GitHubUserName) && kwargs.Source == "remote"
       error('Set "GitHubUserName" or environment variable "GITHUB_USER_NAME"')
    else
       GITHUB_USER_NAME = kwargs.GitHubUserName;
    end
 
-   % Note: for general use, this should be userpath or MATLABPATH, I think.
+   % Without a local source path, the user path stands in: it is where a
+   % user's own functions live when no library checkout is named.
    if isempty(kwargs.localSourcePath)
       localSourcePath = userpath();
    else
       localSourcePath = kwargs.localSourcePath;
    end
+
+   % The scan returns absolute paths, and the working folder changes to
+   % projectPath before any of them is compared with localSourcePath, so a
+   % relative localSourcePath must be absolute here. cd resolves it the
+   % way MATLAB does, and the cleanup object puts the working folder back.
+   % A trailing separator would survive into the relative paths erased
+   % from each file's folder below, so it goes too.
+   job = withcd(localSourcePath);
+   localSourcePath = string(pwd);
+   delete(job)
+   localSourcePath = regexprep(localSourcePath, '[/\\]+$', '');
 
    if isempty(kwargs.remoteRepoName)
       error(['Set "remoteRepoName" to the GitHub repository ' ...
@@ -195,11 +316,6 @@ function [projectPath, ignoreFolder, localSourcePath, ...
       GITHUB_URL = 'https://raw.githubusercontent.com/';
       remoteSourcePath = strcat(GITHUB_URL, GITHUB_USER_NAME, '/', ...
          kwargs.remoteRepoName, '/', kwargs.remoteBranch);
-
-      % This works too:
-      %GITHUB_URL = 'https://github.com/';
-      %remotesource = strcat(GITHUB_URL, GITHUB_USER_NAME, '/', ...
-      %   Opts.remoteRepoName, '/raw/', Opts.remotebranch);
    end
 
    % Pull out required args and remaining optional args
@@ -254,13 +370,20 @@ function requiredFiles = readRequirementsFile(requirementsFile)
    requiredFiles = reshape(requiredFiles, 1, []);
 end
 
-function [requirementsList, urlList] = remoteDependencyList( ...
-      requiredFiles, projectPath, localsource, remotesource)
+function [requirementsList, urlList, localList, skippedList] = ...
+      remoteDependencyList(requiredFiles, projectPath, localsource, ...
+      remotesource)
    %REMOTEDEPENDENCYLIST Get a list of remote url's to function dependencies.
+   %
+   % LOCALLIST holds each file's path under LOCALSOURCE, which is the
+   % source of a local install and the basis of each url. SKIPPEDLIST
+   % holds the names that resolved nowhere under LOCALSOURCE, or in
+   % several places, other than MATLAB's own files.
 
    % This operates on one file at a time
 
-   [requirementsList, urlList] = deal(strings(length(requiredFiles), 1));
+   [requirementsList, urlList, localList, skippedList] = ...
+      deal(strings(length(requiredFiles), 1));
 
    % For each dependency
    for ifile = 1:length(requiredFiles)
@@ -276,32 +399,90 @@ function [requirementsList, urlList] = remoteDependencyList( ...
 
       % If the required file exists in the local source repo, add it to the
       % requirementsList and build a full path to the remote file.
+      %
+      % Limitation: one source repository per call. A project whose
+      % requirements live in several repositories needs one call per
+      % repository, because the lookup below searches one localSourcePath.
 
-      % This was in the icemodel version:
-      % Note - this is problematic if the requiredFiles contain files which are
-      % not in localSourcePath e.g. if one project depends on another. So this
-      % needs to be refactored to work with localSourcePaths (plural).
+      % A file resolved outside localsource, or given as a bare name, is
+      % looked up by name under localsource, so a shadowing copy elsewhere
+      % on the path does not hide the source repo's copy.
+      originalPath = string(requiredFilePath);
+      if ~undersource(requiredFilePath, localsource)
+         requiredFilePath = findUnderSource(requiredFileName, ...
+            requiredFilePath, localsource);
+      end
 
-      if contains(requiredFilePath, localsource)
+      if ~undersource(requiredFilePath, localsource)
+         % Not resolved under the source, and not MATLAB's own: the lookup
+         % above warned, and the caller can read the name here.
+         if ~undersource(originalPath, matlabroot)
+            skippedList(ifile) = requiredFileName;
+         end
+      else
 
          % Add file names to list of external depencies
          requirementsList(ifile) = requiredFileName;
+         localList(ifile) = fullfile(requiredFilePath, requiredFileName);
 
-         % Get the subfolder path relative to the top-level source repo
+         % Get the subfolder path relative to the top-level source repo.
+         % A file at the repo root has no subfolder, so its url has no
+         % middle segment.
          relativePath = erase(requiredFilePath, localsource);
          relativePath = strrep(relativePath, filesep , '/');
-         if relativePath(1) == filesep
-            relativePath = relativePath(2:end);
-         end
+         relativePath = regexprep(relativePath, '^/', '');
 
          % Use '/' not fullfile b/c fullfile is platform specific
-         urlList(ifile) = remotesource + '/' + relativePath + '/' ...
-            + requirementsList(ifile);
+         if strlength(relativePath) == 0
+            urlList(ifile) = remotesource + '/' + requirementsList(ifile);
+         else
+            urlList(ifile) = remotesource + '/' + relativePath + '/' ...
+               + requirementsList(ifile);
+         end
       end
    end
-   requirementsList(requirementsList == "") = [];
-   urlList(urlList == "") = [];
+   % Keep the outputs columns, including the empty ones: deleting every
+   % element of a column leaves a 1-by-0 otherwise.
+   requirementsList = reshape(requirementsList(requirementsList ~= ""), [], 1);
+   urlList = reshape(urlList(urlList ~= ""), [], 1);
+   localList = reshape(localList(localList ~= ""), [], 1);
+   skippedList = reshape(skippedList(skippedList ~= ""), [], 1);
    assert(all(endsWith(urlList, requirementsList)))
+end
+
+function folder = findUnderSource(requiredFileName, resolvedPath, localsource)
+   %FINDUNDERSOURCE Find one file by name under the local source folder.
+   %
+   % Returns the folder holding the one match, or "" when there is no match
+   % or more than one. A MATLAB file under matlabroot, such as userpath.m,
+   % is skipped with no warning: it is not a dependency to vendor.
+
+   arguments
+      requiredFileName (1, 1) string
+      resolvedPath (1, 1) string
+      localsource (1, 1) string
+   end
+
+   folder = "";
+   if undersource(resolvedPath, matlabroot)
+      return
+   end
+
+   found = dir(fullfile(localsource, '**', requiredFileName));
+   found = found(~[found.isdir]);
+
+   if isscalar(found)
+      folder = string(found.folder);
+   elseif isempty(found)
+      warning('installRequiredFiles:notUnderLocalSource', ...
+         '%s is not under localSourcePath %s, so it is skipped.', ...
+         requiredFileName, localsource)
+   else
+      warning('installRequiredFiles:severalUnderLocalSource', ...
+         ['%s has %d copies under localSourcePath, so it is skipped: ' ...
+         '%s'], requiredFileName, numel(found), ...
+         strjoin(fullfile(string({found.folder}), requiredFileName), ', '))
+   end
 end
 
 function tf = skipfile(requiredFileName, requiredFilePath, ...
@@ -310,9 +491,11 @@ function tf = skipfile(requiredFileName, requiredFilePath, ...
    [~, ~, ext] = fileparts(requiredFileName);
 
    % skip this file if it is the target function, a mex file, already found,
-   % or already satisfied b/c it exists in the projectPath.
+   % or already satisfied b/c it exists in the projectPath. The last test
+   % is on folder boundaries, so a source folder whose name starts with
+   % the project folder's name does not count as inside it.
    tf = ...
       strcmp(ext, '.mex') | ...
       any(strcmpi(requiredFileName, requirementsList)) | ...
-      contains(requiredFilePath, projectPath);
+      undersource(requiredFilePath, projectPath);
 end

@@ -94,20 +94,15 @@ function [cont,dirflag] = getcontents(directory,varargin)
    % first pass: contents of top-level folder
    [cont,dirflag] = main(directory,str);
 
-   % do the recursive bit, if recursion is requested
+   % do the recursive bit, if recursion is requested. The walk is level
+   % by level: every folder of one level comes before any folder below
+   % it. That is the order a queue gives. Each level's results are
+   % gathered in one cell per folder and joined once, so no list grows
+   % inside a loop.
    if recflag
-      dirs = main(directory,'folders');
-      count = length(dirs);
-      n = 1;
-      while n <= count % recursion requested
-         [cont_temp,dirflag_temp] = main(dirs{n},str); % search them
-         cont = [cont; cont_temp]; %#ok<AGROW> append search results
-         dirflag = [dirflag; dirflag_temp]; %#ok<AGROW> append search results
-         sdirs = main(dirs{n},'folders');
-         dirs = [dirs; sdirs]; %#ok<AGROW>
-         count = length(dirs);
-         n = n+1;
-      end
+      [subcont, subdirflag] = walk(main(directory, 'folders'), str);
+      cont = [cont; subcont];
+      dirflag = [dirflag; subdirflag];
    end
 
    % remove full path
@@ -127,6 +122,40 @@ function [cont,dirflag] = getcontents(directory,varargin)
       dirflag = dirflag(IX);
    end
 
+end
+
+function [cont, dirflag] = walk(level, str)
+   %WALK Gather the contents of the folders in LEVEL, then of the levels below.
+   %
+   % LEVEL is one level of folders in order. Their own matches come first,
+   % folder by folder, then the matches of every level below them, which
+   % is the breadth-first order. One cell per folder holds its matches and
+   % one per folder its subfolders; each set is joined once.
+
+   arguments
+      level (:, 1) cell
+      str (1, :) char
+   end
+
+   % vertcat of no cells is an empty double, so the empty level returns
+   % the empty cell and logical the caller concatenates.
+   cont = cell(0, 1);
+   dirflag = false(0, 1);
+   if isempty(level)
+      return
+   end
+
+   conts = cell(numel(level), 1);
+   flags = cell(numel(level), 1);
+   subs = cell(numel(level), 1);
+   for n = 1:numel(level)
+      [conts{n}, flags{n}] = main(level{n}, str);
+      subs{n} = main(level{n}, 'folders');
+   end
+   [below, belowflag] = walk(vertcat(subs{:}), str);
+
+   cont = [cont; vertcat(conts{:}); below];
+   dirflag = [dirflag; vertcat(flags{:}); belowflag];
 end
 
 function [cont,dirflag] = main(directory,str)
