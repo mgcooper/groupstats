@@ -181,6 +181,9 @@ function releaseTask(context)
       mkdir(releasefolder)
    end
 
-   % Package the toolbox
+   % Package the toolbox, then read the version back from the package: a
+   % stale project field or a wrong output file cannot ship unnoticed.
    matlab.addons.toolbox.packageToolbox(opts);
+   groupstats.internal.assertpackagedversion(opts.OutputFile, ...
+      opts.ToolboxVersion)
 end
