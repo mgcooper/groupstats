@@ -25,16 +25,19 @@ figure
 groupstats.histogram(Info, "peak");
 title("All peak values, one histogram")
 
-% GroupVar overlays one histogram per group member, with a legend.
+% The third argument, groupvar, overlays one histogram per group member,
+% with a legend.
 figure
-groupstats.histogram(Info, "peak", GroupVar = "scenario");
+groupstats.histogram(Info, "peak", "scenario");
 title("Peak values, one histogram per scenario")
 
 %% The built-in call shapes
 %
-% The built-in's array call shape also works: histogram(x) and
+% The built-in's array call shape for categorical data also works:
 % histogram(x, categories). The first figure is the built-in itself; the
-% second is the wrapper on the same array, keeping three categories.
+% second is the wrapper on the same array, keeping three categories. The
+% one-argument histogram(x) is the built-in's own; the wrapper needs its
+% second argument.
 
 figure
 histogram(Info.month);
@@ -59,7 +62,7 @@ title("Jan through Mar only")
 % keep their order. It overrides SortBy.
 
 figure
-groupstats.histogram(Info, "peak", GroupVar = "scenario", ...
+groupstats.histogram(Info, "peak", "scenario", ...
    GroupOrder = scenarios(3));
 title("The far scenario drawn and listed first")
 
@@ -70,7 +73,7 @@ title("The far scenario drawn and listed first")
 % order the groups already have.
 
 figure
-groupstats.histogram(Info, "peak", GroupVar = "scenario", ...
+groupstats.histogram(Info, "peak", "scenario", ...
    SortBy = "descend");
 title("Scenarios ordered by descending mean peak")
 
@@ -82,7 +85,7 @@ title("Scenarios ordered by descending mean peak")
 % category order.
 
 figure
-groupstats.histogram(Info, "peak", GroupVar = "scenario", ...
+groupstats.histogram(Info, "peak", "scenario", ...
    MergeGroupMembers = {scenarios(2:3)});
 title("The two future scenarios pooled into one histogram")
 
@@ -97,7 +100,7 @@ title("Jan and Feb pooled into one bar")
 % grouped or drawn.
 
 figure
-groupstats.histogram(Info, "peak", GroupVar = "scenario", ...
+groupstats.histogram(Info, "peak", "scenario", ...
    RowSelectVar = "basin", RowSelectMembers = ["basinA", "basinB"]);
 title("basinA and basinB rows only")
 
@@ -111,7 +114,7 @@ figure
 tiles = tiledlayout(1, 2);
 ax1 = nexttile(tiles);
 ax2 = nexttile(tiles);
-groupstats.histogram(Info, "peak", GroupVar = "basin", Parent = ax1);
+groupstats.histogram(Info, "peak", "basin", Parent = ax1);
 groupstats.histogram(Info, "month", ...
    GroupMembers = ["Oct", "Nov", "Dec"], Parent = ax2);
 title(ax1, "Peak by basin in the left tile")
@@ -123,13 +126,13 @@ title(ax2, "Oct through Dec counts in the right tile")
 % them out. Legend = "off" removes the legend.
 
 figure
-groupstats.histogram(Info, "peak", GroupVar = "scenario", ...
+groupstats.histogram(Info, "peak", "scenario", ...
    LegendString = ["Historical", "Near future", "Far future"], ...
    LegendOrientation = "horizontal");
 title("Renamed entries in a horizontal legend")
 
 figure
-groupstats.histogram(Info, "peak", GroupVar = "scenario", Legend = "off");
+groupstats.histogram(Info, "peak", "scenario", Legend = "off");
 title("Legend turned off")
 
 %% Graphics properties pass through
@@ -138,6 +141,6 @@ title("Legend turned off")
 % reach the underlying histogram call.
 
 figure
-groupstats.histogram(Info, "peak", GroupVar = "scenario", ...
+groupstats.histogram(Info, "peak", "scenario", ...
    Normalization = "probability", NumBins = 10);
 title("Probability normalization with ten bins")

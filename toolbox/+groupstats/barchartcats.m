@@ -57,6 +57,23 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    %
    % cgroupuse - A cell array of categories to be used for the color grouping.
    %
+   % Parent - The axes to draw into. The default is gca, so repeated calls
+   % reuse the current axes. The bars, the whiskers, the shading, the
+   % legend, and the axis formatting all go into this axes, and the
+   % current axes is not touched when another one is named.
+   %
+   % LegendString - Replacement legend entries, one per color-group member.
+   % LegendString(i) names the i-th member in category order after member
+   % filtering and merging. CGroupOrder permutes the entries with the
+   % series, so an entry stays on its member. SortBy orders the x-groups
+   % and leaves the legend as it is.
+   %
+   % ShadeGroups - Shade alternating x-tick groups to tell one group of
+   % bars from the next. Defaults to true when cgroupvar is given and
+   % false otherwise, because the shading marks a boundary between
+   % colored bars that a single-series chart does not have. Pass
+   % ShadeGroups=true to shade a single-series chart anyway.
+   %
    % MergeGroupMembers - A cell array of string vectors. Each cell names
    % the color-group members to pool into one bar, matching
    % groupstats.histogram. A bare string vector is one merge group. The
@@ -82,42 +99,70 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    %
    % Example
    %
-   % Plot the Value variable of table tbl. Group along the x-axis by
-   % CategoryX, and by color within each group by CategoryC.
+   % Plot the peak variable of the fixture table. Group along the x-axis by
+   % month, and by color within each group by scenario.
    %
-   % tbl = readtable('data.csv');
-   % h = groupstats.barchartcats(tbl, "Value", "CategoryX", "CategoryC");
+   %  data = groupstats.test.generateTestData('info');
+   %  h = groupstats.barchartcats(data.Info, "peak", "month", "scenario");
    %
    % Restrict the groups to named members. XGroupMembers and CGroupMembers are
    % name-value arguments, not positional ones.
    %
-   % h = groupstats.barchartcats(tbl, "Value", "CategoryX", "CategoryC", ...
-   %    XGroupMembers = ["Cat1", "Cat2", "Cat3"], ...
-   %    CGroupMembers = ["Group1", "Group2"]);
+   %  h = groupstats.barchartcats(data.Info, "peak", "month", "scenario", ...
+   %     XGroupMembers = ["Jan", "Feb", "Mar"], ...
+   %     CGroupMembers = data.scenarios(1:2));
    %
    % Sort the x-groups by their group mean and pass a Bar property through:
    %
-   % h = groupstats.barchartcats(tbl, "Value", "CategoryX", "CategoryC", ...
-   %    SortBy = "ascend", BarWidth = 0.5);
+   %  h = groupstats.barchartcats(data.Info, "peak", "month", "scenario", ...
+   %     SortBy = "ascend", BarWidth = 0.5);
    %
    % Sorting
    %
    % SortBy orders the x-groups by their summarized value, "ascend" or
-   % "descend". XGroupOrder names the order directly and takes precedence.
-   % SortGroupMembers restricts which color-group members contribute to the
-   % sort value.
+   % "descend". The sorted grouping is always xgroupvar. Each x-group's
+   % sort value is the mean of its bars' heights. SortGroupMembers names
+   % the cgroupvar members whose bars enter that mean; omitted, or
+   % string.empty(), it uses every bar. It needs cgroupvar, and each name
+   % must be one of its members (post-merge names after a merge). XGroupOrder names the order
+   % directly and takes precedence over SortBy.
    %
    % Note
    %
    % Grouped data is summarized in category order, not first-appearance
-   % order. Legend text built outside this function must follow category
-   % order.
+   % order. An (x-group, color-group) pair with no rows gets no bar, and
+   % the other bars stay on their own ticks. A table that is already a
+   % groupsummary output is summarized again: name its summary column as
+   % ydatavar, and each bar is then Method over that column's rows in the
+   % group, with the spread of those rows as the whisker.
+   %
+   % Colors
+   %
+   % Each color group takes the next row of defaultcolors, the palette
+   % boxchartcats and scatter read, so the k-th color group of any chart
+   % in the family has the same color. Pass FaceColor to override it, or
+   % CData to color the bars through the colormap as bar does.
    %
    % Dependencies
    %
-   % These come from matfunclib and must be on the path:
+   % These ship in +groupstats/private, vendored from matfunclib and
+   % listed in toolbox/vendored.txt, so no separate path is needed:
    %
+   %  defaultcolors (libplot)      colors the bars
    %  dealout (functools)          splits the outputs
+   %
+   % Errors
+   %
+   % groupstats:barchartcats:mergeWithoutGroupVar - MergeGroupMembers was
+   % given without cgroupvar.
+   % groupstats:barchartcats:sortGroupMembersWithoutGroupVar -
+   % SortGroupMembers was given without cgroupvar.
+   % groupstats:barchartcats:plotErrorNeedsUnmergedGroups - PlotError was
+   % set with MergeMethod="membermean", which combines groups whose spread
+   % PlotError needs.
+   % groupstats:barchartcats:plotErrorNeedsOneSeries - PlotError was set
+   % with more than one bar per x-tick, so the whiskers would not line up
+   % with their bars. Omit cgroupvar, or leave PlotError off.
    %
    % Matt Cooper, 29-Nov-2022, https://github.com/mgcooper
    %
@@ -128,7 +173,9 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       tbl tabular
       ydatavar (1,1) string {mustBeNonempty}
       xgroupvar (1,1) string {mustBeNonempty}
-      cgroupvar string = string.empty()
+      % One color grouping or none. A vector would name two groupings,
+      % which the chart has no second color axis for.
+      cgroupvar string {mustBeScalarOrEmpty} = string.empty()
       opts.XGroupMembers string = string.empty()
       opts.CGroupMembers string = string.empty()
       opts.RowSelectVar string = string.empty()
@@ -140,19 +187,29 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
          { groupstats.namelists.mustBeMemberOf(opts.SortBy, ...
          "sortorder") } = "none"
       % SortGroupMembers names the cgroupvar members whose bars compute
-      % each x-group's sort value when SortBy is set. The default "all"
-      % averages every cgroup bar; name specific members to sort by them
-      % alone.
-      opts.SortGroupMembers (:,1) string = "all"
+      % each x-group's sort value when SortBy is set. Empty, the family's
+      % no-selection sentinel, averages every cgroup bar; name specific
+      % members to sort by them alone. A word such as "all" cannot be the
+      % sentinel, because a member can carry that name.
+      opts.SortGroupMembers (:,1) string = string.empty()
       opts.MergeGroupMembers (:,1) = string.empty()
       opts.MergeMethod (1,1) string ...
          { groupstats.namelists.mustBeMemberOf(opts.MergeMethod, ...
          "mergemethod") } = "pooled"
       opts.XGroupOrder (:,1) string = "none"
       opts.CGroupOrder (:,1) string = "none"
-      % ShadeGroups defaults on in both cats charts, an author decision of
-      % 2026-08-16 that unified the two defaults. PlotError stays off.
-      opts.ShadeGroups (1,1) logical = true
+      % Axes to draw into. The default is gca, so repeated calls reuse the
+      % current axes, as scatter does.
+      opts.Parent (1,1) {mustBeA(opts.Parent, ...
+         "matlab.graphics.axis.AbstractAxes")} = gca
+      % ShadeGroups marks the boundary between x-tick groups of several
+      % colored bars, so it is pointless with one bar per tick. The
+      % sentinel logical.empty() means "unset": resolved right after this
+      % block to true when cgroupvar is given and false otherwise. An
+      % explicit true or false is not the sentinel and always wins, so
+      % ShadeGroups=true still shades a single-series chart. PlotError
+      % stays off by default.
+      opts.ShadeGroups logical {mustBeScalarOrEmpty} = logical.empty()
       opts.PlotError (1,1) logical = false
       opts.Legend (:,1) string ...
          {groupstats.namelists.mustBeMemberOf(opts.Legend, ...
@@ -168,6 +225,14 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    import groupstats.groupselect
    import groupstats.prepareTableGroups
 
+   % Resolve the ShadeGroups sentinel. The shading tells one x-tick group
+   % of colored bars apart from the next, which only matters when a tick
+   % holds more than one bar, so it defaults on with cgroupvar and off
+   % without it. An explicit true or false is not the sentinel and wins.
+   if isempty(opts.ShadeGroups)
+      opts.ShadeGroups = ~isempty(cgroupvar);
+   end
+
    varargs = namedargs2cell(props);
 
    % H, L, and the axes are the outputs.
@@ -179,6 +244,14 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       error('groupstats:barchartcats:mergeWithoutGroupVar', ...
          ['MergeGroupMembers was given without cgroupvar. Name the color ' ...
          'group variable whose members are pooled.'])
+   end
+
+   % SortGroupMembers names color-group members, so without a color group
+   % there are none to name. Empty stands for every member.
+   if isempty(cgroupvar) && ~isempty(opts.SortGroupMembers)
+      error('groupstats:barchartcats:sortGroupMembersWithoutGroupVar', ...
+         ['SortGroupMembers was given without cgroupvar. Name the color ' ...
+         'group variable whose members compute the sort value.'])
    end
 
    % validate inputs
@@ -233,8 +306,8 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    end
 
    % Order the color groups. An explicit CGroupOrder names post-merge
-   % labels when a merge happened.
-   [YData, EData, CData] = reorderCGroups(opts, YData, EData, CData);
+   % labels when a merge happened. LegendString moves with the columns.
+   [YData, EData, CData, opts] = reorderCGroups(opts, YData, EData, CData);
 
    % Find the columns to use for computing the sort. The columns are in
    % category order, and CGroupOrder permutes that order, so read the
@@ -246,8 +319,13 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    else
       cgroups = string(unique(CData));
    end
-   if opts.SortGroupMembers == "all"
+   if isempty(opts.SortGroupMembers)
       opts.SortGroupMembers = cgroups;
+   else
+      % A name that matches no member would select no column, and the sort
+      % would then read a NaN mean and change nothing, with no report.
+      validatemember(opts.SortGroupMembers, cgroups, 'BARCHARTCATS', ...
+         'SortGroupMembers')
    end
    sortcolumns = ismember(cgroups, opts.SortGroupMembers);
 
@@ -263,7 +341,7 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    plotBarErrors(opts, H, YData, EData);
    shadebarchartgroups(opts, H);
 
-   hold off
+   hold(ax, 'off')
    [varargout{1:nargout}] = dealout(H, L, ax);
 end
 
@@ -293,16 +371,34 @@ function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
 
    % Each column of Y needs to correspond to a group of bars. Each bar in a
    % group is a different color, and each group is a different x-tick.
+   % groupsummary returns one row per pair that has rows, so a pair with
+   % none is absent. Place each row in its own slot and leave the absent
+   % pairs NaN, which bar draws as no bar; a reshape would shift every
+   % later value onto another pair's bar.
    XData = unique(XData);
-   YData = reshape(YData, numel(XData), []);
-   EData = reshape(EData, numel(XData), []);
+   [~, ix] = ismember(G.(xgroupvar), XData);
+   if isempty(cgroupvar)
+      ic = ones(height(G), 1);
+      ncols = 1;
+   else
+      cmembers = unique(G.(cgroupvar));
+      [~, ic] = ismember(G.(cgroupvar), cmembers);
+      ncols = numel(cmembers);
+   end
+   slot = sub2ind([numel(XData), ncols], ix, ic);
+   ydata = YData;
+   edata = EData;
+   YData = nan(numel(XData), ncols);
+   EData = nan(numel(XData), ncols);
+   YData(slot) = ydata;
+   EData(slot) = edata;
 
    % cgroupvar may be empty; the logical stand-in makes bar treat
    % everything as one color group, matching boxchartcats.
-   try
-      CData = tbl.(cgroupvar);
-   catch
+   if isempty(cgroupvar)
       CData = true(size(YData));
+   else
+      CData = tbl.(cgroupvar);
    end
 end
 
@@ -327,10 +423,12 @@ function [CData, YData] = mergemembermean(CData, YData, mergegroups)
       mergegroups = {mergegroups};
    end
 
+   % A member with no rows in an x-group holds NaN there, so the merged
+   % bar averages the members that exist and is NaN only when none do.
    keep = true(1, numel(members0));
    for n = 1:numel(mergegroups)
       cols = find(ismember(members0, string(mergegroups{n})));
-      YData(:, min(cols)) = mean(YData(:, cols), 2);
+      YData(:, min(cols)) = mean(YData(:, cols), 2, 'omitnan');
       keep(setdiff(cols, min(cols))) = false;
    end
    YData = YData(:, keep);
@@ -347,12 +445,12 @@ function [XData, YData, EData] = reorderXGroups(opts, sortcolumns, ...
       % The sortorder namelist allows ascend, descend, and none. "stable" is
       % a sort option MATLAB accepts and this one does not.
 
+      % A pair with no rows holds NaN, so the mean reads the bars that
+      % exist, and an x-group with none of the selected bars sorts last.
       switch opts.SortBy
-         case "ascend"
-            [~, idx] = sort(mean(YData(:, sortcolumns), 2), 'ascend');
-            XData = reordercats(XData, string(XData(idx)));
-         case "descend"
-            [~, idx] = sort(mean(YData(:, sortcolumns), 2), 'descend');
+         case {"ascend", "descend"}
+            stat = mean(YData(:, sortcolumns), 2, 'omitnan');
+            [~, idx] = sort(stat, opts.SortBy, 'MissingPlacement', 'last');
             XData = reordercats(XData, string(XData(idx)));
          otherwise
             % "none", the only other value the sortorder namelist allows.
@@ -374,12 +472,14 @@ function [XData, YData, EData] = reorderXGroups(opts, sortcolumns, ...
    end
 end
 
-function [YData, EData, CData] = reorderCGroups(opts, YData, EData, CData)
+function [YData, EData, CData, opts] = reorderCGroups(opts, YData, ...
+      EData, CData)
    %REORDERCGROUPS Reorder the color groups, which are the columns of YData.
    %
    % bar draws one series per column, and the legend reads them in that
    % order. Ordering the columns orders both the bars within each x-tick
-   % group and the legend.
+   % group and the legend. A caller's LegendString binds to the members in
+   % category order, so it is permuted the same way and stays on its data.
 
    if isscalar(opts.CGroupOrder) && opts.CGroupOrder == "none"
       return
@@ -400,6 +500,9 @@ function [YData, EData, CData] = reorderCGroups(opts, YData, EData, CData)
    YData = YData(:, idx);
    if ~isempty(EData)
       EData = EData(:, idx);
+   end
+   if numel(opts.LegendString) == numel(members)
+      opts.LegendString = opts.LegendString(idx);
    end
 
    if iscategorical(CData)
@@ -434,14 +537,15 @@ function plotBarErrors(opts, H, YData, EData)
    % XEndPoints holds the center of each bar in a series, which is where the
    % whisker belongs. Computing it by hand would repeat bar's own layout.
    % Take hold after the guard, so the error leaves the axes as it found them.
-   washeld = ishold();
-   hold on
+   ax = opts.Parent;
+   washeld = ishold(ax);
+   hold(ax, 'on')
 
-   errorbar(H.XEndPoints, YData(:, 1), EData(:, 1), ...
+   errorbar(ax, H.XEndPoints, YData(:, 1), EData(:, 1), ...
       'LineStyle', 'none', 'Color', 'k', 'LineWidth', 1, 'CapSize', 4);
 
    if ~washeld
-      hold off
+      hold(ax, 'off')
    end
 end
 
@@ -462,7 +566,17 @@ function shadebarchartgroups(opts, H)
       return
    end
 
-   [ylow, yhigh] = bounds(ylim);
+   % XEndPoints lists each x-group in the row order XData held when bar()
+   % drew it, which is data order, not left-to-right display order.
+   % reordercats (SortBy or XGroupOrder) changes the display order without
+   % moving XData's rows, so that order can now disagree with position on
+   % the axis. Sort the left/right edges by position first, or the gap and
+   % the alternating selection below read the wrong neighbors and shade
+   % the wrong ticks.
+   [xleft, order] = sort(xleft);
+   xright = xright(order);
+
+   [ylow, yhigh] = bounds(ylim(opts.Parent));
 
    % Extend each shaded region halfway to its neighbor, so the shading meets
    % between groups rather than leaving a gap.
@@ -475,7 +589,7 @@ function shadebarchartgroups(opts, H)
       xleft(idxodd); xleft(idxodd)];
    ypatch = repmat([ylow; ylow; yhigh; yhigh; ylow], 1, numel(idxodd));
 
-   P = patch(xpatch, ypatch, 'k', ...
+   P = patch(opts.Parent, xpatch, ypatch, 'k', ...
       'FaceColor', [0.5 0.5 0.5], ...
       'FaceAlpha', 0.1, ...
       'EdgeColor', 'none');
@@ -493,36 +607,45 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
    % them, so the names always match the columns.
 
    % Note: "grouped" is the default. Use "BarLayout","stacked" for stacked
-   H = bar( XData, YData, 'FaceColor', 'flat', props{:});
-
-   % With FaceColor "flat", the scalar CData = n set below maps each bar
-   % series through the axes colormap, so a chart with more bars than
-   % ColorOrder rows still colors every bar distinctly.
+   ax = opts.Parent;
+   H = bar(ax, XData, YData, props{:});
 
    % Add a ylabel
-   ylabel(ydatavar);
+   ylabel(ax, ydatavar);
 
    % Format the plot
-   ax = gca;
    set(ax, "YGrid", "on", "XGrid", "on", "XMinorTick", "off", "Box", "on");
    set(ax.XAxis, 'TickLength', [0 0]);
 
    % Color the bars
+
+   % The k-th color group takes the k-th row of defaultcolors, the palette
+   % boxchartcats and scatter read, so the family colors its groups alike.
+   % The palette holds 21 colors; more series than that wrap around.
+   colors = defaultcolors();
+   colors = colors(mod((1:numel(H)) - 1, size(colors, 1)) + 1, :);
 
    % bar already took the caller's properties, so setting one here would
    % discard what they asked for. Apply each default only when they left it
    % out.
    given = string(props(1:2:end));
 
+   % A caller's CData shows only under flat coloring, so "flat" stands in
+   % for the palette color when CData is given.
    for n = 1:numel(H)
       if ~ismember("LineWidth", given)
          H(n).LineWidth = 1;
       end
-      if ~ismember("CData", given)
-         H(n).CData = n;
+      if ismember("CData", given)
+         palettecolor = "flat";
+      else
+         palettecolor = colors(n, :);
+      end
+      if ~ismember("FaceColor", given)
+         H(n).FaceColor = palettecolor;
       end
       if ~ismember("EdgeColor", given)
-         H(n).EdgeColor = "flat";
+         H(n).EdgeColor = palettecolor;
       end
       if ~ismember("FaceAlpha", given)
          H(n).FaceAlpha = 0.75;
@@ -546,7 +669,7 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
 
    end
    try
-      L = legend(legendtxt, ...
+      L = legend(ax, legendtxt, ...
          'Location', 'northwest', ...
          'AutoUpdate', 'off', ...
          'Orientation', opts.LegendOrientation, ...

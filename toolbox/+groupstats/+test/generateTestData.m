@@ -29,11 +29,11 @@ function varargout = generateTestData(whichfunction)
    %   "groupsummary" A table with three group variables and two numeric data
    %                variables, sized so every group holds more than one row.
    %                Serves groupsummary and grouppercent.
-   %   "groupdifference" A table with three groups and two condition sets. The
+   %   "groupcompare" A table with three groups and two condition sets. The
    %                reference group is not the alphabetically first member, and
    %                one set has an all-zero reference. Those two properties
-   %                make the reference-group choice and the mixed rank-test
-   %                case observable.
+   %                make the reference-group choice and the signrank-against-
+   %                zero case observable.
    %
    %  This function is the one place test data is defined. Demos and scripts
    %  call it too, so no fixture class or demo may define its own copy.
@@ -46,7 +46,7 @@ function varargout = generateTestData(whichfunction)
 
    % One list of case names so the error message cannot drift from the switch.
    knowncases = ["groupbayes", "groupmap", "dropcats", "info", ...
-      "groupdifference", "groupsummary"];
+      "groupcompare", "groupsummary"];
 
    switch lower(whichfunction)
 
@@ -103,9 +103,9 @@ function varargout = generateTestData(whichfunction)
 
          [TestData, ExpectedResult] = infoCase();
 
-      case 'groupdifference'
+      case 'groupcompare'
 
-         [TestData, ExpectedResult] = groupdifferenceCase();
+         [TestData, ExpectedResult] = groupcompareCase();
 
       case 'groupsummary'
 
@@ -250,16 +250,16 @@ function [TestData, ExpectedResult] = groupsummaryCase()
    ExpectedResult.height = 12;
 end
 
-function [TestData, ExpectedResult] = groupdifferenceCase()
-   %GROUPDIFFERENCECASE Build a table with three groups and two condition sets.
+function [TestData, ExpectedResult] = groupcompareCase()
+   %GROUPCOMPARECASE Build a table with three groups and two condition sets.
    %
-   % Two properties make groupdifference's choices observable:
+   % Two properties make groupcompare's choices observable:
    %
    %  1. The intended reference group is "ctrl", which sorts after "aaa", so
    %     the default reference and the named one differ.
-   %  2. Set "s2" holds an all-zero reference, so it takes the signrank path
-   %     while set "s1" takes the ranksum path. The per-set results must
-   %     concatenate across that difference.
+   %  2. Set "s2" holds an all-zero reference, so Test="signrank" there is a
+   %     test against zero, while set "s1" has reference data to rank
+   %     against.
 
    n = 12;
    group = repmat(["ctrl"; "aaa"; "zzz"], n / 3, 1);
@@ -280,7 +280,7 @@ function [TestData, ExpectedResult] = groupdifferenceCase()
    ExpectedResult.alphabeticalReference = "aaa";
    ExpectedResult.members = ["aaa"; "ctrl"; "zzz"];
    ExpectedResult.sets = ["s1"; "s2"];
-   ExpectedResult.testnames = ["ranksum"; "signrank"];
+   ExpectedResult.setMedians = [median(1:3:n); 0];
 end
 
 function [TestData, ExpectedResult] = infoCase()

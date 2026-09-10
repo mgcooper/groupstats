@@ -48,6 +48,6 @@ for n = 1:numel(scenarios)
    byscenario{n}.scenario = categorical( ...
       repmat(scenarios(n), height(byscenario{n}), 1));
 end
-expected = stacktables(byscenario{:});
+expected = vertcat(byscenario{:});
 
 fprintf('groupmap rows: %d, loop rows: %d\n', height(P), height(expected));

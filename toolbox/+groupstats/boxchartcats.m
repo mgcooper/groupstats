@@ -54,6 +54,23 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % CGroupMembers reads original names; CGroupOrder and the legend read
    % post-merge names.
    %
+   % Parent: The axes to draw into. The default is gca, so repeated calls
+   % reuse the current axes. The boxes, the mean symbols, the shading, the
+   % legend, and the axis formatting all go into this axes, and the
+   % current axes is not touched when another one is named.
+   %
+   % LegendString: Replacement legend entries, one per color-group member.
+   % LegendString(i) names the i-th member in category order after member
+   % filtering and merging. CGroupOrder permutes the entries with the
+   % series, so an entry stays on its member. SortBy orders the x-groups
+   % and leaves the legend as it is.
+   %
+   % ShadeGroups: Shade alternating x-tick groups to tell one group of
+   % boxes from the next. Defaults to true when cgroupvar is given and
+   % false otherwise, because the shading marks a boundary between
+   % colored boxes that a single-series chart does not have. Pass
+   % ShadeGroups=true to shade a single-series chart anyway.
+   %
    % Note: a box holding one observation collapses to a zero-height box
    % with zero-length whiskers, so the mean symbol is its only visible
    % mark. The chart warns when every box is like that.
@@ -67,37 +84,56 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    %
    % Example
    %
-   % Plot the Value variable of table tbl, grouped along the x-axis by
-   % CategoryX and by color within each group by CategoryC.
+   % Plot the peak variable of the fixture table, grouped along the x-axis
+   % by month and by color within each group by scenario.
    %
-   % tbl = readtable('data.csv');
-   % h = groupstats.boxchartcats(tbl, "Value", "CategoryX", "CategoryC");
+   %  data = groupstats.test.generateTestData('info');
+   %  h = groupstats.boxchartcats(data.Info, "peak", "month", "scenario");
    %
    % Restrict the groups to named members. XGroupMembers and CGroupMembers are
    % name-value arguments, not positional ones.
    %
-   % h = groupstats.boxchartcats(tbl, "Value", "CategoryX", "CategoryC", ...
-   %    XGroupMembers = ["Cat1", "Cat2", "Cat3"], ...
-   %    CGroupMembers = ["Group1", "Group2"]);
+   %  h = groupstats.boxchartcats(data.Info, "peak", "month", "scenario", ...
+   %     XGroupMembers = ["Jan", "Feb", "Mar"], ...
+   %     CGroupMembers = data.scenarios(1:2));
    %
    % Sort the x-groups by their group mean and pass BoxChart properties
    % through:
    %
-   % h = groupstats.boxchartcats(tbl, "Value", "CategoryX", "CategoryC", ...
-   %    SortBy = "ascend", Notch = "on", MarkerStyle = "none");
+   %  h = groupstats.boxchartcats(data.Info, "peak", "month", "scenario", ...
+   %     SortBy = "ascend", Notch = "on", MarkerStyle = "none");
    %
    % Sorting
    %
    % SortBy orders the x-groups by their group mean, "ascend" or "descend".
-   % XGroupOrder names the order directly and takes precedence over SortBy.
+   % The sorted grouping is always xgroupvar. SortGroupMembers names the
+   % cgroupvar members whose rows enter each x-group's mean; omitted, or
+   % string.empty(), it uses every row. It needs cgroupvar, and each name
+   % must be one of its members (post-merge names after a merge). An x-group with no
+   % rows in the named members sorts last. XGroupOrder names the order
+   % directly and takes precedence over SortBy.
    %
    % Dependencies
    %
-   % These come from matfunclib and must be on the path:
+   % These ship in +groupstats/private, vendored from matfunclib and
+   % listed in toolbox/vendored.txt, so no separate path is needed:
    %
+   %  defaultcolors (libplot)      colors the mean symbols like the boxes
    %  makevalidvarnames (libtable) builds the y-axis label
    %  naninterp1 (libstats)        fills gaps in the group shading bounds
    %  dealout (functools)          splits the outputs
+   %
+   % Errors and warnings
+   %
+   % groupstats:boxchartcats:mergeWithoutGroupVar - MergeGroupMembers was
+   % given without cgroupvar.
+   % groupstats:boxchartcats:sortGroupMembersWithoutGroupVar -
+   % SortGroupMembers was given without cgroupvar.
+   % groupstats:boxchartcats:allDataMissing - every value of ydatavar in
+   % the selected rows is missing, so there is nothing to draw.
+   % groupstats:boxchartcats:allBoxesSingleObservation - a warning. Every
+   % (x-group, color-group) box holds exactly one observation, so the boxes
+   % collapse to points, as described in the Note above.
    %
    % Matt Cooper, 29-Nov-2022, https://github.com/mgcooper
    %
@@ -117,7 +153,9 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       tbl tabular
       ydatavar (1,1) string { mustBeNonempty }
       xgroupvar (1,1) string { mustBeNonempty }
-      cgroupvar string = string.empty()
+      % One color grouping or none. A vector would name two groupings,
+      % which the chart has no second color axis for.
+      cgroupvar string {mustBeScalarOrEmpty} = string.empty()
 
       % These four came from barchartcats, where they were named CustomOpts.
       % All four default to empty, which prepareTableGroups reads as every
@@ -136,11 +174,27 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
 
       opts.XGroupOrder (:,1) string = "none"
       opts.CGroupOrder (:,1) string = "none"
+      % Axes to draw into. The default is gca, so repeated calls reuse the
+      % current axes, as scatter does.
+      opts.Parent (1,1) {mustBeA(opts.Parent, ...
+         "matlab.graphics.axis.AbstractAxes")} = gca
       opts.SortBy (1,1) string ...
          { groupstats.namelists.mustBeMemberOf(opts.SortBy, ...
          "sortorder") } = "none"
+      % SortGroupMembers names the cgroupvar members whose rows compute
+      % each x-group's sort value when SortBy is set, the same option
+      % barchartcats has. Empty, the family's no-selection sentinel, uses
+      % every row of the x-group. A word such as "all" cannot be the
+      % sentinel, because a member can carry that name.
+      opts.SortGroupMembers (:,1) string = string.empty()
       opts.PlotMeans (1,1) logical = true
-      opts.ShadeGroups (1,1) logical = true
+      % ShadeGroups marks the boundary between x-tick groups of several
+      % colored boxes, so it is pointless with one box per tick. The
+      % sentinel logical.empty() means "unset": resolved right after this
+      % block to true when cgroupvar is given and false otherwise. An
+      % explicit true or false is not the sentinel and always wins, so
+      % ShadeGroups=true still shades a single-series chart.
+      opts.ShadeGroups logical {mustBeScalarOrEmpty} = logical.empty()
       opts.ConnectMeans (1,1) logical = false
       opts.ConnectMedians (1,1) logical = false
       opts.Legend (1,1) string ...
@@ -164,6 +218,14 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    import groupstats.boxchartxdata
    import groupstats.prepareTableGroups
 
+   % Resolve the ShadeGroups sentinel. The shading tells one x-tick group
+   % of colored boxes apart from the next, which only matters when a tick
+   % holds more than one box, so it defaults on with cgroupvar and off
+   % without it. An explicit true or false is not the sentinel and wins.
+   if isempty(opts.ShadeGroups)
+      opts.ShadeGroups = ~isempty(cgroupvar);
+   end
+
    % Override default BoxChart settings
    ResetFields = {'JitterOutliers','Notch'};
    ResetValues = {true,'on'};
@@ -181,6 +243,15 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
          ['MergeGroupMembers was given without cgroupvar. Name the color ' ...
          'group variable whose members are pooled.'])
    end
+
+   % SortGroupMembers names color-group members, so without a color group
+   % there are none to name. Empty stands for every member.
+   if isempty(cgroupvar) && ~isempty(opts.SortGroupMembers)
+      error('groupstats:boxchartcats:sortGroupMembersWithoutGroupVar', ...
+         ['SortGroupMembers was given without cgroupvar. Name the color ' ...
+         'group variable whose members compute the sort value.'])
+   end
+   sortmembers = ~isempty(opts.SortGroupMembers);
 
    % validate inputs
    tbl = prepareTableGroups(tbl, ydatavar, ...
@@ -208,6 +279,14 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       CData = true(size(YData));
    end
 
+   % SortGroupMembers names post-merge members, so check it after the
+   % merge, and whatever SortBy is: a name that matches no member is a
+   % caller error even when no sort runs, as barchartcats treats it.
+   if sortmembers
+      validatemember(opts.SortGroupMembers, CData, 'BOXCHARTCATS', ...
+         'SortGroupMembers')
+   end
+
    % A box holding one observation collapses to a zero-height box with
    % zero-length whiskers, so the mean symbol is its only visible mark.
    % When every box is like that, the selection was almost surely a
@@ -215,6 +294,16 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % was chosen, so no report then. boxchart omits missing YData, so count
    % only the rows a box renders.
    plotted = ~ismissing(YData);
+
+   % boxchart draws nothing from all-missing data, and the helpers that
+   % read the drawn boxes then index with NaN. Report the empty selection
+   % instead of failing inside them.
+   if ~any(plotted)
+      error('groupstats:boxchartcats:allDataMissing', ...
+         ['Every value of %s in the selected rows is missing, so there ' ...
+         'is nothing to draw. Select rows that hold data.'], ydatavar)
+   end
+
    boxcounts = groupcounts( ...
       table(XData(plotted), CData(plotted), ...
       'VariableNames', ["xgroup", "cgroup"]), ["xgroup", "cgroup"]);
@@ -226,20 +315,21 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    end
 
    % main function
-   hold off % repeated calls create problems
+   ax = opts.Parent;
+   hold(ax, 'off') % repeated calls create problems
 
    % Custom ordering along x-axis
-   [XData, YData] = reorderGroups(opts, XData, YData);
+   XData = reorderGroups(opts, XData, YData, CData, sortmembers);
 
    % Create the box chart and legend
    % Order the color groups before drawing, because boxchart reads their
-   % order from the categories of CData.
-   CData = reorderCGroups(opts, CData);
+   % order from the categories of CData. LegendString moves with them.
+   [CData, opts] = reorderCGroups(opts, CData);
 
    [H, L] = categoricalBoxChart(XData, YData, CData, ydatavar, opts, varargs);
 
    % If "markerstyle", "none" is in varargin, clip the ylimits to the data
-   setboxchartylim(H, XData, YData, CData);
+   setboxchartylim(ax, H, XData, YData, CData);
 
    % Add the means if requested
    plotboxchartstats(opts,H,XData,YData,CData);
@@ -248,24 +338,21 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    shadeboxchartgroups(opts,H);
 
    if opts.Legend == "off"
-      legend off
+      legend(ax, 'off')
    end
-   hold off
+   hold(ax, 'off')
 
    % The third output is the axes the chart was drawn into, matching the
-   % other charts' (H, L, ax) signature. Derive it from the chart, because
-   % a caller can pass the BoxChart Parent property and draw into an axes
-   % that is not current. Bead groupstats-50y covers routing the legend
-   % and formatting to that axes too.
-   ax = ancestor(H(1), 'axes');
+   % other charts' (H, L, ax) signature.
    [varargout{1:nargout}] = dealout(H, L, ax);
 end
 
 %% Local Functions
 function [H, L] = categoricalBoxChart(XData, YData, CData, YDataVar, CustomOpts, varargs)
 
-   % Create the box chart
-   H = boxchart( XData, YData, 'GroupByColor', CData, varargs{:} );
+   % Create the box chart, in the caller's axes
+   ax = CustomOpts.Parent;
+   H = boxchart(ax, XData, YData, 'GroupByColor', CData, varargs{:});
 
    % Add the legend
    withwarnoff('MATLAB:legend:IgnoringExtraEntries');
@@ -282,7 +369,7 @@ function [H, L] = categoricalBoxChart(XData, YData, CData, YDataVar, CustomOpts,
    end
 
    try
-      L = legend(legendtxt, ...
+      L = legend(ax, legendtxt, ...
          'Orientation', CustomOpts.LegendOrientation, ...
          'Location', 'northoutside', ...
          'AutoUpdate', 'off', ...
@@ -294,19 +381,21 @@ function [H, L] = categoricalBoxChart(XData, YData, CData, YDataVar, CustomOpts,
    end
 
    % Add a ylabel
-   ylabel(makevalidvarnames(YDataVar))
+   ylabel(ax, makevalidvarnames(YDataVar))
 
    % Format the plot
-   set(gca, "YGrid", "off", "XGrid", "off", "XMinorTick", "off", "box", ...
+   set(ax, "YGrid", "off", "XGrid", "off", "XMinorTick", "off", "box", ...
       "on", "TickLength", [0 0]);
 end
 
-function CData = reorderCGroups(opts, CData)
+function [CData, opts] = reorderCGroups(opts, CData)
    %REORDERCGROUPS Order the color groups, and with them the legend.
    %
    % boxchart draws one series per category of the GroupByColor data, in
    % category order, so ordering the categories orders both the boxes within
-   % each x-tick group and the legend.
+   % each x-tick group and the legend. A caller's LegendString binds to the
+   % members in category order, so it is permuted the same way and stays on
+   % its data.
 
    if isscalar(opts.CGroupOrder) && opts.CGroupOrder == "none"
       return
@@ -323,10 +412,17 @@ function CData = reorderCGroups(opts, CData)
       "boxchartcats", "CGroupOrder");
 
    CData = reordercats(CData, members(idx));
+   if numel(opts.LegendString) == numel(members)
+      opts.LegendString = opts.LegendString(idx);
+   end
 end
 
-function [XData, YData] = reorderGroups(opts, XData, YData)
-   %REORDERGROUPS
+function XData = reorderGroups(opts, XData, YData, CData, sortmembers)
+   %REORDERGROUPS Reorder the x-axis (tick) groups.
+   %
+   % An explicit XGroupOrder wins. Otherwise SortBy orders the x-groups by
+   % their group mean over the rows SortGroupMembers selects. SORTMEMBERS
+   % is true when the caller named members.
 
    if opts.XGroupOrder == "none"
       % Sort the x-groups by their group mean. YData here is the raw column,
@@ -334,9 +430,26 @@ function [XData, YData] = reorderGroups(opts, XData, YData)
       % from groupsummary rather than from a column mean.
       switch opts.SortBy
          case {"ascend", "descend"}
-            [groupmean, members] = groupsummary(YData, XData, "mean");
-            [~, idx] = sort(groupmean, opts.SortBy);
-            XData = reordercats(XData, string(members(idx)));
+            members = string(categories(removecats(XData)));
+
+            % Keep the rows of the named color-group members. The names
+            % were checked against the members above.
+            rows = true(size(YData));
+            if sortmembers
+               rows = ismember(string(CData), opts.SortGroupMembers);
+            end
+
+            % An x-group with no selected rows is absent from the summary,
+            % so place each mean in its member's slot and leave the rest
+            % NaN, which sort puts last.
+            [groupmean, found] = groupsummary(YData(rows), XData(rows), ...
+               "mean");
+            stat = nan(size(members));
+            [~, loc] = ismember(string(found), members);
+            stat(loc) = groupmean;
+
+            [~, idx] = sort(stat, opts.SortBy, 'MissingPlacement', 'last');
+            XData = reordercats(XData, members(idx));
          otherwise
             % "none" leaves the category order as it is.
       end
@@ -355,7 +468,8 @@ end
 
 function plotboxchartstats(opts,H,XData,YData,CData)
 
-   hold on;
+   ax = opts.Parent;
+   hold(ax, 'on');
 
    % Load default colors to match the mean symbols to the boxcharts
    colors = defaultcolors;
@@ -365,8 +479,8 @@ function plotboxchartstats(opts,H,XData,YData,CData)
 
    % Plot the means
    if opts.PlotMeans
-      arrayfun(@(n) scatter(xlocs(n,:), mu(n,:), 30, colors(n, :), 'filled', 's'), ...
-         1:numel(H));
+      arrayfun(@(n) scatter(ax, xlocs(n,:), mu(n,:), 30, colors(n, :), ...
+         'filled', 's'), 1:numel(H));
    end
 
    % Connect the means. plot reads each column as one line, and xlocs holds
@@ -374,12 +488,14 @@ function plotboxchartstats(opts,H,XData,YData,CData)
    % color groups inside one x-tick instead of following one color across
    % the ticks.
    if opts.ConnectMeans == true
-      plot(xlocs', mu', '-', 'Color', [0.5 0.5 0.5],'HandleVisibility','off')
+      plot(ax, xlocs', mu', '-', 'Color', [0.5 0.5 0.5], ...
+         'HandleVisibility', 'off')
    end
 
    % Connect the medians.
    if opts.ConnectMedians
-      plot(xlocs', med', '-', 'Color', [0.5 0.5 0.5],'HandleVisibility','off')
+      plot(ax, xlocs', med', '-', 'Color', [0.5 0.5 0.5], ...
+         'HandleVisibility', 'off')
    end
 end
 
@@ -449,8 +565,9 @@ function shadeboxchartgroups(CustomOpts, H)
    % left/right-most x-coordinate of each xtick group)
    [~, xleft, xright] = boxchartxdata(H);
 
-   % Get the y-coordinate of the plot bounds
-   [ylow, yhigh] = bounds(ylim);
+   % Get the y-coordinate of the plot bounds, in the caller's axes
+   ax = CustomOpts.Parent;
+   [ylow, yhigh] = bounds(ylim(ax));
 
    % The x-tick grid is regular, so interpolate the NaN bounds. naninterp1
    % needs at least two known points to interpolate between, so a grid with
@@ -478,13 +595,12 @@ function shadeboxchartgroups(CustomOpts, H)
    xpatch = [xleft(idxodd); xright(idxodd); xright(idxodd); xleft(idxodd); xleft(idxodd)];
    ypatch = repmat([ylow; ylow; yhigh; yhigh; ylow], 1, numel(idxodd));
 
-   P = patch(xpatch, ypatch, 'k', ...
+   P = patch(ax, xpatch, ypatch, 'k', ...
       'FaceColor', [0.5 0.5 0.5], ...
       'FaceAlpha', 0.1, ...
       'EdgeColor', 'none' );
 
    % Set up a listener for changes in the YLim property
-   ax = gca;
    addlistener(ax, 'YLim', 'PostSet', @(src, evt) updateshadedbounds(P, ax));
 
    function updateshadedbounds(P, ax)
@@ -493,7 +609,7 @@ function shadeboxchartgroups(CustomOpts, H)
    end
 end
 
-function setboxchartylim(H, XData, YData, CData)
+function setboxchartylim(ax, H, XData, YData, CData)
    %SETBOXCHARTYLIM Fit the y limits to the whiskers when outliers are hidden.
    %
    % With MarkerStyle "none" boxchart draws no outlier points, so the visible
@@ -538,7 +654,7 @@ function setboxchartylim(H, XData, YData, CData)
    if padding == 0
       padding = max(abs(bounds(1)), 1) * 0.01;
    end
-   ylim(bounds + [-padding padding]);
+   ylim(ax, bounds + [-padding padding]);
 end
 
 %% LICENSE

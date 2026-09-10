@@ -39,10 +39,6 @@ function setupfile(varargin)
    %
    % See also: userhooks, config, buildfile, makeproject
 
-   % Notes - toolboxdir returns the full path to mathworks toolboxes, needed for
-   % compiler - tbxprefix returns the root folder for mathworks toolboxes (its a
-   % builtin func) - tempname, tempdir create temp folders and temp files
-
    % The project name, then the project path
    narginchk(0, 2)
 
@@ -101,19 +97,6 @@ function setupfile(varargin)
    % Record where this project is installed. groupstats.internal.installpath
    % reads this preference.
    setpref(projectname, 'install_path', projectpath);
-
-   % This is true if running in desktop. Use it to suppress interactions with
-   % the editor or any other feature that requires the Matlab desktop
-   % application.
-   if usejava('desktop')
-      % user hooks related to the editor go here, such as opening or closing
-      % files
-   end
-
-   % This detects if menv/mproject is being used to manage projects
-   if strcmp(mcallername(), 'workon') || strcmp(mcallername(), 'configurepackage')
-
-   end
 end
 
 %% function to safely add paths

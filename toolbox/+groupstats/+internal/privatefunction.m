@@ -58,7 +58,8 @@ function F = privatefunction(funcName)
       funcList = listfiles(allprivatefolders{n}, 'aslist', true, 'mfiles', true);
       funcList = erase(funcList, '.m');
 
-      % cd to the private folder parent so the private function is in scope
+      % cd into the private folder, where its functions are plain files
+      % a name can bind to.
       cd(allprivatefolders{n});
       
       if returnAllFunctions
@@ -66,12 +67,10 @@ function F = privatefunction(funcName)
          F{n} = cell2struct(H, cellfun(@func2str, H, 'UniformOutput', 0), 1);
       else
          if ismember(funcName, funcList)
-            % H = cellfun(@str2func, funcList, 'UniformOutput', 0);
-            % H = cellfun(@str2func, {funcName}, 'UniformOutput', 0);
+            % str2func binds the name in the current folder's scope. The
+            % cd above made that the private folder, where the name is a
+            % plain function file.
             F = str2func(funcName);
-
-            % use this to confirm correct scoping
-            % functions(F)
             return
          end
       end

@@ -1,69 +1,54 @@
 # Project-specific code style — groupstats
 
-Conventions specific to this project, extending the canonical `STYLE.md` (and any
-language conventions merged into it). This file is project-owned — `--update` never
-overwrites it.
+Conventions specific to this project, extending `STYLE.md` (and any language conventions
+merged into it).
 
 ## Naming
 
-- Function-name casing follows canonical `STYLE.md` (MATLAB conventions).
-- Public functions belong in `toolbox/+groupstats/`. Build and maintenance
-  utilities belong in `toolbox/+groupstats/+internal/`. Helpers used by a
-  single folder belong in that folder's `private/` directory.
-- Table arguments must be named `tbl`, never `T`. Rename any remaining or
-  reintroduced `T` table variable to `tbl` on contact. Positional arguments
-  are lowercase (`ydatavar`, `xgroupvar`, `cgroupvar`). Name-value option
-  fields are PascalCase (`XGroupMembers`, `PlotMeans`, `LegendOrientation`);
-  the `arguments`-block structs that hold them are named `opts` (options) and
-  `props` (graphics pass-through properties).
-- Group-argument naming scheme: a scalar grouping variable is `groupvar`
-  (`groupbayes`, `groupdifference`, `groupmap`); a vector of grouping
-  variables is `groupvars` (`groupsummary`, `grouppercent`, `groupselect`);
-  the charts use role-prefixed `xgroupvar`/`cgroupvar`/`sgroupvar`.
-  `dropcats` keeps `varnames` because it names categorical variables, not
-  groupings. Positional member lists are `groupmembers`; name-value member
-  options are PascalCase `*Members`.
-- Test classes must be named `test_<subject>.m` and live in `tests/`,
-  matching `test_dropcats.m`, `test_groupbayes.m`, and `test_groupmap.m`.
-  There are no exceptions.
-- `toolbox/+groupstats/+test/` holds test runners, helpers, and fixtures that
-  ship with the toolbox, not test classes. `generateTestData.m` lives there
-  because demos and scripts call it.
+- Public functions live in `toolbox/+groupstats/`; internal utilities live
+  in `+internal/`; single-folder helpers live in that folder's `private/`.
+- Table arguments are named `tbl`, never `T`. Positional arguments are
+  lowercase; name-value fields are PascalCase. The `arguments`-block
+  structs are `opts` (options) and `props` (graphics pass-through).
+- Grouping variables: a scalar is `groupvar`, a vector is `groupvars`; the
+  cats charts and `scatter` use role-prefixed `xgroupvar`/`cgroupvar`/
+  `sgroupvar`. A grouping variable is positional, except the second
+  grouping of `groupcompare`/`groupsamples`, the name-value `ConditionVar`.
+  An optional grouping variable is declared `string {mustBeScalarOrEmpty}`
+  with a `string.empty()` default. `dropcats` keeps `varnames` because it
+  names categorical variables, not groupings. Positional member lists are
+  `groupmembers`; name-value member options are PascalCase `*Members`.
+- `groupsummary`/`grouppercent` accept the standard positional inputs;
+  rare or groupstats-only controls (`GroupSets`, `RowSelectVar`,
+  `RowSelectMembers`) are PascalCase name-value options.
+- `SortBy` sets the sort direction on all four charts. Cats charts sort
+  `xgroupvar` only, so they have no `SortGroup`, but they have
+  `SortGroupMembers` (which `cgroupvar` members enter the sort). `scatter`
+  sorts either grouping, so it has both `SortGroup` and `SortVar`.
+- Test classes are named `test_<subject>.m` in `tests/`, e.g.
+  `test_dropcats.m`.
+- `toolbox/+groupstats/+test/` holds test runners, helpers, and fixtures,
+  not test classes; `generateTestData.m` lives there so demos and scripts
+  can call it too.
 
 ## Formatting
 
-- Indent with 3 spaces (canonical `STYLE.md` delegates indent width to this
-  file). Never use tabs (`getCases.m` is a legacy exception).
-- Indent `...` continuation lines by 6 spaces (double indent).
-- Preserve the commented BSD 3-Clause footer blocks in files that carry them.
-  Do not add license footers to new files.
+- Indent with 3 spaces, never tabs. Indent `...` continuation lines by 6
+  spaces (double indent).
+- Preserve the commented BSD 3-Clause footer blocks in files that carry
+  them. Do not add license footers to new files.
 
 ## Idioms and patterns
 
 - Use `arguments` blocks for input validation in all new code, including
-  `props.?matlab.graphics.chart.primitive.BoxChart`-style declarations for
-  graphics property pass-through. `inputParser` survives only in two legacy
-  internals (`getRequiredFiles.m`, `replacePackagePrefix.m`); it must not
-  appear in new code.
+  `props.?Class`-style graphics pass-through. `inputParser` must not
+  appear in new code (two legacy internals still use it).
 - Import namespace functions at the top of a function body
-  (`import groupstats.groupselect`) instead of fully qualifying every call.
-- Route grouped-table preprocessing through `groupstats.prepareTableGroups`;
-  do not re-implement group/member validation inside individual functions.
+  (`import groupstats.groupselect`) instead of fully qualifying each call.
+- Route grouped-table preprocessing through `groupstats.prepareTableGroups`
+  instead of reimplementing group/member validation per function.
 - Use the cleanup-object helpers `withwarnoff` and `withcd` for temporary
   warning-state and directory changes.
-
-## Other project conventions
-
-- MATLAB launchers on this machine: `matlab` on `PATH` is a symlink to
-  `/Applications/MATLAB_R2025b.app/bin/matlab`; R2024b is also installed at
-  `/Applications/MATLAB_R2024b.app/bin/matlab`. Develop and test against
-  these releases.
-- Language-feature floor already in use: `arguments` blocks (R2019b+),
-  `props.?Class` validation (R2021a+), `buildtool` (R2022b+), and
-  `codeIssues` (R2023a+). Releasing needs R2025a, for the Package Toolbox
-  task, but that is a maintainer step and not a floor for using the toolbox.
-- `toolbox/+groupstats/permutest/` is vendored third-party code with its own
-  `license.txt`; never edit, restyle, or lint it to project conventions.
 
 ## Prose examples
 

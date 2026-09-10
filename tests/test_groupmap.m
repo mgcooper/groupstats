@@ -104,6 +104,20 @@ classdef test_groupmap < matlab.unittest.TestCase
 
          testCase.verifyClass(returned.(groupcase.groupvar), 'categorical');
       end
+
+      function testInputsAreValidatedByTheArgumentsBlock(testCase)
+         % The arguments block rejects a group variable list and a
+         % function that is not a handle before any group is formed.
+
+         tbl = table(categorical(["a"; "b"]), [1; 2], ...
+            'VariableNames', {'g', 'v'});
+
+         testCase.verifyError(@() groupstats.groupmap(tbl, ["g", "v"], ...
+            @(t) mean(t.v)), 'MATLAB:validation:IncompatibleSize');
+         testCase.verifyError(@() groupstats.groupmap(tbl, "g", "mean"), ...
+            'MATLAB:validation:UnableToConvert');
+      end
+
    end
 end
 

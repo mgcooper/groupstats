@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <productinfo xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="optional">
-
-    <!-- info.xml file for the Group Stats Toolbox -->
-
-    <!-- Supply the following six elements in the order specified -->
-    <!-- (Required) Release of MATLAB. Not currently used but required -->
-    <!-- to parse the file -->
+    <!-- info.xml for the Group Stats Toolbox. Keep these six elements in
+         this order; the parser reads every one, including the two that
+         nothing uses. -->
+    <!-- (Required) Release of MATLAB. Not used, but required to parse
+         the file. -->
     <matlabrelease>R2021a</matlabrelease>
-    <!-- (Required) Title of toolbox. Appears in the Contents pane -->
+    <!-- (Required) Title of the toolbox. Appears in the Contents pane. -->
     <name>Group Stats</name>
-    <!-- (Required) Label for the toolbox. pick one: -->
-    <!-- matlab, toolbox, simulink, blockset, links_targets  -->
+    <!-- (Required) Label for the toolbox, one of matlab, toolbox,
+         simulink, blockset, links_targets. -->
     <type>toolbox</type>
-    <!-- (Required) Icon file to display in the Start button. Not currently used -->
-    <!-- but required to parse the file -->
+    <!-- (Required) Icon file for the Start button. Not used, but required
+         to parse the file. -->
     <icon></icon>
-    <!-- (Required if you supply help) Relative path to help (HTML) folder -->
+    <!-- (Required if you supply help) Relative path to the help (HTML)
+         folder. -->
     <help_location>docs/html</help_location>
-    <!-- (Required if you supply help) Icon used in the Help browser TOC -->
-    <!-- Ignored in R2015a and later -->
+    <!-- (Required if you supply help) Icon for the Help browser TOC.
+         Ignored in R2015a and later. -->
     <help_contents_icon></help_contents_icon>
 </productinfo>

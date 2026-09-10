@@ -45,3 +45,6 @@
 
 % Project resources folder
 resources/
+
+% Written by the Help browser search-database build beside the docs
+**/custom_toolbox.json

@@ -100,8 +100,9 @@ title("Median peak with interquartile whiskers")
 %% Shade the x-groups
 %
 % ShadeGroups puts an alternating band behind each x-group, which helps
-% when many color groups make the group boundaries hard to see. It is on
-% by default in both cats charts, so this section turns it off.
+% when several color groups make the group boundaries hard to see. It is
+% on by default when a color group is given and off without one, on both
+% cats charts, so this section turns it off.
 
 figure
 groupstats.barchartcats(Info, "peak", "month", "scenario", ...

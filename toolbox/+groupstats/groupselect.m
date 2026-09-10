@@ -14,7 +14,7 @@ function tbl = groupselect(tbl, groupvars, groupmembers)
    %
    % Example
    %  tbl = table(["a";"b";"c"], [1;2;3], 'VariableNames', {'Group','Value'});
-   %  groupselect(tbl, "Group", ["a" "b"])   % the first two rows
+   %  groupstats.groupselect(tbl, "Group", ["a" "b"])   % the first two rows
    %
    % Errors
    %  groupstats:groupselect:noMembersRequested - GROUPMEMBERS is empty.

@@ -149,6 +149,16 @@ classdef test_prepareTableGroups < matlab.unittest.TestCase
             'groupstats:prepareTableGroups:membersWithoutGroupVar');
       end
 
+      function testRowSelectVarWithoutMembersErrors(testCase)
+         % A row-selection variable with no members would select no rows
+         % and leave an empty chart, so it is an error under this
+         % function's own identifier.
+
+         testCase.verifyError(@() groupstats.prepareTableGroups( ...
+            testCase.Tbl, "Value", RowSelectVar = "Region"), ...
+            'groupstats:prepareTableGroups:rowSelectVarWithoutMembers');
+      end
+
       function testXGroupMembersWithoutXGroupVarErrors(testCase)
          % The same rule applies to the x-axis group.
 
@@ -340,5 +350,38 @@ classdef test_prepareTableGroups < matlab.unittest.TestCase
          expected = [1; 3; 4; 5; 6];
          testCase.verifyEqual(returned.Value, expected);
       end
+
+      function testNamedCategoryXDataVarStaysCategorical(testCase)
+         % A categorical XDataVar whose categories are names cannot become
+         % numbers, so it stays categorical for the chart to rank, the way
+         % YDataVar does. A text conversion would turn it into NaN.
+
+         level = categorical(["low"; "mid"; "high"], ...
+            ["low", "mid", "high"], 'Ordinal', true);
+         tbl = table(level, [1; 2; 3], categorical(["p"; "p"; "q"]), ...
+            'VariableNames', {'Level', 'Value', 'Grp'});
+
+         returned = groupstats.prepareTableGroups(tbl, "Value", ...
+            XDataVar = "Level", CGroupVar = "Grp");
+
+         testCase.verifyEqual(returned.Level, level);
+      end
+
+
+      function testMultiColumnGroupVariableIsRejected(testCase)
+         % A matrix variable has no single label per row, so it cannot
+         % group. The guard names the argument and the column count.
+
+         tbl = testCase.Tbl;
+         tbl.Pair = [tbl.Value, tbl.Value];
+
+         testCase.verifyError(@() groupstats.prepareTableGroups(tbl, ...
+            "Value", XGroupVar = "Pair"), ...
+            'groupstats:prepareTableGroups:multiColumnGroupVar');
+         testCase.verifyError(@() groupstats.prepareTableGroups(tbl, ...
+            "Value", CGroupVar = "Pair"), ...
+            'groupstats:prepareTableGroups:multiColumnGroupVar');
+      end
+
    end
 end

@@ -16,7 +16,9 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    %  The name-value arguments select rows and prepare group variables:
    %
    %   XDataVar         Name of the x-axis data variable. Converted to double
-   %                    from categorical, then from text, if it is neither.
+   %                    from a categorical whose categories are numbers, or
+   %                    from text. A categorical whose categories are names
+   %                    stays categorical, for the chart to rank.
    %   XGroupVar        Name of the x-axis group variable.
    %   XGroupMembers    Members of XGroupVar to keep. Rows outside them go.
    %   CGroupVar        Name of the color group variable.
@@ -61,6 +63,8 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    %  groupstats:prepareTableGroups:unknownVariable - A named variable is not
    %  a variable of the table. The message names the calling chart, and the
    %  identifier stays the same for every caller, so a test can pin it.
+   %  groupstats:prepareTableGroups:multiColumnGroupVar - XGroupVar or
+   %  CGroupVar names a matrix variable, which has no single label per row.
    %
    % Notes.
    %
@@ -132,6 +136,7 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    % Confirm each XGroupMember is a member of tbl.(XGroupVar)
    if ~isempty(opts.XGroupVar)
       requireVariable(opts.XGroupVar, VarNames, Caller, 'XGroupVar');
+      requireColumn(tbl, opts.XGroupVar, Caller, 'XGroupVar');
    end
    if ~isempty(opts.XGroupMembers)
       % validatemember checks each requested member against the data column,
@@ -155,6 +160,7 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    % Confirm each CGroupMember is a member of tbl.(CGroupVar)
    if ~isempty(opts.CGroupVar)
       requireVariable(opts.CGroupVar, VarNames, Caller, 'CGroupVar');
+      requireColumn(tbl, opts.CGroupVar, Caller, 'CGroupVar');
    end
    if ~isempty(opts.CGroupMembers)
       % Same member check as the x-axis group above.
@@ -202,10 +208,16 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    % Check if xdatavar is categorical, and try to convert it if provided
    if ~isempty(opts.XDataVar) && ~isnumeric(tbl.(opts.XDataVar))
 
-      % Try to convert categorical to double
-      try
-         tbl.(opts.XDataVar) = cat2double(tbl.(opts.XDataVar));
-      catch
+      if iscategorical(tbl.(opts.XDataVar))
+         % Try to convert categorical to double. A categorical whose
+         % categories are names stays categorical, as YDataVar does, so the
+         % chart can draw its ranking; str2double would turn it into NaN.
+         try
+            tbl.(opts.XDataVar) = cat2double(tbl.(opts.XDataVar));
+         catch
+            % let the built-in error catching do the work.
+         end
+      else
          % Try to convert string to double
          try
             tbl.(opts.XDataVar) = str2double(tbl.(opts.XDataVar));
@@ -241,6 +253,21 @@ function requireVariable(VarName, VarNames, Caller, ArgName)
       error('groupstats:prepareTableGroups:unknownVariable', ...
          '%s: %s "%s" is not a variable of the table. Valid names: %s.', ...
          Caller, ArgName, VarName, strjoin(string(VarNames), ', '))
+   end
+end
+
+function requireColumn(tbl, VarName, Caller, ArgName)
+   %REQUIRECOLUMN Require a group variable to hold one column.
+   %
+   % A matrix variable, such as an N-by-2 numeric, has no single label per
+   % row. string() and ismember on it misbehave or fail with a message that
+   % names no cause, so refuse it here, as the builtin group parsing does.
+
+   if ~iscolumn(tbl.(VarName))
+      error('groupstats:prepareTableGroups:multiColumnGroupVar', ...
+         ['%s: %s "%s" has %d columns. A group variable must hold one ' ...
+         'column, one label per row.'], Caller, ArgName, VarName, ...
+         size(tbl.(VarName), 2))
    end
 end
 

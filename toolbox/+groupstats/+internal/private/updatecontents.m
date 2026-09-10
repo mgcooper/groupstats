@@ -54,16 +54,18 @@ function updatecontents(folder)
    dirs = getcontents(folder,'filter','folders','rec',true,'path','full','sort',true);
    dirs = [{folder}; dirs];
 
-   % get files
-   files = cell(0,1);
-   H1_lines = cell(0,1);
+   % get files. One cell per folder holds that folder's rows: a blank
+   % row, a folder-name row, then one row per file. A folder with no file
+   % gets no rows. The cells are joined once, so no list grows inside the
+   % loop.
+   perfiles = repmat({cell(0, 1)}, length(dirs), 1);
+   perh1 = repmat({cell(0, 1)}, length(dirs), 1);
    for d = 1:length(dirs)
       temp = getcontents(dirs{d},'filter','files','sort',true);
       if ~isempty(temp)
          temp = temp(~contains(temp, '~'));    % remove temporary files
          temp = temp(~contains(temp, '.mex')); % remove compiled mex files
          temp = temp(cellfun(@(x) ~strcmp(x,filename),temp)); % remove Contents.m
-         H1_lines = [H1_lines; {''}; {''}]; %#ok<AGROW> % insert blank lines where no functions will be
          % determine package prefix
          pkgprefix = strrep(dirs{d},[filesep '+'],'.');
          pkgprefix = strrep(pkgprefix,[filesep '@'],'.');
@@ -73,17 +75,22 @@ function updatecontents(folder)
          else
             pkgprefix = '';
          end
+         h1 = cell(length(temp), 1);
          for f = 1:length(temp) % read H1 lines
-            H1_lines = [H1_lines; {get_H1_line([dirs{d} filesep temp{f}])}]; %#ok<AGROW> % add H1 lines
+            h1{f} = get_H1_line([dirs{d} filesep temp{f}]);
             % remove extension from and add package prefix to m-files
             [~,fname,ext] = fileparts(temp{f});
             if strcmpi(ext,'.m')
                temp{f} = [pkgprefix fname];
             end
          end
-         files = [files; {''}; {upper(dirs{d}(fIX+1:end))}; temp;]; %#ok<AGROW> % add filenames
+         % two blank H1 rows pair with the blank row and the folder-name row
+         perh1{d} = [{''}; {''}; h1];
+         perfiles{d} = [{''}; {upper(dirs{d}(fIX+1:end))}; temp];
       end
    end
+   files = vertcat(perfiles{:});
+   H1_lines = vertcat(perh1{:});
 
    % longest file name (so appropriate space can be added between files and H1 lines
    longest_word = max(cellfun(@length,files(cellfun(@(x) ~isempty(x),H1_lines))));

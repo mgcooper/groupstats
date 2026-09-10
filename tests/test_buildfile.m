@@ -175,6 +175,46 @@ classdef test_buildfile < matlab.unittest.TestCase
             'toolbox', 'version.txt')))), "v");
          testCase.verifyEqual(returned, expected);
       end
+
+      function testProjectVersionMatchesVersionTxt(testCase)
+         % The Package Toolbox task stores its own version. Read that task
+         % directly, without releaseoptions' override, to keep the project
+         % record synchronized with version.txt.
+
+         embedded = matlab.addons.toolbox.ToolboxOptions(fullfile( ...
+            testCase.Root, 'GroupStats.prj'));
+         returned = string(embedded.ToolboxVersion);
+         expected = erase(strip(string(fileread(fullfile(testCase.Root, ...
+            'toolbox', 'version.txt')))), "v");
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testPackagedVersionIsTheOneVersionTxtCarries(testCase)
+         % The release task packages, then reads the version back from the
+         % .mltbx and compares it with version.txt. Package into a scratch
+         % file with the same options and run that check.
+
+         scratch = string(tempname());
+         mkdir(scratch)
+         testCase.addTeardown(@() rmdir(scratch, "s"));
+         opts = testCase.Opts;
+         opts.OutputFile = fullfile(scratch, "scratch.mltbx");
+         matlab.addons.toolbox.packageToolbox(opts);
+
+         groupstats.internal.assertpackagedversion(opts.OutputFile, ...
+            opts.ToolboxVersion)
+
+         returned = string(matlab.addons.toolbox.toolboxVersion( ...
+            opts.OutputFile));
+         expected = string(erase(groupstats.internal.version(), "v"));
+         testCase.verifyEqual(returned, expected);
+
+         % A version the package does not carry is the mismatch the task
+         % guards against.
+         testCase.verifyError(@() groupstats.internal.assertpackagedversion( ...
+            opts.OutputFile, "9.9.9"), 'groupstats:release:versionMismatch');
+      end
+
    end
 
    methods (Access = private)
@@ -220,6 +260,7 @@ classdef test_buildfile < matlab.unittest.TestCase
 
          testCase.assertClass(files, 'string');
       end
+
    end
 end
 

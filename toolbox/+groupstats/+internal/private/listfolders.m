@@ -45,27 +45,21 @@ function folderlist = listfolders(toppath, numlevels, option, currentlevel)
       folderlist = toplist;
    end
 
-   % Recursion
+   % Recursion. One cell per folder holds the list below it, and the
+   % cells are joined once, so no list grows inside the loop.
    if numlevels == -1 || currentlevel < numlevels
 
-      for thisfolder = toplist(:)'
-         nextpath = fullfile(toppath, thisfolder{:});
+      nextlists = cell(numel(toplist), 1);
+      for n = 1:numel(toplist)
+         nextpath = fullfile(toppath, toplist{n});
          nextlist = listfolders(nextpath, numlevels, option, currentlevel+1);
 
          if strcmp(option, 'relativepaths')
-            nextlist = strcat(thisfolder{:}, '/', nextlist);
+            nextlist = strcat(toplist{n}, '/', nextlist);
          end
 
-         folderlist = [folderlist; nextlist]; %#ok<AGROW>
+         nextlists{n} = nextlist;
       end
+      folderlist = [folderlist; vertcat(nextlists{:})];
    end
 end
-
-%% TESTS
-
-%!test
-
-% Assume the current working directory is the one contains the script.
-% Make sure you have the folder structure created for testing.
-% In this case, 'folder1' and 'folder1/subfolder1' must exist.
-%! assert(isequal(listfolders('folder1', 1, 'relativepaths'), {'subfolder1'}));

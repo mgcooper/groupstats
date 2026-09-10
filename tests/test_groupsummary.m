@@ -37,7 +37,7 @@ classdef test_groupsummary < matlab.unittest.TestCase
          % reported from inside parsegroupbins with no mention of groupsets.
 
          G = groupstats.groupsummary(testCase.Tbl, ["Grp", "Sub"], ...
-            {'mean'}, "Value", "none", "Grp");
+            {'mean'}, "Value", GroupSets = "Grp");
 
          returned = string(G.Properties.VariableNames);
          testCase.verifyEqual(sum(returned == "Grp"), 1);
@@ -50,7 +50,7 @@ classdef test_groupsummary < matlab.unittest.TestCase
          % "none" sentinel.
 
          G = groupstats.groupsummary(testCase.Tbl, ["Grp", "Sub"], ...
-            {'mean'}, "Value", "none", "Set");
+            {'mean'}, "Value", GroupSets = "Set");
 
          returned = string(G.Properties.VariableNames);
          testCase.verifyTrue(any(returned == "Set"));
@@ -67,8 +67,8 @@ classdef test_groupsummary < matlab.unittest.TestCase
          tbl = testCase.Tbl;
          tbl.SetNum = double(categorical(tbl.Set));
 
-         G = groupstats.groupsummary(tbl, "Grp", "mean", [], "none", ...
-            "SetNum");
+         G = groupstats.groupsummary(tbl, "Grp", "mean", [], ...
+            GroupSets = "SetNum");
 
          returned = string(G.Properties.VariableNames);
          testCase.verifyFalse(any(returned == "mean_SetNum"));
@@ -83,7 +83,7 @@ classdef test_groupsummary < matlab.unittest.TestCase
          tbl.Amount = repmat([1; 3], height(tbl) / 2, 1);
 
          G = groupstats.groupsummary(tbl, "Amount", ...
-            {'mean'}, "Value", {[0 2 4]}, "Set");
+            {'mean'}, "Value", {[0 2 4]}, GroupSets = "Set");
 
          returned = string(G.Properties.VariableNames);
          testCase.verifyTrue(any(returned == "Set"));
@@ -162,7 +162,7 @@ classdef test_groupsummary < matlab.unittest.TestCase
          % groupsets names the variable whose members define distinct sets.
 
          G = groupstats.groupsummary(testCase.Tbl, "Sub", "mean", "Value", ...
-            "none", "Grp");
+            GroupSets = "Grp");
 
          returned = string(G.Properties.VariableNames);
          testCase.verifyTrue(any(returned == "Percent_Grp"));
@@ -172,7 +172,6 @@ classdef test_groupsummary < matlab.unittest.TestCase
          % RowSelectVar and RowSelectMembers drop rows before summarizing.
 
          G = groupstats.groupsummary(testCase.Tbl, "Grp", "mean", "Value", ...
-            "none", string.empty(), ...
             RowSelectVar = "Sub", RowSelectMembers = "x");
 
          returned = sum(G.GroupCount);
@@ -187,8 +186,7 @@ classdef test_groupsummary < matlab.unittest.TestCase
 
          testCase.verifyError( ...
             @() groupstats.groupsummary(testCase.Tbl, ["Grp", "Sub"], ...
-            "mean", "Value", "none", string.empty(), ...
-            RowSelectMembers = "x"), ...
+            "mean", "Value", RowSelectMembers = "x"), ...
             'groupstats:groupsummary:membersWithoutGroupVar');
       end
 
@@ -198,7 +196,7 @@ classdef test_groupsummary < matlab.unittest.TestCase
 
          testCase.verifyError( ...
             @() groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
-            "Value", "none", string.empty(), RowSelectVar = "Sub"), ...
+            "Value", RowSelectVar = "Sub"), ...
             'groupstats:groupsummary:rowSelectVarWithoutMembers');
       end
 
@@ -256,7 +254,7 @@ classdef test_groupsummary < matlab.unittest.TestCase
          exception = MException.empty();
          try
             groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
-               "Value", "none", "none");
+               "Value", "none", GroupSets = "none");
          catch exception
          end
          testCase.assertNotEmpty(exception);
@@ -267,11 +265,11 @@ classdef test_groupsummary < matlab.unittest.TestCase
       end
 
       function testEmptyGroupSetsMeansNoGroupSets(testCase)
-         % An explicit string.empty() groupsets must mean the same as
-         % omitting the argument.
+         % An explicit string.empty() GroupSets must mean the same as
+         % omitting the option.
 
          returned = groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
-            "Value", "none", string.empty());
+            "Value", "none", GroupSets = string.empty());
          expected = groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
             "Value");
 
@@ -338,6 +336,68 @@ classdef test_groupsummary < matlab.unittest.TestCase
          testCase.verifyTrue(any(returned == "fun1_Value"));
       end
 
+      function testSeveralGroupSetsEachGetAPercentColumn(testCase)
+         % GroupSets takes a vector, and both names here are outside
+         % groupvars, so the summary groups by all three variables and
+         % every named set variable gets its own within-member percent.
+
+         G = groupstats.groupsummary(testCase.Tbl, "Sub", "mean", ...
+            "Value", GroupSets = ["Grp", "Set"]);
+
+         % The fixture: Grp a is rows 1 to 4, b 5 to 8, c 9 to 12; Sub
+         % alternates x, y; Set p is rows 1 to 6 and q 7 to 12. The eight
+         % (Grp, Set, Sub) groups hold 2, 2, 1, 1, 1, 1, 2, 2 rows in that
+         % sorted order. Within Grp, a and c split 50/50 and b 25 each.
+         % Within Set, each set is 2, 2, 1, 1 of 6 rows.
+         G = sortrows(G, ["Grp", "Set", "Sub"]);
+
+         returned = G.GroupCount;
+         expected = [2; 2; 1; 1; 1; 1; 2; 2];
+         testCase.verifyEqual(returned, expected);
+
+         returned = G.Percent_Grp;
+         expected = [50; 50; 25; 25; 25; 25; 50; 50];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-10);
+
+         returned = G.Percent_Set;
+         expected = 100 * [2; 2; 1; 1; 1; 1; 2; 2] / 6;
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-10);
+
+         % Rows 1 and 3 are (a, p, x), so that group's mean is 2.
+         returned = G.mean_Value(1);
+         expected = 2;
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testOptionLikeDataVariableNamePassesAsACellstr(testCase)
+         % MATLAB reads an optional positional text value that matches an
+         % option name, and is followed by another positional, as that
+         % option. A cellstr is never read as a name, so it is the
+         % documented way to name such a data variable positionally.
+
+         tbl = testCase.Tbl;
+         tbl.GroupSets = tbl.Value;
+
+         G = groupstats.groupsummary(tbl, "Grp", "mean", {'GroupSets'}, ...
+            "none");
+
+         returned = any(string(G.Properties.VariableNames) == ...
+            "mean_GroupSets");
+         expected = true;
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testAStringArrayOfMethodsIsAList(testCase)
+         % A string array names one method per element, the same list a
+         % cellstr gives, so both produce the same columns.
+
+         returned = groupstats.groupsummary(testCase.Tbl, "Grp", ...
+            ["mean", "max"], "Value");
+         expected = groupstats.groupsummary(testCase.Tbl, "Grp", ...
+            {'mean', 'max'}, "Value");
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testTooManyGroupBinsErrors(testCase)
          % One binning scheme per group variable, one in total, or "none".
          % Anything else would misalign the schemes with the variables.
@@ -355,5 +415,75 @@ classdef test_groupsummary < matlab.unittest.TestCase
             @() groupstats.groupsummary(magic(4), "Grp"), ...
             'MATLAB:validation:UnableToConvert');
       end
+
+      function testBinsThatDoNotSpanTheDataAreReported(testCase)
+         % Rows outside the edges would form an <undefined> group and the
+         % percent join would fail on a missing key with a message that
+         % names no cause. The error names the scheme and the row count.
+
+         testCase.verifyError(@() groupstats.groupsummary(testCase.Tbl, ...
+            "Value", "mean", "Other", {[0 6]}), ...
+            'groupstats:groupsummary:binsDoNotSpanData');
+
+         try
+            groupstats.groupsummary(testCase.Tbl, "Value", "mean", ...
+               "Other", {[0 6]});
+         catch e
+            returned = [contains(e.message, "[0 6]"); ...
+               contains(e.message, "Value"); contains(e.message, "6 rows")];
+            expected = [true; true; true];
+            testCase.verifyEqual(returned, expected);
+         end
+      end
+
+      function testIncludedEdgePicksTheBinOfAValueOnAnEdge(testCase)
+         % Value runs 1 to 12. With edges [0 6 12], "left" puts 6 in the
+         % second bin (5 and 7 rows) and "right" puts it in the first (6
+         % and 6).
+
+         G = groupstats.groupsummary(testCase.Tbl, "Value", "mean", ...
+            "Other", {[0 6 12]});
+         returned = G.GroupCount(:);
+         expected = [5; 7];
+         testCase.verifyEqual(returned, expected);
+
+         G = groupstats.groupsummary(testCase.Tbl, "Value", "mean", ...
+            "Other", {[0 6 12]}, IncludedEdge = "right");
+         returned = G.GroupCount(:);
+         expected = [6; 6];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testIncludedEdgeRejectsAnUnknownValue(testCase)
+         % The option takes the two values the builtin takes.
+
+         testCase.verifyError(@() groupstats.groupsummary(testCase.Tbl, ...
+            "Value", "mean", "Other", {[0 6 12]}, IncludedEdge = "middle"), ...
+            'MATLAB:validators:mustBeMember');
+      end
+
+
+      function testNonNumericBinsThatDoNotSpanTheDataAreReported(testCase)
+         % A duration edge scheme takes the text branch of the message.
+         % Twelve one-hour values against edges that stop at six hours
+         % leave six rows outside.
+
+         tbl = testCase.Tbl;
+         tbl.Elapsed = hours(tbl.Value);
+         edges = hours([0 6]);
+
+         try
+            groupstats.groupsummary(tbl, "Elapsed", "mean", "Other", {edges});
+            testCase.verifyFail("no error was raised");
+         catch e
+            returned = {e.identifier; contains(e.message, "Elapsed"); ...
+               contains(e.message, "6 rows"); ...
+               contains(e.message, string(edges(2)))};
+            expected = {'groupstats:groupsummary:binsDoNotSpanData'; ...
+               true; true; true};
+            testCase.verifyEqual(returned, expected);
+         end
+      end
+
    end
 end

@@ -35,7 +35,9 @@ classdef test_histogram < matlab.unittest.TestCase
          % Merging pools members of the group variable. Without one the
          % request had no effect, and nothing said so.
 
-         testCase.verifyError(@() groupstats.histogram(randn(20, 1), ...
+         tbl = table(randn(20, 1), 'VariableNames', {'Value'});
+
+         testCase.verifyError(@() groupstats.histogram(tbl, "Value", ...
             MergeGroupMembers = {["a", "b"]}), ...
             'groupstats:histogram:mergeWithoutGroupVar');
       end
@@ -44,7 +46,9 @@ classdef test_histogram < matlab.unittest.TestCase
          % One ungrouped group turns the legend off by default. A caller
          % who asks for one outright still gets it.
 
-         [~, L] = groupstats.histogram(randn(20, 1), Legend = "on");
+         tbl = table(randn(20, 1), 'VariableNames', {'Value'});
+
+         [~, L] = groupstats.histogram(tbl, "Value", Legend = "on");
 
          testCase.verifyNotEmpty(L);
       end
@@ -73,22 +77,15 @@ classdef test_histogram < matlab.unittest.TestCase
          % caller plotting a filtered subset that came out empty gets an
          % empty chart rather than an error.
 
-         testCase.verifyWarningFree(@() groupstats.histogram(zeros(0, 1)));
-      end
+         tbl = table(zeros(0, 1), 'VariableNames', {'Value'});
 
-      function testUngroupedNumericDataDrawsNoLegend(testCase)
-         % histogram(x) is one group, and the built-in shows no legend.
-         % With no GroupVar there is one group holding every row, and the
-         % legend it would carry says nothing.
-
-         [H, L] = groupstats.histogram(randn(50, 1));
-
-         testCase.verifyTrue(isgraphics(H));
-         testCase.verifyEmpty(L);
+         testCase.verifyWarningFree(@() groupstats.histogram(tbl, "Value"));
       end
 
       function testUngroupedTableVariableDrawsNoLegend(testCase)
-         % The same path, reached through a table and a variable name.
+         % A call with no groupvar is one group holding every row, and the
+         % built-in shows no legend for one series. The legend it would
+         % carry says nothing.
 
          tbl = table(randn(30, 1), 'VariableNames', {'Value'});
 
@@ -102,7 +99,9 @@ classdef test_histogram < matlab.unittest.TestCase
          % Turning the legend off for one group must not override a caller
          % who named the entry.
 
-         [~, L] = groupstats.histogram(randn(30, 1), ...
+         tbl = table(randn(30, 1), 'VariableNames', {'Value'});
+
+         [~, L] = groupstats.histogram(tbl, "Value", ...
             LegendString = "MySeries");
 
          testCase.verifyNotEmpty(L);
@@ -116,25 +115,76 @@ classdef test_histogram < matlab.unittest.TestCase
          data = groupstats.test.generateTestData('info');
 
          [~, L] = groupstats.histogram(data.Info, "month", ...
-            GroupVar = "scenario", Legend = "off");
+            "scenario", Legend = "off");
 
          testCase.verifyEmpty(L);
       end
 
 
-      function testAcceptsAnArrayLikeTheBuiltIn(testCase)
-         % histogram(x) is the built-in's call shape. Supporting it means a
-         % caller does not have to build a table for the simple case.
+      function testDataVariableIsRequired(testCase)
+         % datavar is required so that MATLAB never reads it as a
+         % name-value name. An optional text positional followed by
+         % groupvar would let histogram(tbl, "Data", "g") become
+         % DataTipTemplate = "g" with no error.
 
          data = groupstats.test.generateTestData('info');
 
-         H = groupstats.histogram(data.Info.month);
+         testCase.verifyError(@() groupstats.histogram(data.Info), ...
+            'MATLAB:minrhs');
+      end
 
-         % A categorical histogram is its own class, so check the handle
-         % rather than name a class.
-         testCase.verifyTrue(isgraphics(H));
-         testCase.verifyEqual(numel(H.BinCounts), ...
-            numel(categories(removecats(data.Info.month))));
+      function testAPropertyLikeGroupNameIsReadAsTheGrouping(testCase)
+         % A grouping variable named like a Histogram property is the last
+         % positional argument, and MATLAB reads it as groupvar, alone or
+         % ahead of name-value options. Only a second optional text
+         % positional after it could turn it into a name, and this
+         % signature has none.
+
+         v = (1:6)';
+         Tag = categorical(["a"; "a"; "a"; "b"; "b"; "b"]);
+         tbl = table(v, Tag, 'VariableNames', {'v', 'Tag'});
+
+         H = groupstats.histogram(tbl, "v", "Tag", SortBy = "descend");
+
+         returned = numel(H);
+         expected = 2;
+         testCase.verifyEqual(returned, expected);
+
+         returned = string(H(1).Tag);
+         expected = "";
+         testCase.verifyEqual(returned, expected);
+
+         % The same with the comma pair syntax, where the pairs after
+         % groupvar are plain text too.
+         H = groupstats.histogram(tbl, "v", "Tag", 'NumBins', 3, ...
+            'Visible', 'on');
+
+         returned = numel(H);
+         expected = 2;
+         testCase.verifyEqual(returned, expected);
+
+         returned = string(H(1).Tag);
+         expected = "";
+         testCase.verifyEqual(returned, expected);
+
+         returned = H(1).NumBins;
+         expected = 3;
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testAShortDataVariableNameIsNotReadAsAProperty(testCase)
+         % "t" is a prefix of the Tag property. With the required datavar
+         % it is the data variable, and "g" is the grouping.
+
+         t = (1:6)';
+         g = categorical(["a"; "a"; "a"; "b"; "b"; "b"]);
+         tbl = table(t, g, 'VariableNames', {'t', 'g'});
+
+         H = groupstats.histogram(tbl, "t", "g");
+
+         returned = numel(H);
+         expected = 2;
+         testCase.verifyEqual(returned, expected);
       end
 
       function testAcceptsAnArrayAndCategories(testCase)
@@ -199,7 +249,7 @@ classdef test_histogram < matlab.unittest.TestCase
          % Every group's handle comes back, not only the last one.
 
          H = groupstats.histogram(testCase.Info, "month", ...
-            GroupVar = "scenario");
+            "scenario");
 
          returned = numel(H);
          expected = numel(unique(testCase.Info.scenario));
@@ -210,7 +260,7 @@ classdef test_histogram < matlab.unittest.TestCase
          % The legend covers the groups.
 
          [~, L] = groupstats.histogram(testCase.Info, "month", ...
-            GroupVar = "scenario");
+            "scenario");
 
          testCase.verifyClass(L, 'matlab.graphics.illustration.Legend');
       end
@@ -220,7 +270,7 @@ classdef test_histogram < matlab.unittest.TestCase
 
          members = testCase.Scenarios(1:2);
          H = groupstats.histogram(testCase.Info, "month", ...
-            GroupVar = "scenario", GroupMembers = members);
+            "scenario", GroupMembers = members);
 
          returned = numel(H);
          expected = numel(members);
@@ -234,7 +284,7 @@ classdef test_histogram < matlab.unittest.TestCase
 
          merged = testCase.Scenarios(1:2);
          H = groupstats.histogram(testCase.Info, "month", ...
-            GroupVar = "scenario", MergeGroupMembers = {merged});
+            "scenario", MergeGroupMembers = {merged});
 
          returned = numel(H);
          expected = numel(testCase.Scenarios) - 1;
@@ -246,7 +296,7 @@ classdef test_histogram < matlab.unittest.TestCase
          % axes the chart was drawn into.
 
          [~, ~, ax] = groupstats.histogram(testCase.Info, "peak", ...
-            GroupVar = "scenario");
+            "scenario");
 
          testCase.verifyTrue(isgraphics(ax, 'axes'));
       end
@@ -267,7 +317,7 @@ classdef test_histogram < matlab.unittest.TestCase
          label = strjoin(merged, " and ");
 
          [~, L] = groupstats.histogram(testCase.Info, "peak", ...
-            GroupVar = "scenario", MergeGroupMembers = {merged}, ...
+            "scenario", MergeGroupMembers = {merged}, ...
             GroupOrder = label);
 
          returned = string(L.String(1));
@@ -294,7 +344,7 @@ classdef test_histogram < matlab.unittest.TestCase
          % and the legend follows the draw order.
 
          [~, L] = groupstats.histogram(testCase.Info, "peak", ...
-            GroupVar = "scenario", SortBy = "descend");
+            "scenario", SortBy = "descend");
 
          G = groupsummary(testCase.Info, "scenario", "mean", "peak");
          [~, order] = sort(G.mean_peak, "descend");
@@ -313,7 +363,7 @@ classdef test_histogram < matlab.unittest.TestCase
          t = datetime(2020, 1, [1; 3; 20; 22]);
          tbl = table(g, t, 'VariableNames', {'g', 't'});
 
-         [~, L] = groupstats.histogram(tbl, "t", GroupVar = "g", ...
+         [~, L] = groupstats.histogram(tbl, "t", "g", ...
             SortBy = "descend");
 
          returned = string(L.String(:));
@@ -344,7 +394,7 @@ classdef test_histogram < matlab.unittest.TestCase
          merged = testCase.Scenarios(3);
 
          [~, L] = groupstats.histogram(testCase.Info, "peak", ...
-            GroupVar = "scenario", GroupOrder = merged, ...
+            "scenario", GroupOrder = merged, ...
             SortBy = "ascend");
 
          returned = string(L.String(1));
@@ -388,7 +438,7 @@ classdef test_histogram < matlab.unittest.TestCase
          merged = testCase.Scenarios(1:2);
 
          [~, L] = groupstats.histogram(testCase.Info, "month", ...
-            GroupVar = "scenario", MergeGroupMembers = {merged}, ...
+            "scenario", MergeGroupMembers = {merged}, ...
             LegendString = ["MERGED"; "OTHER"]);
 
          returned = string(L.String{1});
@@ -401,7 +451,7 @@ classdef test_histogram < matlab.unittest.TestCase
 
          merged = testCase.Scenarios(1:2);
          [~, L] = groupstats.histogram(testCase.Info, "month", ...
-            GroupVar = "scenario", MergeGroupMembers = {merged});
+            "scenario", MergeGroupMembers = {merged});
 
          returned = string(L.String);
          testCase.verifyTrue(any(returned == strjoin(merged, " and ")));
@@ -417,7 +467,7 @@ classdef test_histogram < matlab.unittest.TestCase
          tbl = table(categorical(grp), (1:12)', ...
             'VariableNames', {'g', 'v'});
 
-         [H, L] = groupstats.histogram(tbl, "v", GroupVar = "g", ...
+         [H, L] = groupstats.histogram(tbl, "v", "g", ...
             MergeGroupMembers = {["Apple", "Mango"]});
 
          % The merged group holds the Apple and Mango rows, values 5 to 12.
@@ -440,6 +490,22 @@ classdef test_histogram < matlab.unittest.TestCase
          testCase.verifyEqual(string(ax.XMinorTick), "on");
       end
 
+      function testTwoGroupVariablesAreRejected(testCase)
+         % groupvar names one grouping or none.
+
+         testCase.verifyError(@() groupstats.histogram(testCase.Info, ...
+            "month", ["scenario", "basin"]), ...
+            'MATLAB:validators:mustBeScalarOrEmpty');
+      end
+
+      function testGroupVarWithArrayInputIsReported(testCase)
+         % An array call has no table for groupvar to name a variable of.
+
+         testCase.verifyError(@() groupstats.histogram((1:5)', ...
+            string.empty(), "g"), ...
+            'groupstats:histogram:groupVarWithArrayInput');
+      end
+
       function testHistogramPropertiesPassThrough(testCase)
          % A Histogram property named in the call reaches the object.
 
@@ -459,5 +525,5 @@ function fourHistOutputs(Info)
    % Written as a function so the call is a statement, which is the only
    % place a four-output request is syntactically valid.
 
-   [~, ~, ~, ~] = groupstats.histogram(Info, "peak", GroupVar = "scenario");
+   [~, ~, ~, ~] = groupstats.histogram(Info, "peak", "scenario");
 end

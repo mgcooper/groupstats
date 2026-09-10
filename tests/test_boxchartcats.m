@@ -1,5 +1,5 @@
 classdef test_boxchartcats < matlab.unittest.TestCase
-   %TEST_BOXCHARTCATS Test groupstats.boxchartcats and boxchartxdata.
+   %TEST_BOXCHARTCATS Test groupstats.boxchartcats.
    %
    % These cases pin the defects the audit named:
    %
@@ -9,8 +9,15 @@ classdef test_boxchartcats < matlab.unittest.TestCase
    %     covered below.
    %  3. The XGroupOrder="none" branch was a commented-out no-op, so no
    %     sorting was possible.
+   %  4. ShadeGroups defaulted on even without cgroupvar, where the
+   %     shading has nothing to tell apart. It now defaults on only when
+   %     cgroupvar is given. barchartcats had a sibling defect where
+   %     SortBy shaded the wrong ticks; boxchartxdata already places its
+   %     columns by display position, so boxchartcats does not carry it,
+   %     which the sort-order shading tests below confirm.
    %
-   % boxchartxdata is covered here because it reads a live boxchart handle.
+   % boxchartxdata has its own class, test_boxchartxdata, which draws a
+   % chart with boxchartcats for each case.
    %
    % Every case plots into an invisible figure, so the suite runs headless.
    %
@@ -272,6 +279,134 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, order);
       end
 
+      function testSortGroupMembersRestrictsTheSortStatistic(testCase)
+         % SortGroupMembers names the color-group members whose rows compute
+         % each x-group's mean. Here the two members order the x-groups
+         % differently, so the option is observable.
+
+         xg = categorical(["p"; "p"; "q"; "q"]);
+         cg = categorical(["x"; "y"; "x"; "y"]);
+         tbl = table(xg, cg, [1; 10; 5; 2], ...
+            'VariableNames', {'xg', 'cg', 'val'});
+
+         H = groupstats.boxchartcats(tbl, "val", "xg", "cg", ...
+            SortBy = "ascend", SortGroupMembers = "x");
+
+         % Over every row p averages 5.5 and q 3.5, so q would lead. Over
+         % member x alone p is 1 and q is 5, so p leads.
+         returned = string(categories(H(1).XData));
+         expected = ["p"; "q"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testAMemberNamedAllCanBeTheSortMember(testCase)
+         % Empty is the no-selection sentinel, so a member that happens to
+         % be named "all" is a name like any other.
+
+         xg = categorical(["p"; "p"; "q"; "q"]);
+         cg = categorical(["all"; "y"; "all"; "y"]);
+         tbl = table(xg, cg, [1; 10; 5; 2], ...
+            'VariableNames', {'xg', 'cg', 'val'});
+
+         H = groupstats.boxchartcats(tbl, "val", "xg", "cg", ...
+            SortBy = "ascend", SortGroupMembers = "all");
+
+         % Over member "all" alone p is 1 and q is 5, so p leads; over
+         % every row q would lead.
+         returned = string(categories(H(1).XData));
+         expected = ["p"; "q"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSortGroupMembersPutsAnEmptyXGroupLast(testCase)
+         % An x-group with no rows in the named members has no statistic,
+         % so it sorts after the groups that have one.
+
+         xg = categorical(["p"; "p"; "q"; "q"; "r"]);
+         cg = categorical(["x"; "y"; "x"; "y"; "y"]);
+         tbl = table(xg, cg, [5; 10; 1; 2; 0], ...
+            'VariableNames', {'xg', 'cg', 'val'});
+
+         H = groupstats.boxchartcats(tbl, "val", "xg", "cg", ...
+            SortBy = "ascend", SortGroupMembers = "x");
+
+         returned = string(categories(H(1).XData));
+         expected = ["q"; "p"; "r"];
+         testCase.verifyEqual(returned, expected);
+
+         % Descending puts the largest first and still the empty group
+         % last, where sort's default would put a missing value first.
+         clf
+         H = groupstats.boxchartcats(tbl, "val", "xg", "cg", ...
+            SortBy = "descend", SortGroupMembers = "x");
+
+         returned = string(categories(H(1).XData));
+         expected = ["p"; "q"; "r"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testSortGroupMembersWithoutCGroupVarErrors(testCase)
+         % The option names color-group members, so it needs cgroupvar.
+
+         testCase.verifyError(@() groupstats.boxchartcats(testCase.Tbl, ...
+            "Value", "Grp", SortBy = "ascend", SortGroupMembers = "x"), ...
+            'groupstats:boxchartcats:sortGroupMembersWithoutGroupVar');
+      end
+
+      function testUnknownSortGroupMemberErrors(testCase)
+         % A name that matches no member would select no rows and sort
+         % nothing, so it is reported.
+
+         testCase.verifyError(@() groupstats.boxchartcats(testCase.Tbl, ...
+            "Value", "Grp", "Sub", SortBy = "ascend", ...
+            SortGroupMembers = "nosuchmember"), ...
+            'groupstats:validatemember:notAMember');
+      end
+
+      function testSortGroupMembersReadsPostMergeNames(testCase)
+         % After a merge the color groups carry the merged label, so
+         % SortGroupMembers names that label, and an original member of
+         % the merge is not a member any more.
+
+         xg = categorical(["p"; "p"; "p"; "q"; "q"; "q"]);
+         cg = categorical(["a"; "b"; "c"; "a"; "b"; "c"]);
+         tbl = table(xg, cg, [1; 1; 10; 5; 5; 0], ...
+            'VariableNames', {'xg', 'cg', 'val'});
+
+         % Over every row p averages 4 and q averages 10/3, so q would
+         % lead. Over the merged "a and b" rows p averages 1 and q
+         % averages 5, so p leads.
+         H = groupstats.boxchartcats(tbl, "val", "xg", "cg", ...
+            MergeGroupMembers = {["a", "b"]}, SortBy = "ascend", ...
+            SortGroupMembers = "a and b");
+
+         returned = string(categories(H(1).XData));
+         expected = ["p"; "q"];
+         testCase.verifyEqual(returned, expected);
+
+         testCase.verifyError(@() groupstats.boxchartcats(tbl, "val", ...
+            "xg", "cg", MergeGroupMembers = {["a", "b"]}, ...
+            SortGroupMembers = "a"), ...
+            'groupstats:validatemember:notAMember');
+      end
+
+      function testUnknownSortGroupMemberErrorsWithoutASort(testCase)
+         % The names are checked whatever SortBy is, as barchartcats does,
+         % so a typo is reported even when no sort runs.
+
+         testCase.verifyError(@() groupstats.boxchartcats(testCase.Tbl, ...
+            "Value", "Grp", "Sub", SortGroupMembers = "nosuchmember"), ...
+            'groupstats:validatemember:notAMember');
+      end
+
+      function testTwoColorGroupVariablesAreRejected(testCase)
+         % cgroupvar names one grouping or none.
+
+         testCase.verifyError(@() groupstats.boxchartcats(testCase.Tbl, ...
+            "Value", "Grp", ["Sub", "Set"]), ...
+            'MATLAB:validators:mustBeScalarOrEmpty');
+      end
+
       function testGraphicsPropertiesPassThrough(testCase)
          % A BoxChart property named in the call reaches the BoxChart object.
 
@@ -333,30 +468,181 @@ classdef test_boxchartcats < matlab.unittest.TestCase
             "Value", "Grp", "Sub"));
       end
 
-      function testBoxchartxdataReturnsOneRowPerColorGroup(testCase)
-         % boxchartxdata reads the x location of every box from the handle.
-         % The rows are the color groups and the columns are the x ticks.
+      function testShadeGroupsDefaultsOffWithoutCGroupVar(testCase)
+         % The shading tells one x-tick group of colored boxes from the
+         % next, so it is pointless with one box per tick. Without
+         % cgroupvar, ShadeGroups must default off.
 
-         H = groupstats.boxchartcats(testCase.Tbl, "Value", "Grp", "Sub");
+         groupstats.boxchartcats(testCase.Tbl, "Value", "Grp");
 
-         xlocs = groupstats.boxchartxdata(H);
+         returned = findobj(gca, 'Type', 'patch');
+         testCase.verifyEmpty(returned);
+      end
 
-         returned = size(xlocs, 1);
-         expected = numel(H);
+      function testShadeGroupsDefaultsOnWithCGroupVar(testCase)
+         % With cgroupvar each x-tick holds several colored boxes, so
+         % ShadeGroups must default on.
+
+         groupstats.boxchartcats(testCase.Tbl, "Value", "Grp", "Sub");
+
+         returned = findobj(gca, 'Type', 'patch');
+         testCase.verifyNotEmpty(returned);
+      end
+
+      function testShadeGroupsExplicitTrueShadesSingleSeries(testCase)
+         % An explicit ShadeGroups=true is not the auto-default sentinel,
+         % so it must still shade a chart with no color group.
+
+         groupstats.boxchartcats(testCase.Tbl, "Value", "Grp", ...
+            ShadeGroups = true);
+
+         returned = findobj(gca, 'Type', 'patch');
+         testCase.verifyNotEmpty(returned);
+      end
+
+      function testShadeGroupsSortDescendAlignsWithDisplayOrder(testCase)
+         % boxchartxdata places each column at its rounded tick position,
+         % so its xleft/xright already come out in left-to-right display
+         % order, unlike barchartcats' H.XEndPoints. This pins that
+         % boxchartcats does not carry the sibling defect: SortBy still
+         % shades alternating ticks in display order, each patch as wide
+         % as the tick spacing.
+
+         [H, ~, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", SortBy = "descend", ShadeGroups = true);
+
+         [~, xleft, xright] = groupstats.boxchartxdata(H);
+         centers = (xleft + xright) / 2;
+         spacing = mean(diff(centers));
+
+         P = findobj(ax, 'Type', 'patch');
+         testCase.verifyNotEmpty(P);
+
+         returned = P.XData(2, :) - P.XData(1, :);
+         expected = repmat(spacing, 1, numel(returned));
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-9);
+
+         returned = mean(P.XData(1:2, :), 1);
+         expected = centers(1:2:end);
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-9);
+      end
+
+      function testShadeGroupsSortDescendWithCGroupAlignsWithDisplayOrder( ...
+            testCase)
+         % The same display-order check, with a color group present.
+
+         [H, ~, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub", SortBy = "descend");
+
+         [~, xleft, xright] = groupstats.boxchartxdata(H);
+         centers = (xleft + xright) / 2;
+         spacing = mean(diff(centers));
+
+         P = findobj(ax, 'Type', 'patch');
+         testCase.verifyNotEmpty(P);
+
+         % boxchartxdata reads box vertex positions off the rendered
+         % graphics primitive, which stores them at single precision.
+         % Drawing the shading patch after that read can shift the boxes
+         % by one single-precision ULP (about 1.19e-7), so this
+         % comparison needs a looser tolerance than the exact math above.
+         returned = P.XData(2, :) - P.XData(1, :);
+         expected = repmat(spacing, 1, numel(returned));
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-6);
+
+         returned = mean(P.XData(1:2, :), 1);
+         expected = centers(1:2:end);
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-6);
+      end
+
+      function testLegendStringFollowsCGroupOrder(testCase)
+         % LegendString(i) names the i-th member in category order, and
+         % CGroupOrder permutes the entries with the series, so an entry
+         % stays on its member.
+
+         [~, L] = groupstats.boxchartcats(testCase.Tbl, "Value", "Sub", ...
+            "Grp", CGroupOrder = "c", LegendString = ["s1"; "s2"; "s3"]);
+
+         returned = string(L.String(:));
+         expected = ["s3"; "s1"; "s2"];
          testCase.verifyEqual(returned, expected);
       end
 
-      function testBoxchartxdataBoundsBracketTheCenters(testCase)
-         % The left and right bounds of each x-tick group sit either side of
-         % the box centers in that group.
+      function testLegendStringIsUnmovedBySortBy(testCase)
+         % SortBy orders the x-groups, not the series, so the legend keeps
+         % the category-order binding.
 
-         H = groupstats.boxchartcats(testCase.Tbl, "Value", "Grp", "Sub");
+         [~, L] = groupstats.boxchartcats(testCase.Tbl, "Value", "Sub", ...
+            "Grp", SortBy = "descend", LegendString = ["s1"; "s2"; "s3"]);
 
-         [xlocs, xleft, xright] = groupstats.boxchartxdata(H);
-
-         testCase.verifyLessThanOrEqual(xleft(:)', min(xlocs, [], 1));
-         testCase.verifyGreaterThanOrEqual(xright(:)', max(xlocs, [], 1));
+         returned = string(L.String(:));
+         expected = ["s1"; "s2"; "s3"];
+         testCase.verifyEqual(returned, expected);
       end
+
+      function testLegendStringNamesThePostMergeMembers(testCase)
+         % After a merge there is one entry per post-merge member, in the
+         % post-merge category order.
+
+         [~, L] = groupstats.boxchartcats(testCase.Tbl, "Value", "Sub", ...
+            "Grp", MergeGroupMembers = ["a", "b"], CGroupOrder = "c", ...
+            LegendString = ["merged"; "third"]);
+
+         returned = string(L.String(:));
+         expected = ["third"; "merged"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testAllMissingDataIsReported(testCase)
+         % boxchart draws nothing from all-missing data and the helpers
+         % that read the drawn boxes then index with NaN. The chart reports
+         % the empty selection first, and the single-observation warning
+         % stays quiet because no box is drawn.
+
+         tbl = table(categorical(["p"; "q"]), categorical(["a"; "a"]), ...
+            [NaN; NaN], 'VariableNames', {'xg', 'cg', 'val'});
+
+         lastwarn('');
+         testCase.verifyError( ...
+            @() groupstats.boxchartcats(tbl, "val", "xg", "cg"), ...
+            'groupstats:boxchartcats:allDataMissing');
+
+         [~, returned] = lastwarn();
+         expected = '';
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testParentDrawsEverythingIntoTheNamedAxes(testCase)
+         % The boxes, the mean symbols, the shading, the legend, and the
+         % axis formatting go into Parent, and the current axes stays
+         % empty and unheld.
+
+         target = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(target, 'figure'));
+         other = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(other, 'figure'));
+
+         [H, L, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub", Parent = target);
+
+         % One mean-symbol scatter per color group, and one shading patch.
+         symbols = findobj(target, 'Type', 'Scatter');
+         returned = {ax; H(1).Parent; L.Axes; numel(symbols); ...
+            unique([symbols.Parent]); ...
+            findobj(target, 'Type', 'Patch').Parent};
+         expected = {target; target; target; numel(H); target; target};
+         testCase.verifyEqual(returned, expected);
+
+         returned = [string(target.YGrid); string(target.Box)];
+         expected = ["off"; "on"];
+         testCase.verifyEqual(returned, expected);
+
+         returned = [numel(other.Children); ishold(other); ...
+            isequal(gca, other)];
+         expected = [0; false; true];
+         testCase.verifyEqual(returned, expected);
+      end
+
    end
 
    methods (Access = private)
@@ -394,6 +680,7 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          expected = [1, 2, 10, 20, 100, 200];
          testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
       end
+
    end
 end
 

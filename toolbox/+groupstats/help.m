@@ -1,4 +1,4 @@
-function help(docname)
+function varargout = help(docname)
    %HELP Open toolbox html help document in the MATLAB Help browser.
    %
    %  groupstats.help() opens the groupstats toolbox help pages in the MATLAB
@@ -9,14 +9,19 @@ function help(docname)
    %  example, or any other file with an .html extension in the docs/ folder
    %  or any subfolder of docs/.
    %
-   %  docs/ holds one page, groupstats_welcome. Per-function pages come from
-   %  the documentation build, which this toolbox does not ship yet. For one
-   %  function's help meanwhile, use help:
+   %  fullpath = groupstats.help(_) returns the page's full path and opens
+   %  nothing, so a script or a test can check a page without a browser.
    %
-   %  help groupstats.groupbayes
+   %  docs/ holds the hand-written pages (groupstats_welcome and others).
+   %  The documentation build writes one page per function under
+   %  docs/html/m2html/+groupstats/, and groupstats.internal.docpath
+   %  searches both locations, so DOCNAME also accepts a function name.
    %
    % Errors
    %  groupstats:help:docNotFound - no html file of that name is in docs/.
+   %
+   % Example
+   %  page = groupstats.help("groupsummary")   % the page path, nothing opens
    %
    % See also: groupstats.internal.docpath, doc, web
 
@@ -32,6 +37,12 @@ function help(docname)
       error('groupstats:help:docNotFound', ...
          ['No help page named %s. Run groupstats.help() for the toolbox ' ...
          'landing page.'], docname)
+   end
+
+   % With an output requested, the caller wants the path, not a browser.
+   if nargout > 0
+      varargout{1} = fullpath;
+      return
    end
 
    % web, not doc: these are toolbox pages, not MATLAB reference pages.

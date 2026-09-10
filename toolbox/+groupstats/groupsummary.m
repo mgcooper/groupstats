@@ -1,5 +1,5 @@
 function G = groupsummary(tbl, groupvars, methods, datavar, ...
-      groupbins, groupsets, opts)
+      groupbins, opts)
    %GROUPSUMMARY Compute group-wise statistics
    %
    % Syntax:
@@ -8,12 +8,29 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % G = groupstats.groupsummary(tbl,groupvars,methods)
    % G = groupstats.groupsummary(tbl,groupvars,methods,datavar)
    % G = groupstats.groupsummary(tbl,groupvars,methods,datavar,groupbins)
-   % G = groupstats.groupsummary(_,groupsets)
+   % G = groupstats.groupsummary(_,GroupSets=NAME)
    % G = groupstats.groupsummary(_,RowSelectVar=NAME,RowSelectMembers=M)
+   %
+   % The positional order differs from the builtin, which takes
+   % groupsummary(T, groupvars, groupbins, method, datavars). The builtin
+   % puts groupbins third and tells it from method by inspecting the value,
+   % which an arguments block cannot do. Here the everyday inputs come in
+   % the order a caller most often needs them: methods, then datavar, then
+   % groupbins. A caller who bins almost always names the method and the
+   % data variable too. The groupstats-only control GroupSets is a
+   % name-value option, so no caller spells out every earlier default to
+   % reach it.
+   %
+   % MATLAB reads an optional positional text value as an option name when
+   % it matches one (GroupSets, RowSelectVar, RowSelectMembers,
+   % IncludedEdge, or a prefix of one) and another positional follows it.
+   % A data variable named "GroupSets", "Group", or "Included" in the
+   % five-positional form is therefore read as the option. Pass such a
+   % name as a cellstr, {'Group'}, which MATLAB never reads as a name.
    %
    % Description:
    %
-   % G = groupsummary(tbl, groupvars, methods, datavar, groupbins, groupsets)
+   % G = groupsummary(tbl, groupvars, methods, datavar, groupbins)
    % Calls groupsummary with custom function methods.
    %
    % Inputs:
@@ -24,15 +41,22 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % datavar   - char, cellstr, or string of variable names in tbl. Omit it to
    %             summarize every numeric variable that is not a groupvar.
    % groupbins - one binning scheme per groupvar, in a cell array, or the
-   %             scalar string "none" to bin nothing.
-   % groupsets - char or string scalar indicating a variable name in tbl which
-   %             specifies which groupvars define distinct sets, also known as
-   %             "ingroups". For all groupvars in groupsets,
-   %             G.(Percent_<varname>) will sum to 100%. Omit the argument or
-   %             pass string.empty() to request no groupsets. The scalar
-   %             string "none" is not a groupsets value and is rejected, so a
-   %             table variable literally named "none" cannot be selected
-   %             this way.
+   %             scalar string "none" to bin nothing. Explicit edges must
+   %             span the data; see Errors below.
+   %
+   % IncludedEdge - "left" (default) or "right", the bin edge a value on an
+   %             edge belongs to, passed to the builtin for every binned
+   %             groupvar. "left" puts a value on an edge in the bin that
+   %             starts there; "right" puts it in the bin that ends there.
+   %
+   % GroupSets - one or more variable names in tbl, as a string vector or
+   %             cellstr, naming the variables whose members define distinct
+   %             sets, also known as "ingroups". For every variable in
+   %             GroupSets, G.(Percent_<varname>) sums to 100 within each of
+   %             its members. Omit the option or pass string.empty() to
+   %             request no groupsets. The scalar string "none" is not a
+   %             GroupSets value and is rejected, so a table variable
+   %             literally named "none" cannot be selected this way.
    %
    % RowSelectVar, RowSelectMembers - keep only the rows whose RowSelectVar
    %             value is one of RowSelectMembers, before summarizing. Give
@@ -49,16 +73,40 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    %
    % 2. The output of groupcounts is joined with the output of groupsummary
    %
-   % 3. Group percents are computed for ingroups using the groupsets optional
-   % input. This contrasts with the Percent variable returned by groupcounts,
+   % 3. Group percents are computed for ingroups using the GroupSets
+   % option. This contrasts with the Percent variable returned by groupcounts,
    % which is the frequency of each group relative to all observations in all
    % groups.
    %
-   % Limitations:
+   % Errors:
    %
-   % groupbins edges must span the data. A bin scheme that leaves rows
-   % <undefined> makes the internal join error with "The key variables
-   % cannot contain any missing values".
+   % groupstats:groupsummary:binsDoNotSpanData - a bin scheme leaves rows
+   % outside its edges, so they would form an <undefined> group and the
+   % internal percent join would fail on a missing key. The message names
+   % the group variable, the scheme, and the row count. Widen the edges or
+   % select the rows first.
+   %
+   % groupstats:groupsummary:noDataVariables - datavar resolved to no
+   % variable. Every numeric variable of the table is a group variable, so
+   % none is left to summarize. Name datavar explicitly.
+   %
+   % groupstats:groupsummary:badGroupBins - groupbins is not a scalar string
+   % "none" and does not hold one scheme per variable in groupvars, one
+   % scheme in total, or a valid non-cell scheme.
+   %
+   % groupstats:groupsummary:rowSelectVarWithoutMembers and
+   % groupstats:groupsummary:membersWithoutGroupVar - RowSelectVar or
+   % RowSelectMembers was given without the other.
+   %
+   % Example
+   %
+   % Summarize peak by scenario and month, with the percent of each
+   % scenario's rows that fall in each month:
+   %
+   %  data = groupstats.test.generateTestData('info');
+   %  G = groupstats.groupsummary(data.Info, ["scenario", "month"], ...
+   %     ["mean", "max"], "peak", GroupSets = "scenario");
+   %  head(G, 5)
    %
    % See also: groupbayes, grouppercent
 
@@ -76,9 +124,11 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
       methods = {'mean'}
       datavar = vartype("numeric")
       groupbins (1, :) = "none"
-      groupsets (1, :) string = string.empty()
+      opts.GroupSets (1, :) string = string.empty()
       opts.RowSelectVar (1, :) string = string.empty()
       opts.RowSelectMembers (:, 1) string = string.empty()
+      opts.IncludedEdge (1, 1) string ...
+         {mustBeMember(opts.IncludedEdge, ["left", "right"])} = "left"
    end
 
    % import groupstats package
@@ -87,7 +137,7 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % string.empty() is the one no-groupsets sentinel across the family. The
    % shared validator rejects a scalar "none" with the rewrite, so the code
    % below never treats it as a variable name.
-   validategroupsets(groupsets)
+   validategroupsets(opts.GroupSets)
 
    % An empty positional argument means "use the default", so a caller can
    % skip one and still reach the argument after it.
@@ -101,7 +151,12 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
       groupbins = "none";
    end
 
-   if ~iscell(methods)
+   % The builtin takes the methods as a cell. A string array is a list of
+   % names, one method per element; a char, a scalar string, or a function
+   % handle is one method.
+   if isstring(methods)
+      methods = cellstr(methods);
+   elseif ~iscell(methods)
       methods = {methods};
    end
 
@@ -110,7 +165,7 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % makes MATLAB's groupsummary group by it twice. reshape because setdiff
    % returns a column for an empty input, which will not concatenate with
    % the row groupvars holds, so reshape it to a row.
-   extrasets = setdiff(string(groupsets), string(groupvars), 'stable');
+   extrasets = setdiff(string(opts.GroupSets), string(groupvars), 'stable');
    summaryvars = [groupvars, reshape(extrasets, 1, [])];
 
    % Resolve datavar to variable names. The default is a vartype subscript,
@@ -152,14 +207,18 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
 
    % Summarize with the built-in groupsummary, grouped by every summary
    % variable, so each groupsets member gets its own rows.
-   G = groupsummary(tbl, cellstr(summaryvars), groupbins, methods, datavar);
+   G = groupsummary(tbl, cellstr(summaryvars), groupbins, methods, datavar, ...
+      "IncludedEdge", opts.IncludedEdge);
+
+   requireSpanningBins(G, summaryvars, groupbins)
 
    G = dropDiscPrefix(G, cellstr(summaryvars));
 
    % Group the percents by summaryvars too, so the join has one key per
    % group and every row finds its match.
    G = join(G, ...
-      groupstats.grouppercent(tbl, summaryvars, groupbins, groupsets));
+      groupstats.grouppercent(tbl, summaryvars, groupbins, ...
+      GroupSets = opts.GroupSets, IncludedEdge = opts.IncludedEdge));
 
    % Reset the variable names to match custom function names in methods. The
    % first variables will be groupvars followed by GroupCount from
@@ -175,6 +234,37 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    V = renameFunctionHandleVars(V, methods, datavar);
 
    G = settablevarnames(G, V);
+end
+
+function requireSpanningBins(G, groupvars, groupbins)
+   %REQUIRESPANNINGBINS Error when a bin scheme left rows outside its edges.
+   %
+   % The builtin puts those rows in an <undefined> group of the binned
+   % variable, and the percent join fails on that missing key with a
+   % message that names no cause. Report the scheme instead.
+
+   for n = 1:numel(groupbins)
+      scheme = groupbins{n};
+      if (ischar(scheme) || isstring(scheme)) && all(string(scheme) == "none")
+         continue
+      end
+      binned = "disc_" + string(groupvars(n));
+      if ~ismember(binned, string(G.Properties.VariableNames))
+         continue
+      end
+      outside = ismissing(G.(binned));
+      if any(outside)
+         if isnumeric(scheme)
+            schemetext = mat2str(scheme);
+         else
+            schemetext = strjoin(string(scheme), ", ");
+         end
+         error('groupstats:groupsummary:binsDoNotSpanData', ...
+            ['The groupbins scheme %s for %s leaves %d rows outside its ' ...
+            'bins. Widen the edges to span the data, or select the rows ' ...
+            'first.'], schemetext, groupvars(n), sum(G.GroupCount(outside)))
+      end
+   end
 end
 
 function tbl = dropDiscPrefix(tbl, groupvars)

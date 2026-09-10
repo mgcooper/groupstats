@@ -6,6 +6,7 @@
 % number, boxchartcats shows the spread.
 %
 % See also: groupstats.boxchartcats, groupstats.barchartcats,
+% groupstats.boxchartxdata, groupstats.boxchartydata,
 % groupstats.test.generateTestData
 
 data = groupstats.test.generateTestData('info');
@@ -85,8 +86,9 @@ title("SSP585-HOT-FAR drawn first")
 
 %% Shade the x-groups
 %
-% ShadeGroups is on by default in both cats charts. This section turns
-% it off so the difference is visible.
+% ShadeGroups is on by default when a color group is given, on both cats
+% charts, and off without one. This section turns it off so the
+% difference is visible.
 
 figure
 groupstats.boxchartcats(Info, "peak", "month", "scenario", ...
@@ -117,3 +119,32 @@ title("Horizontal legend, narrower boxes")
 figure
 groupstats.boxchartcats(Info, "peak", "month", "scenario", Legend = "off");
 title("Legend turned off")
+
+%% Annotate the boxes with boxchartxdata and boxchartydata
+%
+% boxchartxdata reads the x coordinate of every box from the chart handle,
+% one row per color group and one column per x-tick. boxchartydata
+% computes the y coordinates boxchart draws for one box's data: the
+% median line, the box edges, the whisker tips, and the outliers. Together
+% they place a label on each box, here the median above the upper
+% whisker.
+
+figure
+[H, ~, ax] = groupstats.boxchartcats(Info, "peak", "month", "scenario", ...
+   XGroupMembers = ["Jan", "Feb", "Mar"], PlotMeans = false);
+title("Median labels placed with the box helpers")
+
+xlocs = groupstats.boxchartxdata(H);
+months = categories(removecats(H(1).XData));
+scenarios = categories(removecats(Info.scenario));
+hold(ax, "on")
+for m = 1:numel(H)
+   for n = 1:numel(months)
+      rows = Info.month == months{n} & Info.scenario == scenarios{m};
+      y = groupstats.boxchartydata(Info.peak(rows));
+      text(ax, xlocs(m, n), y.whiskers(2), sprintf("%.0f", y.boxline), ...
+         HorizontalAlignment = "center", VerticalAlignment = "bottom", ...
+         FontSize = 8)
+   end
+end
+hold(ax, "off")

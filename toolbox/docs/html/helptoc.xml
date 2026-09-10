@@ -1,19 +1,38 @@
 <?xml version='1.0' encoding="utf-8"?>
 
 <toc version="2.0">
-<!-- First tocitem specifies top level in Help browser Contents pane -->
+<!-- The first tocitem is the top level in the Help browser Contents pane. -->
    <tocitem target="groupstats_welcome.html">Group Stats Toolbox
 
-      <!-- A Getting Started Guide usually comes first -->
-      <tocitem target="groupstats_welcome.html"
+      <tocitem target="groupstats_gettingStarted.html"
                image="HelpIcon.GETTING_STARTED">
                   Getting Started
       </tocitem>
 
-      <!-- Function reference next -->
-      <tocitem target="groupstats_welcome.html"
+      <tocitem target="usingGroupStats.html"
+               image="HelpIcon.USER_GUIDE">
+                  Using Group Stats
+      </tocitem>
+
+      <tocitem target="m2html/function_index.html"
                image="HelpIcon.FUNCTION">
                   Functions
+      </tocitem>
+
+      <tocitem target="groupstats_examples_contents.html"
+               image="HelpIcon.EXAMPLES">
+                  Examples
+         <tocitem target="demo_barchartcats.html">demo_barchartcats</tocitem>
+         <tocitem target="demo_boxchartcats.html">demo_boxchartcats</tocitem>
+         <tocitem target="demo_scatter.html">demo_scatter</tocitem>
+         <tocitem target="demo_histogram.html">demo_histogram</tocitem>
+         <tocitem target="demo_groupsummary.html">demo_groupsummary</tocitem>
+         <tocitem target="demo_groupcompare.html">demo_groupcompare</tocitem>
+         <tocitem target="demo_groupmap.html">demo_groupmap</tocitem>
+         <tocitem target="demo_groupbayes.html">demo_groupbayes</tocitem>
+         <tocitem target="demo_bayes.html">demo_bayes</tocitem>
+         <tocitem target="demo_pairwise_bayes.html">demo_pairwise_bayes</tocitem>
+         <tocitem target="gettingStarted.html">gettingStarted (live script)</tocitem>
       </tocitem>
 
    </tocitem>

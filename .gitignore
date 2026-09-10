@@ -619,10 +619,14 @@ TSWLatexianTemp*
 .dolt/
 *.db
 
-# A global gitignore rule excludes any folder named html. These are the
-# toolbox help pages, which groupstats.help() opens, so they must ship.
+# A global gitignore rule excludes any folder named html. toolbox/docs/html
+# holds the Help browser pages that `buildtool docs` writes and that
+# `buildtool release` rebuilds before packaging, so only helptoc.xml, the
+# table of contents the build reads, is a source. The built pages,
+# figures, function pages, and search database stay out.
 !toolbox/docs/html/
-!toolbox/docs/html/**
+toolbox/docs/html/*
+!toolbox/docs/html/helptoc.xml
 
 # MATLAB Project state. Track resources/project, the project definition
 # openProject reads, so a fresh clone opens as a Project without running
@@ -631,3 +635,6 @@ TSWLatexianTemp*
 # project's state is machine-local, not source.
 **/resources/*
 !**/resources/project/
+
+# Written by the Help browser search-database build beside the docs; not a source file.
+custom_toolbox.json

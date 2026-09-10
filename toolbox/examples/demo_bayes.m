@@ -1,3 +1,13 @@
+%% Conditional probability by hand
+%
+% This demo shows the arithmetic groupstats.groupbayes does. It uses two
+% random samples, with no table and no groups. It computes the marginal,
+% joint, and conditional probabilities of two events. Then Bayes' rule
+% recovers one conditional from the other. Every sample counts in the
+% denominator N, including the ones that satisfy neither condition. That
+% is what groupbayes does with Population = "table". Its default, "union",
+% counts only the events that belong to either group. Read this demo before
+% demo_groupbayes to see what the columns of a groupbayes result hold.
 
 % dataA and dataB are numbers from 1-100, but pretend they represent some
 % characteristics like age and number of number of living relatives. In this

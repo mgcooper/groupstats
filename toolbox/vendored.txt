@@ -1,0 +1,27 @@
+# Files copied from matfunclib by buildtool dependencies.
+# Do not edit them here: change matfunclib, then rerun the task.
+# Format: <path under toolbox/> <- <path under the matfunclib checkout>
++groupstats/private/dealout.m <- functools/dealout.m
++groupstats/private/isoneof.m <- functools/isoneof.m
++groupstats/private/mcallername.m <- functools/mcallername.m
++groupstats/private/getMissingValue.m <- libdata/getMissingValue.m
++groupstats/private/isnumericscalar.m <- liblogic/isnumericscalar.m
++groupstats/private/notempty.m <- liblogic/notempty.m
++groupstats/private/naninterp1.m <- libmath/naninterp1.m
++groupstats/private/defaultcolors.m <- libplot/defaultcolors.m
++groupstats/private/defaultmarkers.m <- libplot/defaultmarkers.m
++groupstats/private/colorspace.m <- libplot/distinguishable_colors/colorspace.m
++groupstats/private/distinguishable_colors.m <- libplot/distinguishable_colors/distinguishable_colors.m
++groupstats/private/allCustomProps.m <- libtable/allCustomProps.m
++groupstats/private/cat2double.m <- libtable/cat2double.m
++groupstats/private/makevalidvarnames.m <- libtable/makevalidvarnames.m
++groupstats/private/mergeCustomProps.m <- libtable/mergeCustomProps.m
++groupstats/private/stacktables.m <- libtable/stacktables.m
++groupstats/+internal/tablecompletions.m <- libtable/tablecompletions.m
++groupstats/+internal/private/tempfile.m <- functools/tempfile.m
++groupstats/+internal/private/arraymap.m <- libarrays/arraymap.m
++groupstats/+internal/private/islogicalscalar.m <- liblogic/islogicalscalar.m
++groupstats/+internal/private/isscalartext.m <- liblogic/isscalartext.m
++groupstats/+internal/private/cat2double.m <- libtable/cat2double.m
++groupstats/private/colorspace_LICENSE.txt <- libplot/distinguishable_colors/license.txt
++groupstats/private/distinguishable_colors_LICENSE.txt <- libplot/distinguishable_colors/license.txt
