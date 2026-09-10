@@ -6,7 +6,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the toolbox follows [Semantic Versioning](https://semver.org/). The
 version the package carries is in `toolbox/version.txt`.
 
-## [Unreleased]
+## 1.0.0 - 2026-09-09
 
 The vendor-ready quality pass.
 
