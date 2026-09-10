@@ -35,6 +35,13 @@ Run these from the repository root in MATLAB:
 
 ## Releases
 
+Published releases use annotated `vX.Y.Z` tags. To start a release, invoke
+`$groupstats-release` with the instruction `release vX.Y.Z`. The local skill
+owns the GroupStats checks, builds, publication, and recovery. It delegates the
+`dev`-to-`main` no-FF release merge and annotated tag to
+`$merge-dev-to-main-release`; do not merge a release directly into `main` by
+another path.
+
 `buildtool release` runs `check`, `test`, and `docs`, then packages
 `release/GroupStatsToolbox.mltbx` from the Package Toolbox task in the MATLAB
 Project, with the version read from `toolbox/version.txt`. The docs build

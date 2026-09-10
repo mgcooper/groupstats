@@ -175,6 +175,20 @@ classdef test_buildfile < matlab.unittest.TestCase
             'toolbox', 'version.txt')))), "v");
          testCase.verifyEqual(returned, expected);
       end
+
+      function testProjectVersionMatchesVersionTxt(testCase)
+         % The Package Toolbox task stores its own version. Read that task
+         % directly, without releaseoptions' override, to keep the project
+         % record synchronized with version.txt.
+
+         embedded = matlab.addons.toolbox.ToolboxOptions(fullfile( ...
+            testCase.Root, 'GroupStats.prj'));
+         returned = string(embedded.ToolboxVersion);
+         expected = erase(strip(string(fileread(fullfile(testCase.Root, ...
+            'toolbox', 'version.txt')))), "v");
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testPackagedVersionIsTheOneVersionTxtCarries(testCase)
          % The release task packages, then reads the version back from the
          % .mltbx and compares it with version.txt. Package into a scratch

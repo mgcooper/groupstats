@@ -61,7 +61,10 @@ Charts for categorical (grouped) table data:
 
 ## Installation
 
-Use any of these methods to install the toolbox:
+Choose one installation method:
+
+- [Download `GroupStatsToolbox.mltbx`](https://github.com/mgcooper/groupstats/releases/latest/download/GroupStatsToolbox.mltbx)
+  from the latest GitHub release, then double-click it.
 
 - Add the `toolbox/` folder to the path:
 
