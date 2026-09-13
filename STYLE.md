@@ -204,5 +204,4 @@ rules above. Opinionated, project-varying choices belong in `STYLE.local.md`.
   debug from full stdout/stderr. Use an already-open interactive MATLAB session
   only for short checks, and only when its returned result shape is sufficient.
 - If `matlab` is not on `$PATH`, locate the installed binary and invoke its
-  absolute path. Record a durable machine- or project-specific launcher path in
-  `STYLE.local.md`, not this shared style file.
+  absolute path.

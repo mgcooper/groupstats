@@ -42,7 +42,7 @@ merged into it).
 
 - Use `arguments` blocks for input validation in all new code, including
   `props.?Class`-style graphics pass-through. `inputParser` must not
-  appear in new code (two legacy internals still use it).
+  appear in new code.
 - Import namespace functions at the top of a function body
   (`import groupstats.groupselect`) instead of fully qualifying each call.
 - Route grouped-table preprocessing through `groupstats.prepareTableGroups`
