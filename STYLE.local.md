@@ -64,3 +64,7 @@ as this:
 > This branch loops over the groupset members. The main branch below also
 > loops over groupsets. Note: multiple groupsets are untested here and are not
 > supported.
+
+## Other project conventions
+
+Agents must preserve the third-party files identified in AGENTS.local.md.
