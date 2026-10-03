@@ -209,31 +209,123 @@ classdef test_prepareTableGroups < matlab.unittest.TestCase
       end
 
       function testTimetableIsAccepted(testCase)
-         % A timetable passes through with its rows intact. Grouping by its
-         % time dimension is a documented limitation: the name passes the
-         % variable-name check, and dropcats then rejects it.
+         % Grouping data variables keeps the timetable and its metadata.
 
          tbl = table2timetable(testCase.Tbl, ...
             'RowTimes', datetime(2020, 1, 1) + days(0:5)');
+         tbl.Properties.Description = 'Grouped measurements';
+         tbl.Properties.UserData = struct('Source', 'timetable regression');
 
          returned = groupstats.prepareTableGroups(tbl, "Value", ...
             XGroupVar = "XGroup");
 
-         expected = height(tbl);
-         testCase.verifyEqual(height(returned), expected);
+         expected = tbl;
+         testCase.verifyEqual(returned, expected);
       end
 
-      function testTimetableTimeDimensionAsGroupErrors(testCase)
-         % Pin the documented limitation, so a later change that supports it
-         % has to update this test and the docstring together.
+      function testTimetableTimeDimensionGroupsAndSelectsRows(testCase)
+         % A time group selects repeated times before converting the labels.
+
+         tbl = table2timetable(testCase.Tbl, ...
+            'RowTimes', datetime(2020, 1, 1) + days([0; 0; 1; 1; 2; 2]));
+
+         returned = groupstats.prepareTableGroups(tbl, "Value", ...
+            XGroupVar = "Time", XGroupMembers = "02-Jan-2020", ...
+            CGroupVar = "CGroup", CGroupMembers = "blue", ...
+            RowSelectVar = "Region", RowSelectMembers = "south");
+
+         expected = 4;
+         testCase.verifyClass(returned, 'table');
+         testCase.verifyEqual(returned.Value, expected);
+         testCase.verifyClass(returned.Time, 'categorical');
+         testCase.verifyEqual(string(returned.Time), "02-Jan-2020");
+         testCase.verifyEqual(categories(returned.Time), {'02-Jan-2020'});
+      end
+
+      function testNamedTimeColorGroupKeepsMetadata(testCase)
+         % Conversion preserves data and metadata while exposing a named time.
+
+         tbl = table2timetable(testCase.Tbl, ...
+            'RowTimes', datetime(2020, 1, 1) + days([0; 0; 1; 1; 2; 2]));
+         tbl.Properties.DimensionNames{1} = 'ObservedAt';
+         tbl.Properties.Description = 'Grouped measurements';
+         tbl.Properties.UserData = struct('Source', 'time grouping');
+         tbl.Properties.VariableUnits = {'', '', '', 'm'};
+         tbl.Properties.VariableDescriptions = {'x', 'color', 'region', 'value'};
+
+         returned = groupstats.prepareTableGroups(tbl, "Value", ...
+            XGroupVar = "XGroup", CGroupVar = "ObservedAt");
+
+         expected = {testCase.Tbl.XGroup; testCase.Tbl.CGroup; ...
+            testCase.Tbl.Region; testCase.Tbl.Value};
+         testCase.verifyEqual({returned.XGroup; returned.CGroup; ...
+            returned.Region; returned.Value}, expected);
+         testCase.verifyEqual(string(returned.ObservedAt), ...
+            ["01-Jan-2020"; "01-Jan-2020"; "02-Jan-2020"; ...
+            "02-Jan-2020"; "03-Jan-2020"; "03-Jan-2020"]);
+         testCase.verifyEqual(returned.Properties.Description, ...
+            tbl.Properties.Description);
+         testCase.verifyEqual(returned.Properties.UserData, ...
+            tbl.Properties.UserData);
+         testCase.verifyEqual(returned.Properties.VariableUnits(2:end), ...
+            tbl.Properties.VariableUnits);
+         testCase.verifyEqual( ...
+            returned.Properties.VariableDescriptions(2:end), ...
+            tbl.Properties.VariableDescriptions);
+      end
+
+      function testTimeGroupsDropMissingTimes(testCase)
+         % NaT belongs to no group, including when both roles name the time.
+
+         times = datetime(2020, 1, 1) + days([0; 0; 1; 1; 2; 2]);
+         times(3) = NaT;
+         tbl = table2timetable(testCase.Tbl, 'RowTimes', times);
+
+         returned = groupstats.prepareTableGroups(tbl, "Value", ...
+            XGroupVar = "Time", CGroupVar = "Time");
+
+         expected = [1; 2; 4; 5; 6];
+         testCase.verifyEqual(returned.Value, expected);
+         testCase.verifyFalse(any(isundefined(returned.Time)));
+      end
+
+      function testDurationTimeGroupsAvoidNameCollisions(testCase)
+         % A time named Rows must not overwrite data or the table dimension.
+
+         tbl = timetable([1; 2; 3], [10; 20; 30], ...
+            'RowTimes', seconds([0; 0; 1]), ...
+            'VariableNames', {'Value', 'Rows_1'});
+         tbl.Properties.DimensionNames{1} = 'Rows';
+         tbl.Properties.VariableNames{1} = 'Time';
+
+         returned = groupstats.prepareTableGroups(tbl, "Time", ...
+            XGroupVar = "Rows");
+
+         expected = {'Rows', 'Time', 'Rows_1'};
+         testCase.verifyEqual(returned.Properties.VariableNames, expected);
+         testCase.verifyEqual(returned.Time, [1; 2; 3]);
+         testCase.verifyEqual(returned.Rows_1, [10; 20; 30]);
+         testCase.verifyEqual(string(returned.Rows), ...
+            ["0 sec"; "0 sec"; "1 sec"]);
+         testCase.verifyFalse(ismember(returned.Properties.DimensionNames{1}, ...
+            returned.Properties.VariableNames));
+      end
+
+      function testTimeGroupingRejectsUnknownNamesAndMembers(testCase)
+         % Exact names and present members remain required for a time group.
 
          tbl = table2timetable(testCase.Tbl, ...
             'RowTimes', datetime(2020, 1, 1) + days(0:5)');
 
-         testCase.verifyError( ...
-            @() groupstats.prepareTableGroups(tbl, "Value", ...
-            XGroupVar = "Time"), ...
-            'groupstats:dropcats:badVariableName');
+         testCase.verifyError(@() groupstats.prepareTableGroups(tbl, ...
+            "Value", XGroupVar = "time"), ...
+            'groupstats:prepareTableGroups:unknownVariable');
+         testCase.verifyError(@() groupstats.prepareTableGroups(tbl, ...
+            "Value", CGroupVar = "Tim"), ...
+            'groupstats:prepareTableGroups:unknownVariable');
+         testCase.verifyError(@() groupstats.prepareTableGroups(tbl, ...
+            "Value", XGroupVar = "Time", XGroupMembers = "absent"), ...
+            'groupstats:validatemember:notAMember');
       end
 
       function testOrdinalGroupKeepsItsOrder(testCase)

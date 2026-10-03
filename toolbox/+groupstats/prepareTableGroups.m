@@ -44,10 +44,11 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    %  Set ConvertDataVar false to keep a categorical YDataVar, which is what
    %  a categorical histogram needs.
    %
-   % Limitations
-   %  A timetable's time dimension passes the variable-name check but cannot
-   %  be a group variable: dropcats rejects a name it cannot find among the
-   %  table variables. Group by an ordinary column instead.
+   % Timetables
+   %  XGroupVar and CGroupVar can name a timetable's time dimension. The
+   %  function converts that timetable to a table before selecting rows and
+   %  preparing groups. The time dimension becomes a variable with the same
+   %  name. Grouping by data variables keeps the timetable type.
    %
    % Example
    %  tbl = table(categorical(["a";"b";"a"]), [1;2;3], ...
@@ -108,6 +109,13 @@ function tbl = prepareTableGroups(tbl, ydatavar, opts)
    % The shared check keeps groupsummary's errors identical to these.
    validaterowselect(opts.RowSelectVar, opts.RowSelectMembers, ...
       "prepareTableGroups", Caller)
+
+   % A time group must be a table variable so categorical conversion can
+   % change its type. Normalize before row selection and group preparation.
+   if istimetable(tbl) && any(strcmp(tbl.Properties.DimensionNames{1}, ...
+         [opts.XGroupVar opts.CGroupVar]))
+      tbl = timetable2table(tbl);
+   end
 
    % Validate variable names by confirming that they are column names of tbl.
    VarNames = tbl.Properties.VariableNames;

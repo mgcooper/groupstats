@@ -33,6 +33,20 @@ classdef test_groupsamples < matlab.unittest.TestCase
 
    methods (Test)
 
+      function testTimeDimensionCollectsRepeatedSamples(testCase)
+         % groupsamples collects rows with the same time into one sample.
+
+         times = datetime(2020, 1, 1) + days([0; 1; 0; 1; NaN]);
+         tbl = timetable([1; 8; 3; 10; 99], 'RowTimes', times, ...
+            'VariableNames', {'Value'});
+
+         returned = groupstats.groupsamples(tbl, "Time", "Value");
+
+         expected = table(["01-Jan-2020"; "02-Jan-2020"], ...
+            {[1; 3]; [8; 10]}, 'VariableNames', {'Group', 'Data'});
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testOneRowPerMemberInCategoryOrder(testCase)
          % Without a named reference the first member in category order
          % leads, and every member has one row.

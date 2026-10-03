@@ -31,6 +31,20 @@ classdef test_histogram < matlab.unittest.TestCase
    end
 
    methods (Test)
+      function testTimeDimensionGroupsHistogramData(testCase)
+         % Time groups must keep each histogram's data and legend paired.
+
+         tbl = timetable([1; 8; 3; 10], ...
+            'RowTimes', datetime(2020, 1, 1) + days([0; 1; 0; 1]), ...
+            'VariableNames', {'Value'});
+
+         [H, L] = groupstats.histogram(tbl, "Value", "Time");
+
+         returned = {H(1).Data(:); H(2).Data(:); string(L.String(:))};
+         expected = {[1; 3]; [8; 10]; ["01-Jan-2020"; "02-Jan-2020"]};
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testMergeWithoutGroupVarIsReported(testCase)
          % Merging pools members of the group variable. Without one the
          % request had no effect, and nothing said so.
