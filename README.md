@@ -48,6 +48,8 @@ Charts for categorical (grouped) table data:
   show the spread or the `groupci` interval.
 - Grouped scatter charts and histograms (`groupstats.scatter`,
   `groupstats.histogram`)
+- Heatmaps with one cell per pairing of two groupings, colored by a summary
+  of the data (`groupstats.groupheatmap`)
 
 ## Requirements
 

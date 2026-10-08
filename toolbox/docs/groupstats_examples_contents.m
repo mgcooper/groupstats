@@ -10,6 +10,8 @@
 % the box coordinate helpers.
 % * <demo_scatter.html demo_scatter> - grouped scatter charts.
 % * <demo_histogram.html demo_histogram> - grouped categorical histograms.
+% * <demo_groupheatmap.html demo_groupheatmap> - grouped heatmaps: each
+% method, ordering, a merge, and tiled layouts.
 
 %% Statistics
 % * <demo_groupsummary.html demo_groupsummary> - the table statistics

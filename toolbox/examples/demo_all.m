@@ -7,15 +7,17 @@ function demo_all(varargin)
    %
    % Description
    %  The chart demos are the ones worth looking at. demo_barchartcats,
-   %  demo_boxchartcats, demo_scatter, and demo_histogram each open one figure
-   %  per option, so the effect of every option is visible side by side. The
+   %  demo_boxchartcats, demo_scatter, demo_histogram, and demo_groupheatmap
+   %  each open one figure per option, so the effect of every option is
+   %  visible side by side. The
    %  groupsummary, groupcompare, groupmap, and groupbayes demos print tables
    %  rather than draw figures (demo_groupcompare draws one histogram).
    %  demo_groupci prints interval tables and draws one box chart and two
    %  bar charts with the intervals.
    %
    % See also: groupstats.barchartcats, groupstats.boxchartcats,
-   % groupstats.scatter, groupstats.histogram, groupstats.groupci
+   % groupstats.scatter, groupstats.histogram, groupstats.groupheatmap,
+   % groupstats.groupci
 
    arguments (Repeating)
       varargin
@@ -31,6 +33,7 @@ function demo_all(varargin)
       "demo_boxchartcats", ...
       "demo_scatter", ...
       "demo_histogram", ...
+      "demo_groupheatmap", ...
       "demo_groupsummary", ...
       "demo_groupcompare", ...
       "demo_groupci", ...

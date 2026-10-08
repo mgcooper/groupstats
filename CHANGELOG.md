@@ -17,6 +17,13 @@ version the package carries is in `toolbox/version.txt`.
   needs only base MATLAB.
 - `demo_groupci` shows the interval table, the notch comparison, and the
   interval error bars.
+- `groupstats.groupheatmap`, the fifth chart, draws a built-in
+  `HeatmapChart` with one cell per pairing of `xgroupvar` and `cgroupvar`
+  members. `Method` sets the cell statistic: mean, median, count, sum, min,
+  or max. It takes the member, row-select, merge, and ordering options of
+  the cats charts, a container `Parent`, and `HeatmapChart` properties.
+- `demo_groupheatmap` shows each method, ordering, a merge, and tiled
+  layouts.
 - `ErrorBar` and `Alpha` on `groupstats.barchartcats`. With
   `PlotError=true`, `ErrorBar="ci"` draws the `groupstats.groupci` interval
   of each bar as its whisker. `"spread"`, the default, keeps the standard

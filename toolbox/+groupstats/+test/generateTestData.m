@@ -34,6 +34,9 @@ function varargout = generateTestData(whichfunction)
    %                one set has an all-zero reference. Those two properties
    %                make the reference-group choice and the signrank-against-
    %                zero case observable.
+   %   "groupheatmap" A table whose heatmap cells all differ: columns Grp
+   %                p, q, r by rows Sub u, v, w. The expected struct holds
+   %                the hand value of every cell for each heatmap Method.
    %
    %  This function is the one place test data is defined. Demos and scripts
    %  call it too, so no fixture class or demo may define its own copy.
@@ -46,7 +49,7 @@ function varargout = generateTestData(whichfunction)
 
    % One list of case names so the error message cannot drift from the switch.
    knowncases = ["groupbayes", "groupmap", "dropcats", "info", ...
-      "groupcompare", "groupsummary"];
+      "groupcompare", "groupsummary", "groupheatmap"];
 
    switch lower(whichfunction)
 
@@ -110,6 +113,10 @@ function varargout = generateTestData(whichfunction)
       case 'groupsummary'
 
          [TestData, ExpectedResult] = groupsummaryCase();
+
+      case 'groupheatmap'
+
+         [TestData, ExpectedResult] = groupheatmapCase();
 
       otherwise
 
@@ -248,6 +255,48 @@ function [TestData, ExpectedResult] = groupsummaryCase()
    ExpectedResult.members.Set = ["p"; "q"];
    ExpectedResult.rowsPerGrp = 4;
    ExpectedResult.height = 12;
+end
+
+function [TestData, ExpectedResult] = groupheatmapCase()
+   %GROUPHEATMAPCASE Build a table whose heatmap cells all differ.
+   %
+   % Columns Grp p, q, r by rows Sub u, v, w. No two pairings with values
+   % share a mean, median, count, sum, min, or max, so a cell that shows
+   % another pairing's value fails. Pairing p-v holds one NaN among five
+   % values, q-v holds only NaN, and r-v has no rows.
+   %
+   % Each pairing lists its values. The rows of the table repeat each
+   % pairing's labels once per value.
+
+   cells = {
+      "p", "u", [1 2 9]
+      "q", "u", [10 11]
+      "r", "u", [20 21 22 37]
+      "p", "v", [5 NaN 7 30 8 40]
+      "q", "v", [NaN NaN]
+      "p", "w", 50
+      "q", "w", [60 61 62 63 64 100]
+      "r", "w", [-1 -2 -3 -4 -5 -6 0]
+      };
+   counts = cellfun(@numel, cells(:, 3));
+   grp = repelem(string(cells(:, 1)), counts);
+   sub = repelem(string(cells(:, 2)), counts);
+   value = [cells{:, 3}]';
+
+   TestData.tbl = table(categorical(grp), categorical(sub), value, ...
+      'VariableNames', {'Grp', 'Sub', 'Value'});
+
+   % Hand values, rows Sub u, v, w by columns Grp p, q, r. Pairing p-v uses
+   % its five numbers. Pairings q-v and r-v show NaN for mean, median, min,
+   % and max and 0 for count and sum.
+   ExpectedResult.mean = [4 10.5 25; 18 NaN NaN; 50 410/6 -3];
+   ExpectedResult.median = [2 10.5 21.5; 8 NaN NaN; 50 62.5 -3];
+   ExpectedResult.count = [3 2 4; 5 0 0; 1 6 7];
+   ExpectedResult.sum = [12 21 100; 90 0 0; 50 410 -21];
+   ExpectedResult.min = [1 10 20; 5 NaN NaN; 50 60 -6];
+   ExpectedResult.max = [9 11 37; 40 NaN NaN; 50 100 0];
+   ExpectedResult.xmembers = ["p"; "q"; "r"];
+   ExpectedResult.cmembers = ["u"; "v"; "w"];
 end
 
 function [TestData, ExpectedResult] = groupcompareCase()

@@ -26,6 +26,7 @@
          <tocitem target="demo_boxchartcats.html">demo_boxchartcats</tocitem>
          <tocitem target="demo_scatter.html">demo_scatter</tocitem>
          <tocitem target="demo_histogram.html">demo_histogram</tocitem>
+         <tocitem target="demo_groupheatmap.html">demo_groupheatmap</tocitem>
          <tocitem target="demo_groupsummary.html">demo_groupsummary</tocitem>
          <tocitem target="demo_groupcompare.html">demo_groupcompare</tocitem>
          <tocitem target="demo_groupci.html">demo_groupci</tocitem>

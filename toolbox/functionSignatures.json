@@ -301,6 +301,32 @@
       ]
    },
 
+   "groupstats.groupheatmap":
+   {
+      "inputs":
+      [
+         {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table of grouped data"},
+         {"name":"ydatavar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the data variable each cell summarizes"},
+         {"name":"xgroupvar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]], "purpose":"the grouping variable of the columns"},
+         {"name":"cgroupvar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]], "purpose":"the grouping variable of the rows"},
+         {"name":"XGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', xgroupvar)", "purpose":"the xgroupvar members to keep"},
+         {"name":"CGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)", "purpose":"the cgroupvar members to keep"},
+         {"name":"RowSelectVar", "kind":"namevalue", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the variable to down-select rows of the input table"},
+         {"name":"RowSelectMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)", "purpose":"the members of RowSelectVar whose rows to keep"},
+         {"name":"MergeGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)", "purpose":"the cgroupvar members to pool into one row"},
+         {"name":"Method", "kind":"namevalue", "type":["char", "string", "scalar", "choices=groupstats.namelists.heatmapmethod()"], "default":"'mean'", "purpose":"the statistic of each cell"},
+         {"name":"XGroupOrder", "kind":"namevalue", "type":[["char","string"],["choices=groupstats.internal.tablecompletions(tbl, 'selectby', xgroupvar)"]], "default":"'none'", "purpose":"the column order to show"},
+         {"name":"CGroupOrder", "kind":"namevalue", "type":[["char","string"],["choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)"]], "default":"'none'", "purpose":"the row order to show"},
+         {"name":"SortBy", "kind":"namevalue", "type":["char", "string", "scalar", "choices=groupstats.namelists.sortorder()"], "default":"'none'", "purpose":"order the columns by their mean cell value"},
+         {"name":"SortGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)", "purpose":"the cgroupvar rows that enter the sort mean"},
+         {"name":"Parent", "kind":"namevalue", "type":[["matlab.ui.Figure"],["matlab.ui.container.Panel"],["matlab.ui.container.Tab"],["matlab.graphics.layout.TiledChartLayout"]], "purpose":"the figure, panel, tab, or tiled layout to draw in"}
+      ],
+      "outputs":
+      [
+         {"name":"h", "type":"matlab.graphics.chart.HeatmapChart"}
+      ]
+   },
+
    "groupstats.groupsamples":
    {
       "inputs":

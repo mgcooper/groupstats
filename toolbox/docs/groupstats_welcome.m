@@ -46,6 +46,8 @@
 % * |groupstats.scatter| - scatter chart colored and sized by group.
 % * |groupstats.histogram| - histogram of a categorical variable, with
 % grouping.
+% * |groupstats.groupheatmap| - heatmap with one cell per pairing of two
+% groupings, colored by a summary of the data.
 % * |groupstats.boxchartxdata| and |groupstats.boxchartydata| - the box
 % coordinates, for annotating a box chart.
 

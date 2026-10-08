@@ -21,10 +21,10 @@ merged into it).
 - `groupsummary`/`grouppercent` accept the standard positional inputs;
   rare or groupstats-only controls (`GroupSets`, `RowSelectVar`,
   `RowSelectMembers`) are PascalCase name-value options.
-- `SortBy` sets the sort direction on all four charts. Cats charts sort
-  `xgroupvar` only, so they have no `SortGroup`, but they have
-  `SortGroupMembers` (which `cgroupvar` members enter the sort). `scatter`
-  sorts either grouping, so it has both `SortGroup` and `SortVar`.
+- `SortBy` sets the sort direction on all five charts. Cats charts and
+  `groupheatmap` sort `xgroupvar` only, so they have no `SortGroup`, but
+  they have `SortGroupMembers` (which `cgroupvar` members enter the sort).
+  `scatter` sorts either grouping, so it has both `SortGroup` and `SortVar`.
 - Test classes are named `test_<subject>.m` in `tests/`, e.g.
   `test_dropcats.m`.
 - `toolbox/+groupstats/+test/` holds test runners, helpers, and fixtures,
