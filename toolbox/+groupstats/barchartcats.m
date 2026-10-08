@@ -47,11 +47,27 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % define groups for the colors of the bars.
    %
    % Method - the method used in the call to groupsummary to compute the values
-   % plotted as bars. The default method is 'mean'. For 'mean', the standard
-   % deviation is also computed in the call to groupsummary to support the
-   % addition of whiskers to the bars. If 'median' is passed in as the method,
-   % the whiskers represent the interquartile range. Set PlotError to draw
-   % them. PlotError needs one bar per x-tick, so omit cgroupvar.
+   % plotted as bars, "mean" (default) or "median". Give one method. For
+   % 'mean', the standard deviation is also computed in the call to
+   % groupsummary to support the addition of whiskers to the bars. If
+   % 'median' is passed in as the method, the whiskers represent the
+   % interquartile range. Set PlotError to draw them. PlotError needs one
+   % bar per x-tick, so omit cgroupvar, or select or merge its members down
+   % to one.
+   %
+   % ErrorBar - what the PlotError whisker shows. "spread" (default) is the
+   % spread above: the mean plus or minus the standard deviation, or the
+   % median plus or minus the interquartile range. "ci" is the confidence
+   % interval that groupstats.groupci returns for the same rows. That is the
+   % Student t interval of the mean, or the boxchart notch of the median.
+   % The whisker tips equal the groupci bounds. A bar with fewer than two
+   % values has no interval, so it gets no whisker. ErrorBar="ci" needs
+   % PlotError=true.
+   %
+   % Alpha - the significance level of the ErrorBar="ci" mean interval, in
+   % the open interval (0, 1). Empty, the default, means 0.05. Alpha
+   % applies only with ErrorBar="ci" and Method="mean", because the spread
+   % and the median notch have no level to set.
    %
    % xgroupuse - A cell array of categories to be used for the x-axis grouping.
    %
@@ -117,6 +133,11 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    %  h = groupstats.barchartcats(data.Info, "peak", "month", "scenario", ...
    %     SortBy = "ascend", BarWidth = 0.5);
    %
+   % Draw the 90% confidence interval of each month's mean as the whisker:
+   %
+   %  h = groupstats.barchartcats(data.Info, "peak", "month", ...
+   %     PlotError = true, ErrorBar = "ci", Alpha = 0.10);
+   %
    % Sorting
    %
    % SortBy orders the x-groups by their summarized value, "ascend" or
@@ -163,11 +184,16 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % groupstats:barchartcats:plotErrorNeedsOneSeries - PlotError was set
    % with more than one bar per x-tick, so the whiskers would not line up
    % with their bars. Omit cgroupvar, or leave PlotError off.
+   % groupstats:barchartcats:errorBarWithoutPlotError - ErrorBar="ci" was
+   % given without PlotError=true, so no whisker would show it.
+   % groupstats:barchartcats:alphaWithoutMeanCI - Alpha was given without
+   % both ErrorBar="ci" and Method="mean", so it would set no level.
    %
    % Matt Cooper, 29-Nov-2022, https://github.com/mgcooper
    %
    % See also reordergroups, reordercats, barchart,
-   % groupstats.boxchartcats, groupstats.namelists.sortorder
+   % groupstats.boxchartcats, groupstats.groupci,
+   % groupstats.namelists.sortorder
 
    arguments
       tbl tabular
@@ -180,7 +206,9 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       opts.CGroupMembers string = string.empty()
       opts.RowSelectVar string = string.empty()
       opts.RowSelectMembers string = string.empty()
-      opts.Method (:,1) string ...
+      % One method. Each bar is one statistic, and the whiskers pair with
+      % it, so a list of methods has no single chart to draw.
+      opts.Method (1,1) string ...
          { groupstats.namelists.mustBeMemberOf(opts.Method, ...
          "centralstatistic") } = "mean"
       opts.SortBy (1,1) string ...
@@ -211,6 +239,16 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
       % stays off by default.
       opts.ShadeGroups logical {mustBeScalarOrEmpty} = logical.empty()
       opts.PlotError (1,1) logical = false
+      % ErrorBar picks what the PlotError whisker shows. The default,
+      % "spread", is the standard deviation or interquartile range whisker.
+      opts.ErrorBar (1,1) string ...
+         { groupstats.namelists.mustBeMemberOf(opts.ErrorBar, ...
+         "errorbartype") } = "spread"
+      % Empty means unset, so the interval helper applies its one default,
+      % as in groupstats.groupci.
+      opts.Alpha double {mustBeScalarOrEmpty, ...
+         mustBeGreaterThan(opts.Alpha, 0), ...
+         mustBeLessThan(opts.Alpha, 1)} = []
       opts.Legend (:,1) string ...
          {groupstats.namelists.mustBeMemberOf(opts.Legend, ...
          "legendvisibility")} = "on"
@@ -254,6 +292,24 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
          'group variable whose members compute the sort value.'])
    end
 
+   % PlotError draws the whiskers, so an interval asked for without it
+   % would never show.
+   if opts.ErrorBar == "ci" && ~opts.PlotError
+      error('groupstats:barchartcats:errorBarWithoutPlotError', ...
+         ['ErrorBar="ci" was given without PlotError=true, so no ' ...
+         'whisker would show the interval. Set PlotError=true.'])
+   end
+
+   % Alpha sets the level of the mean t interval alone. The spread and the
+   % median notch have no level, so an Alpha there would change nothing.
+   if ~isempty(opts.Alpha) && ~(opts.ErrorBar == "ci" ...
+         && opts.Method == "mean")
+      error('groupstats:barchartcats:alphaWithoutMeanCI', ...
+         ['Alpha sets the level of the mean confidence interval, so it ' ...
+         'needs ErrorBar="ci" and Method="mean". The spread and the ' ...
+         'median notch have no level to set.'])
+   end
+
    % validate inputs
    tbl = prepareTableGroups(tbl, ydatavar, ...
       XGroupVar = xgroupvar, ...
@@ -275,7 +331,8 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
 
    % barchartcats requires summarizing the data, unlike boxchart
    [XData, YData, CData, EData] = summarizeTableGroups( ...
-      tbl, ydatavar, xgroupvar, cgroupvar, opts.Method);
+      tbl, ydatavar, xgroupvar, cgroupvar, opts.Method, opts.ErrorBar, ...
+      opts.Alpha);
 
    % main function
 
@@ -347,27 +404,33 @@ end
 
 
 function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
-      xgroupvar, cgroupvar, method)
-   %SUMMARIZETABLEGROUPS
+      xgroupvar, cgroupvar, method, errortype, alpha)
+   %SUMMARIZETABLEGROUPS Bar heights and whisker half-widths per pairing.
+   %
+   % The bar height is METHOD. With ERRORTYPE "spread", the whisker is the
+   % spread that pairs with it. With ERRORTYPE "ci", it is the half-width
+   % of the groupci interval at level ALPHA.
 
    % cgroupvar leads the grouping list because it controls the row order
    % groupsummary returns, which the reshape below and bar's series
    % layout rely on.
 
-   if strcmp(method,'mean')
-      G = groupsummary(tbl,[cgroupvar xgroupvar], ["mean", "std"], ydatavar);
-      XData = G.(xgroupvar);
-      YData = G.("mean_" + ydatavar);
-      EData = G.("std_" + ydatavar);
-   elseif strcmp(method,'median')
-      G = groupsummary(tbl,[cgroupvar xgroupvar], {"median", @iqr}, ydatavar);
-      XData = G.(xgroupvar);
-      YData = G.("median_" + ydatavar);
-
-      % groupsummary names a function-handle method's column fun<N>_<var>.
+   % groupsummary names a function-handle method's column fun<N>_<var>,
+   % so read the whisker by position: it is the last column either way.
+   if errortype == "ci"
+      % The interval comes from the helper groupci uses, so each whisker tip
+      % equals the groupci bound for the same rows.
+      whisker = @(y) cihalfwidth(y, method, alpha);
+   elseif method == "mean"
+      whisker = "std";
+   else
       % The spread that pairs with a median is the interquartile range.
-      EData = G.("fun1_" + ydatavar);
+      whisker = @iqr;
    end
+   G = groupsummary(tbl, [cgroupvar xgroupvar], {method, whisker}, ydatavar);
+   XData = G.(xgroupvar);
+   YData = G.(method + "_" + ydatavar);
+   EData = G{:, end};
 
    % Each column of Y needs to correspond to a group of bars. Each bar in a
    % group is a different color, and each group is a different x-tick.
@@ -402,6 +465,19 @@ function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
    end
 end
 
+
+function halfwidth = cihalfwidth(y, method, alpha)
+   %CIHALFWIDTH Half-width of the groupci interval of one bar's values.
+   %
+   % Both intervals are symmetric about the bar height: the t interval about
+   % the mean, and the notch about the median. errorbar draws the bar
+   % height plus or minus this half-width, so the tips land on the bounds.
+   % A bar with fewer than two values has NaN bounds, so errorbar draws no
+   % whisker there.
+
+   [~, bounds] = sampleci(y, method, alpha);
+   halfwidth = diff(bounds) / 2;
+end
 
 function [CData, YData] = mergemembermean(CData, YData, mergegroups)
    %MERGEMEMBERMEAN Average member columns of the summary matrix by name.
@@ -515,7 +591,9 @@ function plotBarErrors(opts, H, YData, EData)
    %
    % The whisker is the standard deviation for method "mean", and the
    % interquartile range for method "median". summarizeTableGroups computes
-   % whichever pairs with the method.
+   % whichever pairs with the method. With ErrorBar="ci", EData holds the
+   % half-width of the groupci interval, so the same call draws the
+   % interval.
 
    if ~opts.PlotError || isempty(EData)
       return

@@ -14,6 +14,7 @@ classdef test_privatehelpers < matlab.unittest.TestCase
       isvariable
       settablevarnames
       mergegroupmembers
+      tcritical
    end
 
    methods (TestClassSetup)
@@ -31,6 +32,8 @@ classdef test_privatehelpers < matlab.unittest.TestCase
             groupstats.internal.privatefunction('settablevarnames');
          testCase.mergegroupmembers = ...
             groupstats.internal.privatefunction('mergegroupmembers');
+         testCase.tcritical = ...
+            groupstats.internal.privatefunction('tcritical');
       end
    end
 
@@ -351,6 +354,42 @@ classdef test_privatehelpers < matlab.unittest.TestCase
 
          expected = {'col_1', 'col_2', 'col_3'};
          testCase.verifyEqual(returned.Properties.VariableNames, expected);
+      end
+
+      % ---- tcritical
+
+      function testTcriticalMatchesIndependentValues(testCase)
+         % Each value is t(1 - Alpha/2, nu), rounded to 10 decimals. None
+         % comes from MATLAB. For nu up to 1e4, a standard-library Python
+         % inversion of the regularized incomplete beta function computed
+         % them. For nu of 1e6 and 1e9, the normal value plus three series
+         % terms did. The values for nu = 1 and 2 match closed forms. The
+         % DesignSpec acceptance section and the groupci ExecPlan record
+         % them. nu = 9999 and 10000 sit on each side of the series branch.
+         % The rounding is below 1e-10, far inside the 1e-8 tolerance.
+
+         nu = [1; 2; 7; 30; 1000; 9999; 10000; 1e6; 1e9];
+         alpha = [0.05 0.10 0.01];
+         expected = [
+            12.7062047362  6.3137515147  63.6567411629
+             4.3026527297  2.9199855804   9.9248432009
+             2.3646242516  1.8945786051   3.4994832974
+             2.0422724563  1.6972608866   2.7499956536
+             1.9623390808  1.6463788173   2.5807546981
+             1.9602012636  1.6450060333   2.5763210959
+             1.9602012399  1.6450060180   2.5763210467
+             1.9599663568  1.6448551507   2.5758342201
+             1.9599639869  1.6448536285   2.5758293085
+            ];
+
+         returned = zeros(size(expected));
+         for i = 1:numel(nu)
+            for j = 1:numel(alpha)
+               returned(i, j) = testCase.tcritical(alpha(j), nu(i));
+            end
+         end
+
+         testCase.verifyEqual(returned, expected, 'RelTol', 1e-8);
       end
    end
 end

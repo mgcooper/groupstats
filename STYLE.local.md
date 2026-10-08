@@ -11,8 +11,8 @@ merged into it).
   lowercase; name-value fields are PascalCase. The `arguments`-block
   structs are `opts` (options) and `props` (graphics pass-through).
 - Grouping variables: a scalar is `groupvar`, a vector is `groupvars`; the
-  cats charts and `scatter` use role-prefixed `xgroupvar`/`cgroupvar`/
-  `sgroupvar`. A grouping variable is positional, except the second
+  cats charts, `groupci`, and `scatter` use role-prefixed `xgroupvar`/
+  `cgroupvar`/`sgroupvar`. A grouping variable is positional, except the second
   grouping of `groupcompare`/`groupsamples`, the name-value `ConditionVar`.
   An optional grouping variable is declared `string {mustBeScalarOrEmpty}`
   with a `string.empty()` default. `dropcats` keeps `varnames` because it

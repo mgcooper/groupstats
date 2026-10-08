@@ -8,6 +8,26 @@ version the package carries is in `toolbox/version.txt`.
 
 ## [Unreleased]
 
+### Added
+
+- `groupstats.groupci` returns the confidence interval of each group's
+  center as a table, one row per pairing of the cats-chart groupings,
+  empty pairings included. `Method="mean"` gives the Student t interval,
+  and `Method="median"` gives the notch that `boxchartcats` draws. It
+  needs only base MATLAB.
+- `demo_groupci` shows the interval table, the notch comparison, and the
+  interval error bars.
+- `ErrorBar` and `Alpha` on `groupstats.barchartcats`. With
+  `PlotError=true`, `ErrorBar="ci"` draws the `groupstats.groupci` interval
+  of each bar as its whisker. `"spread"`, the default, keeps the standard
+  deviation or interquartile range whisker. `Alpha` sets the level of the
+  mean interval.
+
+### Changed
+
+- `groupstats.barchartcats` takes one `Method`. A vector `Method`, which the
+  code never handled, is a validation error.
+
 ### Fixed
 
 - `groupstats.boxchartydata` returns the whisker tips that `boxchart`

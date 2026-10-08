@@ -29,6 +29,8 @@
 % rank-sum, sign-rank, or permutation test, with an optional bootstrapped
 % median difference.
 % * |groupstats.groupsamples| - the data of each group, reference first.
+% * |groupstats.groupci| - the confidence interval of each group's mean or
+% median, one table row per pairing of the cats-chart groupings.
 % * |groupstats.groupselect| - select the rows matching group members.
 % * |groupstats.groupmap| - apply a function to each group and recombine
 % the results.
@@ -38,7 +40,7 @@
 
 %% Charts for grouped data
 % * |groupstats.barchartcats| - bar chart grouped along x and colored
-% within groups.
+% within groups, with spread or confidence-interval error bars.
 % * |groupstats.boxchartcats| - box chart grouped along x and colored
 % within groups.
 % * |groupstats.scatter| - scatter chart colored and sized by group.

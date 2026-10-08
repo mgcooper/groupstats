@@ -32,6 +32,8 @@ Grouped statistics for MATLAB tables:
 - Group-wise frequencies and percentages, including group sets
   (`groupstats.grouppercent`)
 - Group-wise conditional (Bayesian) probabilities (`groupstats.groupbayes`)
+- Group-wise confidence intervals of the mean or the median, one table row
+  per pairing of the chart groupings (`groupstats.groupci`)
 - Group comparison by rank-sum, sign-rank, or permutation test, with an
   optional bootstrapped median difference (`groupstats.groupcompare`), and
   the grouped samples it reads (`groupstats.groupsamples`)
@@ -42,7 +44,8 @@ Grouped statistics for MATLAB tables:
 Charts for categorical (grouped) table data:
 
 - Bar and box charts grouped along the x-axis and colored within groups
-  (`groupstats.barchartcats`, `groupstats.boxchartcats`)
+  (`groupstats.barchartcats`, `groupstats.boxchartcats`). Bar error bars
+  show the spread or the `groupci` interval.
 - Grouped scatter charts and histograms (`groupstats.scatter`,
   `groupstats.histogram`)
 

@@ -129,7 +129,24 @@
             "kind":"namevalue",
             "type":["logical", "scalar"],
             "default":"false",
-            "purpose":"draw a whisker per bar from the spread of its group"
+            "purpose":"draw a whisker per bar: the spread of its group, or with ErrorBar ci its groupci interval"
+         },
+         {
+            "name":"ErrorBar",
+            "kind":"namevalue",
+            "type":
+            [
+               "char", "string", "scalar",
+               "choices=groupstats.namelists.errorbartype()"
+            ],
+            "default":"'spread'",
+            "purpose":"what the PlotError whisker shows: the spread or the groupci interval"
+         },
+         {
+            "name":"Alpha",
+            "kind":"namevalue",
+            "type":["numeric","scalar"],
+            "purpose":"the significance level of the ErrorBar ci mean interval, default 0.05"
          },
          {
             "name":"XGroupOrder",
@@ -259,6 +276,28 @@
       [
          {"name":"stats", "type":"tabular"},
          {"name":"samples", "type":"double"}
+      ]
+   },
+
+   "groupstats.groupci":
+   {
+      "inputs":
+      [
+         {"name":"tbl", "kind":"required", "type":["tabular"], "purpose":"the table of grouped data"},
+         {"name":"ydatavar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the data variable whose center is bounded"},
+         {"name":"xgroupvar", "kind":"required", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]], "purpose":"the grouping variable along the x axis of the cats charts"},
+         {"name":"cgroupvar", "kind":"ordered", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl, 'rowtimes', true)"]], "purpose":"the color grouping variable of the cats charts"},
+         {"name":"XGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', xgroupvar)", "purpose":"the xgroupvar members to keep"},
+         {"name":"CGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)", "purpose":"the cgroupvar members to keep"},
+         {"name":"RowSelectVar", "kind":"namevalue", "type":[["char","string"],["scalar"],["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose":"the variable to down-select rows of the input table"},
+         {"name":"RowSelectMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl,'selectby',RowSelectVar)", "purpose":"the members of RowSelectVar whose rows to keep"},
+         {"name":"MergeGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)", "purpose":"the cgroupvar members to pool, one cell per merge group"},
+         {"name":"Method", "kind":"namevalue", "type":["char", "string", "scalar", "choices=groupstats.namelists.centralstatistic()"], "default":"'mean'", "purpose":"the mean t interval or the median notch"},
+         {"name":"Alpha", "kind":"namevalue", "type":["numeric","scalar"], "purpose":"the significance level of the mean interval, default 0.05"}
+      ],
+      "outputs":
+      [
+         {"name":"ci", "type":"tabular"}
       ]
    },
 

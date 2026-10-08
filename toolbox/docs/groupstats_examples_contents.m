@@ -17,6 +17,8 @@
 % |prepareTableGroups|.
 % * <demo_groupcompare.html demo_groupcompare> - |groupcompare| and
 % |groupsamples|, one section per option.
+% * <demo_groupci.html demo_groupci> - |groupci| interval tables, the
+% |boxchartcats| notch, and |barchartcats| interval error bars.
 % * <demo_groupmap.html demo_groupmap> - |groupmap| with |groupbayes| per
 % group.
 % * <demo_groupbayes.html demo_groupbayes> - |groupbayes| on an event

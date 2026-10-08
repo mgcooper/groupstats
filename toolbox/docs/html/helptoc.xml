@@ -28,6 +28,7 @@
          <tocitem target="demo_histogram.html">demo_histogram</tocitem>
          <tocitem target="demo_groupsummary.html">demo_groupsummary</tocitem>
          <tocitem target="demo_groupcompare.html">demo_groupcompare</tocitem>
+         <tocitem target="demo_groupci.html">demo_groupci</tocitem>
          <tocitem target="demo_groupmap.html">demo_groupmap</tocitem>
          <tocitem target="demo_groupbayes.html">demo_groupbayes</tocitem>
          <tocitem target="demo_bayes.html">demo_bayes</tocitem>
