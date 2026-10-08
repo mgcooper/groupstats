@@ -75,6 +75,11 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % with zero-length whiskers, so the mean symbol is its only visible
    % mark. The chart warns when every box is like that.
    %
+   % Y-limits: when every MarkerStyle is "none", boxchart draws no outlier
+   % points. The chart then fits its y-limits to the whisker tips, the box
+   % edges, and the notches when Notch is "on". A notch can reach past the
+   % whisker tips for a small or skewed box.
+   %
    % Output Arguments
    %
    % H: A handle to the created box chart.
@@ -328,7 +333,8 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
 
    [H, L] = categoricalBoxChart(XData, YData, CData, ydatavar, opts, varargs);
 
-   % If "markerstyle", "none" is in varargin, clip the ylimits to the data
+   % If "markerstyle", "none" is in varargin, fit the ylimits to the drawn
+   % whiskers, boxes, and notches
    setboxchartylim(ax, H, XData, YData, CData);
 
    % Add the means if requested
@@ -610,14 +616,17 @@ function shadeboxchartgroups(CustomOpts, H)
 end
 
 function setboxchartylim(ax, H, XData, YData, CData)
-   %SETBOXCHARTYLIM Fit the y limits to the whiskers when outliers are hidden.
+   %SETBOXCHARTYLIM Fit the y limits to the drawn boxes when outliers are hidden.
    %
    % With MarkerStyle "none" boxchart draws no outlier points, so the visible
-   % extent is the whisker tips. Fitting the limits to the plotted data
-   % instead leaves empty space wherever an outlier was suppressed.
+   % extent is the whisker tips, the box edges, and, with Notch "on", the
+   % notches. Fitting the limits to the plotted data instead leaves empty
+   % space wherever an outlier was suppressed. Limits fit to the whiskers
+   % alone can clip a notch. A notch reaches past the whisker tips for a
+   % small or skewed box, such as 2.^(0:7) or a box of two values.
    %
-   % The whiskers come from groupstats.boxchartydata, which computes them from
-   % the data. Reading them off H(n).NodeChildren(4).VertexData instead
+   % The coordinates come from groupstats.boxchartydata, which computes them
+   % from the data. Reading them off H(n).NodeChildren(4).VertexData instead
    % depends on undocumented graphics internals and needs a drawnow first.
 
    import groupstats.boxchartydata
@@ -626,10 +635,14 @@ function setboxchartylim(ax, H, XData, YData, CData)
       return
    end
 
+   % The notches count only where boxchart draws them.
+   drawsnotch = any([H.Notch] == "on");
+
    % One box per pairing of an x-group member with a color-group member.
+   % Each row holds the extent of one box. A pairing with no rows stays NaN.
    xmembers = unique(XData);
    cmembers = unique(CData);
-   whiskers = nan(numel(xmembers) * numel(cmembers), 2);
+   extents = nan(numel(xmembers) * numel(cmembers), 2);
 
    k = 0;
    for x = 1:numel(xmembers)
@@ -637,19 +650,27 @@ function setboxchartylim(ax, H, XData, YData, CData)
          k = k + 1;
          inbox = XData == xmembers(x) & CData == cmembers(c);
          if any(inbox)
-            whiskers(k, :) = boxchartydata(YData(inbox)).whiskers;
+            % The whisker tips never lie inside the box, so they bound the
+            % box edges too. Only the notches can reach farther.
+            y = boxchartydata(YData(inbox));
+            extent = y.whiskers;
+            if drawsnotch
+               extent = [min(extent(1), y.notches(1)) ...
+                  max(extent(2), y.notches(2))];
+            end
+            extents(k, :) = extent;
          end
       end
    end
 
-   ywhiskers = whiskers(~isnan(whiskers));
-   if isempty(ywhiskers)
+   yextents = extents(~isnan(extents));
+   if isempty(yextents)
       return
    end
 
    % Compute axis limits with padding. Pad by a fixed amount when every
-   % whisker sits at the same value, because ylim rejects a zero-width range.
-   bounds = [min(ywhiskers) max(ywhiskers)];
+   % box sits at the same value, because ylim rejects a zero-width range.
+   bounds = [min(yextents) max(yextents)];
    padding = 0.01 * diff(bounds);
    if padding == 0
       padding = max(abs(bounds(1)), 1) * 0.01;

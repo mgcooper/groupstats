@@ -420,7 +420,8 @@ classdef test_boxchartcats < matlab.unittest.TestCase
 
       function testHiddenOutliersFitTheYLimitsToTheWhiskers(testCase)
          % With MarkerStyle "none" boxchart draws no outlier points, so the
-         % y limits follow the whiskers rather than the data range.
+         % y limits follow the whiskers, boxes, and notches rather than the
+         % data range.
 
          tbl = outlierTable();
 
@@ -444,6 +445,61 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          bounds = ylim;
          testCase.verifyLessThanOrEqual(bounds(1), min(y.whiskers));
          testCase.verifyGreaterThanOrEqual(bounds(2), max(y.whiskers));
+      end
+
+      function testHiddenOutliersKeepTheBoxTopAndTheNotch(testCase)
+         % For [1 2 3 4 100] the box top is Q3 = 4 + 0.25 * 96 = 28, above
+         % every inside value. The notch is the median 3 plus or minus
+         % 1.57 * 26.25 / sqrt(5), and its lower end lies below the lowest
+         % value. Limits fit to the inside values alone, [1 4], cut off both.
+         % The limits must hold the box and the notch and leave out the
+         % hidden outlier 100.
+
+         tbl = table(categorical(repmat("a", 5, 1)), [1; 2; 3; 4; 100], ...
+            'VariableNames', {'Grp', 'Value'});
+
+         groupstats.boxchartcats(tbl, "Value", "Grp", MarkerStyle = "none");
+
+         notchlow = 3 - 1.57 * 26.25 / sqrt(5);
+         bounds = ylim;
+         testCase.verifyLessThanOrEqual(bounds(1), notchlow);
+         testCase.verifyGreaterThanOrEqual(bounds(2), 28);
+         testCase.verifyLessThan(bounds(2), 100);
+      end
+
+      function testHiddenOutliersKeepANotchBeyondTheWhiskers(testCase)
+         % For 2.^(0:7) the median is 12, Q1 = 2 + 0.5 * 2 = 3, and
+         % Q3 = 32 + 0.5 * 32 = 48. The notch reaches down to
+         % 12 - 1.57 * 45 / sqrt(8), about -12.98, far below the lower
+         % whisker tip at 1. The upper fence is 48 + 1.5 * 45 = 115.5, so
+         % 128 is a hidden outlier and the upper tip is 64.
+
+         tbl = table(categorical(repmat("a", 8, 1)), 2 .^ (0:7)', ...
+            'VariableNames', {'Grp', 'Value'});
+
+         groupstats.boxchartcats(tbl, "Value", "Grp", MarkerStyle = "none");
+
+         notchlow = 12 - 1.57 * 45 / sqrt(8);
+         bounds = ylim;
+         testCase.verifyLessThanOrEqual(bounds(1), notchlow);
+         testCase.verifyGreaterThanOrEqual(bounds(2), 64);
+         testCase.verifyLessThan(bounds(2), 128);
+      end
+
+      function testHiddenOutliersKeepTheNotchesOfTwoValueBoxes(testCase)
+         % Every fixture pairing holds two values two apart, and its box
+         % spans them. Each notch is the median plus or minus
+         % 1.57 * 2 / sqrt(2). Pairing a-x holds 1 and 3, with the
+         % lowest notch end, 2 - 1.57 * sqrt(2). Pairing c-y holds 10 and
+         % 12, with the highest, 11 + 1.57 * sqrt(2). Both lie past every
+         % whisker tip.
+
+         groupstats.boxchartcats(testCase.Tbl, "Value", "Grp", "Sub", ...
+            MarkerStyle = "none");
+
+         bounds = ylim;
+         testCase.verifyLessThanOrEqual(bounds(1), 2 - 1.57 * sqrt(2));
+         testCase.verifyGreaterThanOrEqual(bounds(2), 11 + 1.57 * sqrt(2));
       end
 
       function testConstantDataDoesNotBreakTheYLimits(testCase)

@@ -6,6 +6,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the toolbox follows [Semantic Versioning](https://semver.org/). The
 version the package carries is in `toolbox/version.txt`.
 
+## [Unreleased]
+
+### Fixed
+
+- `groupstats.boxchartydata` returns the whisker tips that `boxchart`
+  draws. A tip never lies inside the box, so the whiskers of
+  `[1 2 3 4 100]` are `[1 28]`, where the helper returned `[1 4]`.
+- `groupstats.boxchartcats` with every `MarkerStyle` set to `"none"` fits
+  its y-limits to the whisker tips, the box edges, and the notches. Limits
+  fit to the whiskers alone cut off a box top or a notch.
+
 ## 1.0.0 - 2026-09-09
 
 The vendor-ready quality pass.
