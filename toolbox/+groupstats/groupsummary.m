@@ -40,6 +40,10 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % methods   - char, cellstr, string, function handle, or combination thereof
    % datavar   - char, cellstr, or string of variable names in tbl. Omit it to
    %             summarize every numeric variable that is not a groupvar.
+   %             A categorical datavar whose categories are numbers is
+   %             summarized by those numbers. One whose categories are names
+   %             stays categorical, so a method that takes categorical data,
+   %             such as "mode", works, and "mean" is the builtin's error.
    % groupbins - one binning scheme per groupvar, in a cell array, or the
    %             scalar string "none" to bin nothing. Explicit edges must
    %             span the data; see Errors below.
@@ -54,9 +58,10 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    %             sets, also known as "ingroups". For every variable in
    %             GroupSets, G.(Percent_<varname>) sums to 100 within each of
    %             its members. Omit the option or pass string.empty() to
-   %             request no groupsets. The scalar string "none" is not a
-   %             GroupSets value and is rejected, so a table variable
-   %             literally named "none" cannot be selected this way.
+   %             request no groupsets, and G gets no Percent_<varname>
+   %             column. The scalar string "none" is not a GroupSets value
+   %             and is rejected, so a table variable literally named
+   %             "none" cannot be selected this way.
    %
    % RowSelectVar, RowSelectMembers - keep only the rows whose RowSelectVar
    %             value is one of RowSelectMembers, before summarizing. Give
@@ -71,20 +76,29 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % of "fun1_<datavar>" the variable will be the function handle name returned
    % by fnc2str
    %
-   % 2. The output of groupcounts is joined with the output of groupsummary
+   % 2. Percent, each group's share of all rows, follows GroupCount, as
+   % groupcounts returns it.
    %
    % 3. Group percents are computed for ingroups using the GroupSets
    % option. This contrasts with the Percent variable returned by groupcounts,
    % which is the frequency of each group relative to all observations in all
    % groups.
    %
+   % A missing value of a group variable forms one group of its own, sorted
+   % last, as in the builtin. For Percent_<varname>, the missing value is
+   % one more member, so its rows also sum to 100.
+   %
+   % A binned group variable keeps its name in G, for bin edges, a bin
+   % count, and a named time bin. Pass a named bin in a cell, such as
+   % {"month"}; the bare text is a badGroupBins error.
+   %
    % Errors:
    %
    % groupstats:groupsummary:binsDoNotSpanData - a bin scheme leaves rows
-   % outside its edges, so they would form an <undefined> group and the
-   % internal percent join would fail on a missing key. The message names
-   % the group variable, the scheme, and the row count. Widen the edges or
-   % select the rows first.
+   % outside its edges. They would form an <undefined> group that mixes them
+   % with missing values. The message names the group variable, the scheme,
+   % and the count of rows whose value is present but outside the edges.
+   % Widen the edges or select the rows first.
    %
    % groupstats:groupsummary:noDataVariables - datavar resolved to no
    % variable. Every numeric variable of the table is a group variable, so
@@ -97,6 +111,10 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % groupstats:groupsummary:rowSelectVarWithoutMembers and
    % groupstats:groupsummary:membersWithoutGroupVar - RowSelectVar or
    % RowSelectMembers was given without the other.
+   %
+   % groupstats:groupsummary:reservedName - a groupvars or GroupSets
+   % variable is named GroupCount or Percent, the names of the count and
+   % percent columns of G.
    %
    % Example
    %
@@ -115,8 +133,8 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % Neither return them for "ingroups" (groupsets).
    % The toolbox function grouppercent is like groupcounts but supports
    % groupsets. This function combines the ability to compute additional
-   % statistics using groupsummary with the default frequencies returned by
-   % grouppercent.
+   % statistics using groupsummary with the percents groupcounts returns and
+   % the within-set percents grouppercent adds.
 
    arguments
       tbl tabular {mustBeNonempty}
@@ -168,6 +186,17 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    extrasets = setdiff(string(opts.GroupSets), string(groupvars), 'stable');
    summaryvars = [groupvars, reshape(extrasets, 1, [])];
 
+   % G names its count and percent columns GroupCount and Percent, so the
+   % count or the percents would overwrite a grouping variable with either
+   % name. The check rejects that name, as groupstats.groupci rejects the
+   % names of its result columns.
+   clash = intersect(summaryvars, ["GroupCount", "Percent"]);
+   if ~isempty(clash)
+      error('groupstats:groupsummary:reservedName', ...
+         ['Grouping variable "%s" has the name of a result column. ' ...
+         'Rename it; GroupCount and Percent are reserved.'], clash(1))
+   end
+
    % Resolve datavar to variable names. The default is a vartype subscript,
    % which selects columns but cannot be indexed by arrayfun or used to build
    % an output variable name, both of which happen below. Exclude every
@@ -196,10 +225,18 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    groupbins = parseGroupBins(groupbins, groupvars);
    groupbins = [groupbins, repmat({"none"}, 1, numel(extrasets))];
 
-   % Try to convert each data variable to double if it is categorical
+   % Try to convert each data variable to double. A categorical converts
+   % through cat2double, as in prepareTableGroups, so it is summarized by
+   % its numeric categories, not by its category codes. One whose categories
+   % are names stays categorical, and the builtin applies the methods that
+   % accept it.
    for n = 1:numel(datavar)
       try
-         tbl.(datavar(n)) = double(tbl.(datavar(n)));
+         if iscategorical(tbl.(datavar(n)))
+            tbl.(datavar(n)) = cat2double(tbl.(datavar(n)));
+         else
+            tbl.(datavar(n)) = double(tbl.(datavar(n)));
+         end
       catch
          % let the built-in error catching do the work.
       end
@@ -210,22 +247,25 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    G = groupsummary(tbl, cellstr(summaryvars), groupbins, methods, datavar, ...
       "IncludedEdge", opts.IncludedEdge);
 
-   requireSpanningBins(G, summaryvars, groupbins)
+   requireSpanningBins(G, tbl, summaryvars, groupbins)
 
-   G = dropDiscPrefix(G, cellstr(summaryvars));
+   G = restoregroupvarnames(G, summaryvars);
 
-   % Group the percents by summaryvars too, so the join has one key per
-   % group and every row finds its match.
-   G = join(G, ...
-      groupstats.grouppercent(tbl, summaryvars, groupbins, ...
-      GroupSets = opts.GroupSets, IncludedEdge = opts.IncludedEdge));
+   % Add the percents from G's own counts. Percent is the definition
+   % groupcounts uses. grouppercent adds the within-set percents to a
+   % summarized table. No second count is joined, because a join rejects
+   % the missing key of a missing group.
+   G.Percent = 100 .* G.GroupCount ./ sum(G.GroupCount);
+   if ~isempty(opts.GroupSets)
+      G = groupstats.grouppercent(G, summaryvars, GroupSets = opts.GroupSets);
+   end
 
    % Reset the variable names to match custom function names in methods. The
    % first variables will be groupvars followed by GroupCount from
-   % groupsummary, and then the groupvar_method columns, then 'Percent' and
-   % any 'Percent_<groupset>' variables from grouppercent. Moving GroupCounts
-   % to the end, before Percent, avoids dealing with the groupsets variable
-   % names.
+   % groupsummary, and then the groupvar_method columns, then 'Percent',
+   % added above, and any 'Percent_<groupset>' variables from grouppercent.
+   % Moving GroupCounts to the end, before Percent, avoids dealing with the
+   % groupsets variable names.
 
    G = movevars(G, "GroupCount", "Before", "Percent");
    V = G.Properties.VariableNames;
@@ -236,24 +276,23 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    G = settablevarnames(G, V);
 end
 
-function requireSpanningBins(G, groupvars, groupbins)
+function requireSpanningBins(G, tbl, groupvars, groupbins)
    %REQUIRESPANNINGBINS Error when a bin scheme left rows outside its edges.
    %
-   % The builtin puts those rows in an <undefined> group of the binned
-   % variable, and the percent join fails on that missing key with a
-   % message that names no cause. Report the scheme instead.
+   % The builtin puts those rows in the <undefined> group of the binned
+   % variable, together with the rows whose value is missing. A missing
+   % value is a group of its own, but a value outside the edges is a scheme
+   % that does not fit the data, so report the scheme. The builtin puts the
+   % group variables first, in order, so column n is groupvars(n).
 
    for n = 1:numel(groupbins)
       scheme = groupbins{n};
       if (ischar(scheme) || isstring(scheme)) && all(string(scheme) == "none")
          continue
       end
-      binned = "disc_" + string(groupvars(n));
-      if ~ismember(binned, string(G.Properties.VariableNames))
-         continue
-      end
-      outside = ismissing(G.(binned));
-      if any(outside)
+      outside = sum(G.GroupCount(ismissing(G{:, n}))) ...
+         - nnz(ismissing(tbl.(groupvars(n))));
+      if outside > 0
          if isnumeric(scheme)
             schemetext = mat2str(scheme);
          else
@@ -262,28 +301,9 @@ function requireSpanningBins(G, groupvars, groupbins)
          error('groupstats:groupsummary:binsDoNotSpanData', ...
             ['The groupbins scheme %s for %s leaves %d rows outside its ' ...
             'bins. Widen the edges to span the data, or select the rows ' ...
-            'first.'], schemetext, groupvars(n), sum(G.GroupCount(outside)))
+            'first.'], schemetext, groupvars(n), outside)
       end
    end
-end
-
-function tbl = dropDiscPrefix(tbl, groupvars)
-   %DROPDISCPREFIX Restore a binned group variable's original name.
-   %
-   % groupcounts and groupsummary name a binned group variable disc_<name>.
-   % Strip that prefix so a caller reads the same name whether or not
-   % groupbins was used.
-   %
-   % Only a name built from one of groupvars is renamed. A blanket substring
-   % replace would also rewrite a variable the caller named disc_something.
-
-   names = string(tbl.Properties.VariableNames);
-   binned = "disc_" + string(groupvars);
-
-   [isbinned, loc] = ismember(names, binned);
-   names(isbinned) = string(groupvars(loc(isbinned)));
-
-   tbl.Properties.VariableNames = names;
 end
 
 function datavar = resolveDataVars(tbl, datavar, groupvars)

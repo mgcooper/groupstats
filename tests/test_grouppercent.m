@@ -275,5 +275,37 @@ classdef test_grouppercent < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+
+      function testMissingMemberPercentsSumToOneHundred(testCase)
+         % The builtin counts missing values as one group. Grp loses rows
+         % 11 (Sub x) and 12 (Sub y), so its missing member holds two rows
+         % of one each, 50 percent each, as every other member's rows sum
+         % to 100.
+
+         tbl = testCase.Tbl;
+         tbl.Grp(11:12) = missing;
+
+         G = groupstats.grouppercent(tbl, ["Grp", "Sub"]);
+
+         returned = G.Percent_Grp(ismissing(G.Grp));
+         expected = [50; 50];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
+      function testNamedTimeBinsKeepTheGroupVariableName(testCase)
+         % Two dates in January, one in February, three in March. The
+         % builtin names the binned column month_t; the result names it t.
+         % Each month is its own member, so every Percent_t is 100.
+
+         t = datetime(2020, [1; 1; 2; 3; 3; 3], [1; 15; 1; 1; 10; 20]);
+         tt = timetable(t, (1:6)');
+
+         G = groupstats.grouppercent(tt, "t", {"month"});
+
+         returned = [G.GroupCount, G.Percent_t];
+         expected = [2 100; 1 100; 3 100];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
    end
 end

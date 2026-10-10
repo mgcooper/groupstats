@@ -54,9 +54,13 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
    %  to 100.
    %
    %  When grouppercent computes the counts from a raw table, a binned group
-   %  variable keeps its original name in G: the disc_ prefix groupcounts
-   %  adds is removed. A table that already carries GroupCount is used as
-   %  given, so a disc_ name in it stays.
+   %  variable keeps its original name in G: the disc_ prefix, or the named
+   %  bin prefix such as month_, that groupcounts adds is removed. A table
+   %  that already carries GroupCount is used as given, so a disc_ name in
+   %  it stays.
+   %
+   %  A missing value of a group variable forms one group, as in groupcounts.
+   %  For Percent_<groupvar> it is one more member, so its rows sum to 100.
    %
    %  IncludedEdge, "left" (default) or "right", is the bin edge a value on
    %  an edge belongs to, passed to groupcounts for every binned group
@@ -164,14 +168,8 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
       end
 
       % Restore each binned group variable's original name, so a caller reads
-      % the same name whether or not groupbins was used. Only a name built
-      % from one of groupvars is renamed; a blanket substring replace would
-      % also rewrite a variable the caller named disc_something.
-      names = string(G.Properties.VariableNames);
-      binned = "disc_" + groupvars;
-      [isbinned, loc] = ismember(names, binned);
-      names(isbinned) = groupvars(loc(isbinned));
-      G.Properties.VariableNames = names;
+      % the same name whether or not groupbins was used.
+      G = restoregroupvarnames(G, groupvars);
    end
 
    % If multiple groupvars, calculate the GroupPercent for each groupvar
@@ -194,6 +192,15 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
       G.("Percent_" + groupvar) = nan(height(G), 1);
       for n = 1:numel(grps)
          idx = G.(groupvar) == grps(n);
+         G.("Percent_" + groupvar)(idx) = ...
+            100 .* G.GroupCount(idx) ./ sum(G.GroupCount(idx));
+      end
+
+      % The count makes every missing value one group, but a missing value
+      % equals no member, so the loop above skips its rows. Give them the
+      % percents of one more member.
+      idx = ismissing(G.(groupvar));
+      if any(idx)
          G.("Percent_" + groupvar)(idx) = ...
             100 .* G.GroupCount(idx) ./ sum(G.GroupCount(idx));
       end

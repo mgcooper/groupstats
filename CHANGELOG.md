@@ -34,6 +34,13 @@ version the package carries is in `toolbox/version.txt`.
 
 - `groupstats.barchartcats` takes one `Method`. A vector `Method`, which the
   code never handled, is a validation error.
+- `groupstats.groupsummary` adds a `Percent_<var>` column only for each
+  variable that `GroupSets` names, as its help states. A call without
+  `GroupSets` returns `Percent` and no `Percent_<var>` column. Pass
+  `GroupSets` to get the within-set percents.
+- `groupstats.groupsummary` rejects a grouping variable named `GroupCount`
+  or `Percent`, the names of its result columns
+  (`groupstats:groupsummary:reservedName`). Rename the variable first.
 
 ### Fixed
 
@@ -43,6 +50,19 @@ version the package carries is in `toolbox/version.txt`.
 - `groupstats.boxchartcats` with every `MarkerStyle` set to `"none"` fits
   its y-limits to the whisker tips, the box edges, and the notches. Limits
   fit to the whiskers alone cut off a box top or a notch.
+- `groupstats.groupsummary` returns a row for a missing grouping value,
+  sorted last, where it raised a key error. A missing value of a binned
+  variable forms an `<undefined>` bin. `binsDoNotSpanData` counts only the
+  values that lie outside the edges.
+- `groupstats.groupsummary` summarizes a categorical data variable whose
+  categories are numbers by those numbers, not by its category codes. One
+  whose categories are names stays categorical.
+- `groupstats.groupsummary` and `groupstats.grouppercent` keep the group
+  variable's name for a named time bin such as `{"month"}`, on a
+  timetable's row times or a datetime variable. Both raised an
+  unknown-variable error there.
+- `groupstats.grouppercent` gives the rows of a missing group member their
+  within-member percents, where it returned NaN.
 
 ## 1.0.0 - 2026-09-09
 
