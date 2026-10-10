@@ -63,6 +63,11 @@ version the package carries is in `toolbox/version.txt`.
   unknown-variable error there.
 - `groupstats.grouppercent` gives the rows of a missing group member their
   within-member percents, where it returned NaN.
+- `groupstats.groupci` and the `ErrorBar="ci"` whiskers of
+  `groupstats.barchartcats` keep the mean interval finite and accurate at
+  extreme `Alpha`. The half-width was 0 as `Alpha` neared 1. It was Inf for
+  a tiny `Alpha` with one or two degrees of freedom. It was inaccurate for
+  an `Alpha` below about 1e-300.
 - The published demo pages show each figure once. A figure could appear
   again in the section after the one that draws it.
 

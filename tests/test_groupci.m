@@ -346,6 +346,29 @@ classdef test_groupci < matlab.unittest.TestCase
             'groupstats:groupci:nonNumericData');
       end
 
+      function testExtremeAlphaBoundsOfZeroCenteredSamples(testCase)
+         % [-1 1] and [-1 0 1] have mean 0, so the bounds are minus and
+         % plus the half-width, and a width of 1e-16 stays visible. The
+         % "groupci" test data derives each half-width from an exact t
+         % identity. Near Alpha 1 a t value can cancel to 0, and for tiny
+         % Alpha it can overflow to Inf. At Alpha 1e-310 the true [-1 1]
+         % half-width exceeds the double range, so its bounds are -Inf and
+         % Inf.
+
+         [data, expected] = groupstats.test.generateTestData("groupci");
+
+         for n = 1:numel(data.alpha)
+            ci = groupstats.groupci(data.tbl, "Value", "Grp", ...
+               Alpha = data.alpha(n));
+
+            halfwidth = expected.halfwidth(:, n);
+            testCase.verifyEqual(ci.Estimate, [0; 0]);
+            testCase.verifyEqual([ci.CILower ci.CIUpper], ...
+               [-halfwidth halfwidth], 'RelTol', 1e-12, ...
+               sprintf('Alpha %g', data.alpha(n)));
+         end
+      end
+
       function testAlphaWithMedianErrors(testCase)
          testCase.verifyError(@() groupstats.groupci(testCase.Tbl, ...
             "Value", "Grp", Method = "median", Alpha = 0.1), ...

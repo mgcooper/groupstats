@@ -260,6 +260,26 @@ classdef test_barchartcats < matlab.unittest.TestCase
             [2; 6; 10] + [-6.3137515147 6.3137515147], 'AbsTol', 1e-6);
       end
 
+      function testCiWhiskerAtExtremeAlpha(testCase)
+         % Each bar of [-1 1] and [-1 0 1] has height 0, so its whisker
+         % tips are minus and plus the exact half-width of the "groupci"
+         % test data. Alpha 1e-310 is left out: its [-1 1] whisker is
+         % infinite, which the groupci test covers.
+
+         [data, expected] = groupstats.test.generateTestData("groupci");
+
+         for n = 2:numel(data.alpha)
+            cla
+            groupstats.barchartcats(data.tbl, "Value", "Grp", ...
+               PlotError = true, ErrorBar = "ci", Alpha = data.alpha(n));
+
+            halfwidth = expected.halfwidth(:, n);
+            testCase.verifyEqual(whiskerTips(gca), ...
+               [-halfwidth halfwidth], 'RelTol', 1e-12, ...
+               sprintf('Alpha %g', data.alpha(n)));
+         end
+      end
+
       function testCiWhiskerOfAPooledMerge(testCase)
          % Merging x and y pools each Grp member's four values into one
          % bar: a {1:4}, b {5:8}, c {9:12}.

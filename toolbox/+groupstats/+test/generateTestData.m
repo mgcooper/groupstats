@@ -37,6 +37,10 @@ function varargout = generateTestData(whichfunction)
    %   "groupheatmap" A table whose heatmap cells all differ: columns Grp
    %                p, q, r by rows Sub u, v, w. The expected struct holds
    %                the hand value of every cell for each heatmap Method.
+   %   "groupci"    Two zero-centered samples, [-1 1] and [-1 0 1], and
+   %                Alpha levels from 1e-310 to 1 - 2^-53. The expected
+   %                struct holds the exact t critical values at one and two
+   %                degrees of freedom and each sample's interval half-width.
    %
    %  This function is the one place test data is defined. Demos and scripts
    %  call it too, so no fixture class or demo may define its own copy.
@@ -49,7 +53,7 @@ function varargout = generateTestData(whichfunction)
 
    % One list of case names so the error message cannot drift from the switch.
    knowncases = ["groupbayes", "groupmap", "dropcats", "info", ...
-      "groupcompare", "groupsummary", "groupheatmap"];
+      "groupcompare", "groupsummary", "groupheatmap", "groupci"];
 
    switch lower(whichfunction)
 
@@ -117,6 +121,10 @@ function varargout = generateTestData(whichfunction)
       case 'groupheatmap'
 
          [TestData, ExpectedResult] = groupheatmapCase();
+
+      case 'groupci'
+
+         [TestData, ExpectedResult] = groupciCase();
 
       otherwise
 
@@ -255,6 +263,41 @@ function [TestData, ExpectedResult] = groupsummaryCase()
    ExpectedResult.members.Set = ["p"; "q"];
    ExpectedResult.rowsPerGrp = 4;
    ExpectedResult.height = 12;
+end
+
+function [TestData, ExpectedResult] = groupciCase()
+   %GROUPCICASE Two zero-centered samples and extreme Alpha levels.
+   %
+   % Grp a holds [-1 1] and Grp b holds [-1 0 1]. Each mean is exactly 0,
+   % so each interval runs from minus to plus its half-width, and a tiny
+   % width stays visible. a has N = 2, s = sqrt(2), and one degree of
+   % freedom, so its half-width is t1. b has N = 3, s = 1, and two degrees
+   % of freedom, so its half-width is t2 / sqrt(3).
+   %
+   % t1 and t2 come from exact identities, found by integrating the Student
+   % t density, not from an inverse beta function:
+   %
+   %     t1 = cot(pi * Alpha / 2) = tan(pi * (1 - Alpha) / 2),
+   %     t2 = (1 - Alpha) * sqrt(2 / (2 - Alpha)) / sqrt(Alpha).
+   %
+   % The tan form serves Alpha above 1/2, where 1 - Alpha is exact in
+   % double. At Alpha = 1e-310, t1 is about 6.4e309, beyond the double
+   % range, so it is Inf.
+
+   TestData.tbl = table(categorical(["a"; "a"; "b"; "b"; "b"]), ...
+      [-1; 1; -1; 0; 1], 'VariableNames', {'Grp', 'Value'});
+   TestData.alpha = [1e-310, 1e-300, 1e-200, 1e-100, 1e-20, 1e-6, 0.05, ...
+      0.5, 0.9, 1 - 1e-6, 1 - 1e-10, 1 - 2^-53];
+
+   alpha = TestData.alpha;
+   upper = alpha > 1 / 2;
+   t1 = 1 ./ tan(pi * alpha / 2);
+   t1(upper) = tan(pi * (1 - alpha(upper)) / 2);
+   t2 = (1 - alpha) .* sqrt(2 ./ (2 - alpha)) ./ sqrt(alpha);
+
+   ExpectedResult.t1 = t1;
+   ExpectedResult.t2 = t2;
+   ExpectedResult.halfwidth = [t1; t2 / sqrt(3)];
 end
 
 function [TestData, ExpectedResult] = groupheatmapCase()
