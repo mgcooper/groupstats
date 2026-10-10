@@ -86,6 +86,58 @@ classdef test_makedocs < matlab.unittest.TestCase
          testCase.verifyEmpty(dir(fullfile(testCase.OutputFolder, '*.html')));
       end
 
+      function testRepeatedImagesAreDropped(testCase)
+         % publish can snap a figure again, unchanged, in the cell after
+         % the one that draws it. The repeat is pixel-identical. The pass
+         % keeps the first of equal images, removes the later tag and its
+         % file, and keeps a different image and the order.
+
+         folder = testCase.OutputFolder;
+         mkdir(folder)
+         first = zeros(8, 8, 3, 'uint8');
+         first(:, :, 1) = 200;
+         other = first;
+         other(:, :, 3) = 200;
+         imwrite(first, fullfile(folder, "p_01.png"))
+         imwrite(first, fullfile(folder, "p_02.png"))
+         imwrite(other, fullfile(folder, "p_03.png"))
+         img = @(n) sprintf( ...
+            '<img vspace="5" hspace="5" src="p_%02d.png" alt="">', n);
+         page = fullfile(folder, "p.html");
+         writelines(["<html><body>", img(1), "<p>next</p>", img(2), img(3), ...
+            "</body></html>"], page)
+
+         droprepeatedimages = groupstats.internal.privatefunction( ...
+            'droprepeatedimages');
+         droprepeatedimages(page)
+
+         returned = string(regexp(fileread(page), 'src="([^"]+)"', ...
+            'tokens'));
+         expected = ["p_01.png", "p_03.png"];
+         testCase.verifyEqual(returned, expected);
+         returned = isfile(fullfile(folder, ...
+            ["p_01.png" "p_02.png" "p_03.png"]));
+         expected = [true false true];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testDemoPageShowsEachFigureOnce(testCase)
+         testCase.assumeFalse(isMATLABReleaseOlderThan("R2025a"), ...
+            "export reads plain-text live scripts from R2025a.");
+         % demo_groupci calls figure three times: once in the notch
+         % section and twice in the error-bar section. When publish snaps
+         % a figure again in the next section, the page shows a fourth or
+         % fifth image.
+
+         groupstats.internal.makedocs(Parts = "demos", ...
+            Demos = "demo_groupci", OutputFolder = testCase.OutputFolder);
+
+         page = fileread(fullfile(testCase.OutputFolder, "demo_groupci.html"));
+         returned = numel(regexp(page, '<img\s', 'start'));
+         expected = 3;
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testDemosWritesWhitePngsNotBlack(testCase)
          testCase.assumeFalse(isMATLABReleaseOlderThan("R2025a"), ...
             "export reads plain-text live scripts from R2025a.");

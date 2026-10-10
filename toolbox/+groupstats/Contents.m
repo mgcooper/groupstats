@@ -46,6 +46,7 @@
 %   groupstats.internal/private.cat2double         - Convert categorical data to double
 %   groupstats.internal/private.cellmap            - Apply function to cell-array
 %   groupstats.internal/private.convertlivescripts - Convert live script to m-files
+%   groupstats.internal/private.droprepeatedimages - Remove a published image that repeats an earlier one
 %   groupstats.internal/private.fitimages          - Show each figure at its unscaled width, and no wider than the page
 %   groupstats.internal/private.getcontents        - Get the contents of a specified directory
 %   groupstats.internal/private.getRequiredFiles   - Retrieve requirements for MATLAB functions or toolboxes

@@ -32,6 +32,10 @@ function makedocs(opts)
    %               only a folder that the help_location of an info.xml on
    %               the path names, which toolbox/docs/html is.
    %
+   %  publish can show a figure a second time, unchanged, in the section
+   %  after the one that draws it. Each published page keeps only the first
+   %  of equal images (droprepeatedimages, private/).
+   %
    %  Demos names the demos the "demos" part publishes, default every
    %  examples/demo_*.m file other than demo_all. A test publishes one demo
    %  with it, because publishing every demo with its figures takes minutes.
@@ -190,6 +194,7 @@ function makedocs(opts)
       for n = 1:numel(sources)
          removeOutputs(htmlpath, stems(n))
          publish(fullfile(sources(n).folder, sources(n).name), pubopts);
+         droprepeatedimages(fullfile(htmlpath, stems(n) + ".html"))
          fitimages(fullfile(htmlpath, stems(n) + ".html"), figurescale)
       end
    end
@@ -219,6 +224,9 @@ function makedocs(opts)
          [~, stem] = fileparts(demos(n));
          removeOutputs(htmlpath, stem)
          publish(demos(n), pubopts);
+         % publish can snap a figure again, unchanged, in the next cell.
+         % Drop those repeats before the widths are set.
+         droprepeatedimages(fullfile(htmlpath, stem + ".html"))
          fitimages(fullfile(htmlpath, stem + ".html"), figurescale)
       end
       % publish leaves the figures a demo opened. Close those, and no

@@ -63,6 +63,8 @@ version the package carries is in `toolbox/version.txt`.
   unknown-variable error there.
 - `groupstats.grouppercent` gives the rows of a missing group member their
   within-member percents, where it returned NaN.
+- The published demo pages show each figure once. A figure could appear
+  again in the section after the one that draws it.
 
 ## 1.0.0 - 2026-09-09
 
