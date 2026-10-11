@@ -18,26 +18,31 @@ months = ["Jan", "Apr", "Jul", "Oct"];
 %% The mean of each pairing
 %
 % The default Method is "mean". Each cell is the mean peak of one month and
-% one scenario. The colorbar takes the place of a legend.
+% one scenario. The colorbar takes the place of a legend, and the default
+% title names what the colors map: the method and the data variable, with
+% the description and units the table gives it.
 
 figure
-groupstats.groupheatmap(Info, "peak", "month", "scenario", ...
-   Title = "Mean peak by month and scenario");
+groupstats.groupheatmap(Info, "peak", "month", "scenario");
 
 %% Every method in a tiled layout
 %
 % Method sets the statistic of each cell: "mean", "median", "count",
 % "sum", "min", or "max". Call nexttile before each chart and pass the
 % layout as Parent, as with heatmap. "count" counts the non-missing values:
-% each month and scenario holds four rows, one per basin label.
+% each month and scenario holds four rows, one per basin label. Short row
+% labels, through the HeatmapChart property YDisplayLabels, keep the small
+% tiles readable.
 
+shortnames = ["WRF-DIST", "WARM-NEAR", "HOT-FAR"];
 figure
-layout = tiledlayout(2, 3);
+layout = tiledlayout(3, 2);
 for method = groupstats.namelists.heatmapmethod()'
    nexttile(layout)
    groupstats.groupheatmap(Info, "peak", "month", "scenario", ...
       XGroupMembers = months, Method = method, Parent = layout, ...
-      Title = method, ColorbarVisible = "off");
+      Title = method, ColorbarVisible = "off", ...
+      YDisplayLabels = shortnames);
 end
 
 %% Empty pairings

@@ -24,6 +24,9 @@ version the package carries is in `toolbox/version.txt`.
   the cats charts, a container `Parent`, and `HeatmapChart` properties.
 - `demo_groupheatmap` shows each method, ordering, a merge, and tiled
   layouts.
+- `FitPDF` on `groupstats.histogram`. `FitPDF="normal"` draws each group's
+  fitted normal density over its histogram, in the group's color, scaled
+  to the `Normalization`.
 - `ErrorBar` and `Alpha` on `groupstats.barchartcats`. With
   `PlotError=true`, `ErrorBar="ci"` draws the `groupstats.groupci` interval
   of each bar as its whisker. `"spread"`, the default, keeps the standard
@@ -41,6 +44,20 @@ version the package carries is in `toolbox/version.txt`.
 - `groupstats.groupsummary` rejects a grouping variable named `GroupCount`
   or `Percent`, the names of its result columns
   (`groupstats:groupsummary:reservedName`). Rename the variable first.
+- `groupstats.barchartcats`, `boxchartcats`, `histogram`, and `scatter` put
+  the legend above the axes in up to three columns. They use fewer columns
+  when three would not fit the figure. The legend text follows the axes
+  font. `barchartcats` and `histogram` drew a legend with a fixed font size
+  of 12 at the upper left. `scatter` drew it to the right of the axes.
+- Chart axis labels come from the table's `VariableDescriptions` and
+  `VariableUnits` for the variable, else its name. The `barchartcats` y
+  label names its `Method`, as in "Mean peak", and `groupstats.histogram`
+  labels its x axis with the data variable.
+- `groupstats.groupheatmap` takes the axes font size, and its default
+  title names the mapped quantity, as in "Mean of peak". For
+  `Method="count"`, 16 or fewer count levels get a discrete colormap.
+- `groupstats.scatter` draws its markers 1.25 times the shared default
+  sizes.
 
 ### Fixed
 
@@ -70,6 +87,8 @@ version the package carries is in `toolbox/version.txt`.
   an `Alpha` below about 1e-300.
 - The published demo pages show each figure once. A figure could appear
   again in the section after the one that draws it.
+- The Getting Started and Using GroupStats pages draw figure text at the
+  proportion of the demo pages. Their text was about 1.5 times too large.
 
 ## 1.0.0 - 2026-09-09
 

@@ -18,6 +18,11 @@ Info = data.Info;
 rng(1)
 Info.runoff = 2 * Info.peak + randn(height(Info), 1);
 
+% A table variable's description and units label its axis. runoff is
+% synthetic like peak, so it has no unit either.
+Info.Properties.VariableDescriptions{'runoff'} = 'runoff';
+Info.Properties.VariableUnits{'runoff'} = 'unitless';
+
 %% Color by one group
 
 figure
