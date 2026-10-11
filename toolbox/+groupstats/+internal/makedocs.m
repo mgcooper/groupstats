@@ -173,14 +173,8 @@ function makedocs(opts)
       @() restoreFigureDefaults(oldfiguredefaults));
    scaledposition = oldfiguredefaults.FigurePosition;
    scaledposition(3:4) = scaledposition(3:4) * figurescale;
-   set(groot, ...
-      'defaultFigurePosition', scaledposition, ...
-      'defaultAxesFontSize', oldfiguredefaults.AxesFontSize * figurescale, ...
-      'defaultTextFontSize', oldfiguredefaults.TextFontSize * figurescale, ...
-      'defaultLineLineWidth', oldfiguredefaults.LineLineWidth * figurescale, ...
-      'defaultAxesLineWidth', oldfiguredefaults.AxesLineWidth * figurescale, ...
-      'defaultPatchLineWidth', ...
-      oldfiguredefaults.PatchLineWidth * figurescale);
+   set(groot, 'defaultFigurePosition', scaledposition);
+   scaleFontsAndLines(oldfiguredefaults, figurescale)
 
    % The docs pages: every groupstats_*.m source in docs/. The template's
    % version of this branch read a list that nothing defined; the list is
@@ -229,9 +223,16 @@ function makedocs(opts)
          droprepeatedimages(fullfile(htmlpath, stem + ".html"))
          fitimages(fullfile(htmlpath, stem + ".html"), figurescale)
       end
-      % publish leaves the figures a demo opened. Close those, and no
-      % figure the caller had open before.
-      close(setdiff(findall(groot, 'Type', 'figure'), figuresbefore))
+
+      % export draws a live script's figure 560 pixels wide, whatever the
+      % default figure size, at twice the headless print resolution.
+      % Measured: export wrote 1120-pixel images, and a 36-point glyph 40
+      % pixels tall where print at the headless dpi drew it 20 pixels tall.
+      % The doubled resolution already does what figurescale does for
+      % publish. The fonts and lines therefore need only the width ratio,
+      % and live-script text keeps the published demos' proportion.
+      livescale = 560 / oldfiguredefaults.FigurePosition(3);
+      scaleFontsAndLines(oldfiguredefaults, livescale)
       livescripts = [
          fullfile(string(tbxpath), "gettingStarted.m")
          fullfile(string(examplespath), "usingGroupStats.m")
@@ -243,6 +244,9 @@ function makedocs(opts)
             'Run', true);
          fitimages(fullfile(htmlpath, name + ".html"), figurescale)
       end
+      % publish and export leave the figures a demo or a live script
+      % opened. Close those, and no figure the caller had open before.
+      close(setdiff(findall(groot, 'Type', 'figure'), figuresbefore))
    end
 
    % The function pages: m2html over the namespace folder, not recursive,
@@ -332,6 +336,21 @@ function restoreGraphicsTheme(graphicstheme, hadtemporaryvalue, oldvalue)
    else
       graphicstheme.clearTemporaryValue();
    end
+end
+
+function scaleFontsAndLines(olddefaults, scale)
+   %SCALEFONTSANDLINES Set the font and line defaults to SCALE times OLDDEFAULTS.
+   %
+   % A glyph's or a line's pixel size is its point size times dpi/72. At
+   % the fixed headless dpi, scaling the point sizes scales the rendered
+   % text and lines.
+
+   set(groot, ...
+      'defaultAxesFontSize', olddefaults.AxesFontSize * scale, ...
+      'defaultTextFontSize', olddefaults.TextFontSize * scale, ...
+      'defaultLineLineWidth', olddefaults.LineLineWidth * scale, ...
+      'defaultAxesLineWidth', olddefaults.AxesLineWidth * scale, ...
+      'defaultPatchLineWidth', olddefaults.PatchLineWidth * scale);
 end
 
 function restoreFigureDefaults(olddefaults)

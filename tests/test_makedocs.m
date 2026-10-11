@@ -220,6 +220,47 @@ classdef test_makedocs < matlab.unittest.TestCase
          end
       end
 
+      function testLiveScriptTextKeepsThePublishedProportion(testCase)
+         testCase.assumeFalse(isMATLABReleaseOlderThan("R2025a"), ...
+            "export reads plain-text live scripts from R2025a.");
+         % export draws a live-script figure 560 pixels wide at twice the
+         % headless print resolution. publish draws the default figure
+         % and its fonts at twice their size. Text keeps one proportion
+         % on both pages when the live-script axes font is the default
+         % font times 560 over the default figure width. A 700-pixel
+         % default figure with a 10-point font gives 8 points. An axes
+         % CreateFcn default records each font. demo_groupmap draws no
+         % figure, but publish can make an axes of its own at the publish
+         % scale, 20 points. Every other axes comes from a live script.
+
+         oldposition = get(groot, 'defaultFigurePosition');
+         oldfont = get(groot, 'defaultAxesFontSize');
+         oldcreate = get(groot, 'defaultAxesCreateFcn');
+         testCase.addTeardown(@() set(groot, ...
+            'defaultFigurePosition', oldposition, ...
+            'defaultAxesFontSize', oldfont, ...
+            'defaultAxesCreateFcn', oldcreate));
+         testCase.addTeardown(@() rmappdata(groot, 'test_makedocs_fonts'));
+         setappdata(groot, 'test_makedocs_fonts', [])
+         set(groot, 'defaultFigurePosition', [100 100 700 525], ...
+            'defaultAxesFontSize', 10, ...
+            'defaultAxesCreateFcn', @(ax, ~) setappdata(groot, ...
+            'test_makedocs_fonts', ...
+            [getappdata(groot, 'test_makedocs_fonts'), ax.FontSize]));
+         figuresbefore = findall(groot, 'Type', 'figure');
+
+         groupstats.internal.makedocs(Parts = "demos", ...
+            Demos = "demo_groupmap", OutputFolder = testCase.OutputFolder);
+
+         returned = setdiff(getappdata(groot, 'test_makedocs_fonts'), 20);
+         expected = 8;
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+
+         % The build closes the figures the live scripts opened.
+         returned = setdiff(findall(groot, 'Type', 'figure'), figuresbefore);
+         testCase.verifyEmpty(returned);
+      end
+
       function testFitimagesAcceptsEveryAttributeForm(testCase)
          % fitimages rewrites the <img> tags of a page. The generated
          % pages use lowercase names, double quotes, and no space around
