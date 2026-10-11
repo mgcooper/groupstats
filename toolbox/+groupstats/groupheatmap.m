@@ -56,9 +56,19 @@ function h = groupheatmap(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)
    %  example Title, Colormap, ColorLimits, CellLabelFormat,
    %  MissingDataColor, ColorbarVisible, or Interpreter. groupheatmap sets
    %  Interpreter="none", so variable names show as they are; a caller value
-   %  wins. The built-in title and axis labels stay. groupheatmap sets the
-   %  data properties from the inputs above, so passing one raises an error
-   %  that names its input.
+   %  wins. The built-in axis labels stay. groupheatmap sets the data
+   %  properties from the inputs above, so passing one raises an error that
+   %  names its input.
+   %
+   % Defaults that follow the chart family
+   %  FontSize is the parent figure's axes font size, so the heatmap text
+   %  matches the other charts. HeatmapChart otherwise keeps 12. The title
+   %  names the mapped quantity, "<Method> of <label>", because the colorbar
+   %  has no label. The label is YDATAVAR's description and units when the
+   %  table sets them. For Method="count", a range of 16 or fewer whole
+   %  counts gets a discrete colormap, one color per count, with each count
+   %  centered on its color. A caller's FontSize, Title, Colormap,
+   %  ColorLimits, or ColorScaling replaces these defaults.
    %
    % Empty pairings and missing values
    %  The built-in heatmap removes rows with a NaN YDATAVAR value before it
@@ -213,6 +223,42 @@ function h = groupheatmap(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)
    % cell values as the built-in computed them.
    orderRows(h, opts);
    orderColumns(h, opts);
+
+   % Family defaults the HeatmapChart lacks, each replaced by a caller
+   % value. The font follows the figure's axes font, and the title names
+   % what the colors map.
+   if ~isfield(props, 'FontSize')
+      h.FontSize = get(ancestor(h, 'figure'), 'DefaultAxesFontSize');
+   end
+   if ~isfield(props, 'Title')
+      h.Title = upper(extractBefore(opts.Method, 2)) ...
+         + extractAfter(opts.Method, 1) + " of " + axislabel(tbl, ydatavar);
+   end
+   if opts.Method == "count" && ~any(isfield(props, ...
+         {'Colormap', 'ColorLimits', 'ColorScaling'}))
+      useDiscreteCountColors(h);
+   end
+end
+
+function useDiscreteCountColors(h)
+   %USEDISCRETECOUNTCOLORS Give each whole count its own color.
+   %
+   % Counts are whole numbers. When they span 16 or fewer levels, from the
+   % smallest to the largest, this function resamples the colormap to one
+   % color per level. The color limits put each count at the center of its
+   % color. More levels keep the continuous colormap.
+
+   counts = h.ColorData;
+   lo = min(counts, [], 'all');
+   hi = max(counts, [], 'all');
+   levels = hi - lo + 1;
+   if isempty(counts) || levels > 16
+      return
+   end
+   cmap = h.Colormap;
+   h.Colormap = interp1(linspace(0, 1, size(cmap, 1)), cmap, ...
+      linspace(0, 1, levels));
+   h.ColorLimits = [lo - 0.5, hi + 0.5];
 end
 
 function orderRows(h, opts)

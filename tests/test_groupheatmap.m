@@ -386,6 +386,62 @@ classdef test_groupheatmap < matlab.unittest.TestCase
          expected = "MATLAB";
          testCase.verifyEqual(returned, expected);
       end
+
+      % ---- Readability (groupstats-ctg.6)
+
+      function testFontSizeFollowsTheAxesFont(testCase)
+         % HeatmapChart keeps its own font size of 12 otherwise. The chart
+         % takes the parent figure's axes font, and a caller value wins.
+
+         f = figure('Visible', 'off', 'DefaultAxesFontSize', 21);
+         testCase.addTeardown(@() close(f));
+         h = groupstats.groupheatmap(testCase.Data.tbl, "Value", "Grp", ...
+            "Sub", Parent = f);
+         testCase.verifyEqual(h.FontSize, 21);
+
+         g = figure('Visible', 'off', 'DefaultAxesFontSize', 21);
+         testCase.addTeardown(@() close(g));
+         h = groupstats.groupheatmap(testCase.Data.tbl, "Value", "Grp", ...
+            "Sub", Parent = g, FontSize = 9);
+         testCase.verifyEqual(h.FontSize, 9);
+      end
+
+      function testDefaultTitleNamesTheMappedQuantity(testCase)
+         % The title says which statistic of which variable the colors
+         % map, from the table's description and units when set.
+
+         tbl = testCase.Data.tbl;
+         tbl.Properties.VariableDescriptions{'Value'} = 'value of things';
+         tbl.Properties.VariableUnits{'Value'} = 'kg';
+
+         h = groupstats.groupheatmap(tbl, "Value", "Grp", "Sub", ...
+            Method = "median");
+
+         testCase.verifyEqual(string(h.Title), ...
+            "Median of value of things (kg)");
+      end
+
+      function testCountUsesADiscreteColormap(testCase)
+         % The fixture counts run from 0 to 7: eight levels, one color
+         % each, with each level centered on its color.
+
+         h = groupstats.groupheatmap(testCase.Data.tbl, "Value", "Grp", ...
+            "Sub", Method = "count");
+
+         testCase.verifyEqual(size(h.Colormap, 1), 8);
+         testCase.verifyEqual(h.ColorLimits, [-0.5 7.5]);
+      end
+
+      function testCallerColormapWinsForCount(testCase)
+         % A caller colormap is kept as given.
+
+         cmap = gray(4);
+         h = groupstats.groupheatmap(testCase.Data.tbl, "Value", "Grp", ...
+            "Sub", Method = "count", Colormap = cmap);
+
+         testCase.verifyEqual(h.Colormap, cmap);
+      end
+
    end
 end
 
