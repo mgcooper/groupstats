@@ -503,6 +503,40 @@ classdef test_scatter < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+
+      % ---- Family legend and axis labels (groupstats-ctg)
+      %
+      % The family legend sits above the axes in up to three columns. It
+      % sets no font size of its own, so it follows the axes font. MATLAB
+      % draws a legend at 0.9 of its axes font. Axis labels come from the
+      % table's description and units of the variable, else its name.
+
+      function testLegendSitsAboveTheAxesInUpToThreeColumns(testCase)
+         % Three Grp members give three entries, so three columns.
+
+         [~, L, ax] = groupstats.scatter(testCase.Tbl, "Value", "X", "Grp");
+
+         testCase.verifyEqual(string(L.Location), "northoutside");
+         testCase.verifyEqual(L.NumColumns, 3);
+         testCase.verifyEqual(L.FontSize, 0.9 * ax.FontSize, ...
+            'RelTol', 1e-12);
+      end
+
+      function testAxisLabelsComeFromTheTableMetadata(testCase)
+         % Each axis names its variable: the description and units when
+         % the table sets them, else the name.
+
+         tbl = testCase.Tbl;
+         tbl.Properties.VariableDescriptions{'Value'} = 'value of things';
+         tbl.Properties.VariableUnits{'Value'} = 'kg';
+
+         [~, ~, ax] = groupstats.scatter(tbl, "Value", "X", "Grp");
+
+         testCase.verifyEqual(string(ax.XLabel.String), ...
+            "value of things (kg)");
+         testCase.verifyEqual(string(ax.YLabel.String), "X");
+      end
+
    end
 end
 

@@ -84,6 +84,15 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % series, so an entry stays on its member. SortBy orders the x-groups
    % and leaves the legend as it is.
    %
+   % Legend and labels - The legend sits above the axes in up to three
+   % columns, fewer when three would be wider than the figure.
+   % LegendOrientation "horizontal" puts every entry in one row. The legend
+   % text follows the axes font. The legend handle comes back as L, so a
+   % caller can move it, for example to "northwest" in one column.
+   % The y label names the Method and the data variable, for example "Mean
+   % peak". The table's VariableDescriptions and VariableUnits for the data
+   % variable replace its name when set: "Mean peak magnitude (unitless)".
+   %
    % ShadeGroups - Shade alternating x-tick groups to tell one group of
    % bars from the next. Defaults to true when cgroupvar is given and
    % false otherwise, because the shading marks a boundary between
@@ -390,9 +399,12 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    [XData, YData, EData] = reorderXGroups(opts, sortcolumns, ...
       XData, YData, EData);
 
-   % Create the figure
+   % Create the figure. The y label names the statistic the bars show and
+   % the data variable, from the table's description and units when set.
+   ylabeltext = upper(extractBefore(opts.Method, 2)) ...
+      + extractAfter(opts.Method, 1) + " " + axislabel(tbl, ydatavar);
    [H, L, ax] = createCategoricalBarChart(XData, YData, CData, cgroups, ...
-      ydatavar, opts, varargs);
+      ylabeltext, opts, varargs);
 
    % Draw the whiskers on top of the bars, then shade behind them.
    plotBarErrors(opts, H, YData, EData);
@@ -679,7 +691,7 @@ function shadebarchartgroups(opts, H)
 end
 
 function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
-      cgroups, ydatavar, opts, props)
+      cgroups, ylabeltext, opts, props)
    % Create the barchart. cgroups names one color group per YData column.
    % It is read from the categories of CData after any merge relabeled
    % them, so the names always match the columns.
@@ -689,7 +701,7 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
    H = bar(ax, XData, YData, props{:});
 
    % Add a ylabel
-   ylabel(ax, ydatavar);
+   ylabel(ax, ylabeltext);
 
    % Format the plot
    set(ax, "YGrid", "on", "XGrid", "on", "XMinorTick", "off", "Box", "on");
@@ -747,11 +759,10 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
 
    end
    try
-      L = legend(ax, legendtxt, ...
-         'Location', 'northwest', ...
-         'AutoUpdate', 'off', ...
-         'Orientation', opts.LegendOrientation, ...
-         'FontSize', 12);
+      % The family layout puts the legend above the axes in up to three
+      % columns that fit the figure. The legend uses the axes font.
+      L = legend(ax, legendtxt, 'AutoUpdate', 'off');
+      legendlayout(L, opts.LegendOrientation);
 
       set(L, 'Visible', opts.Legend)
    catch

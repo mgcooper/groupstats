@@ -65,6 +65,14 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % series, so an entry stays on its member. SortBy orders the x-groups
    % and leaves the legend as it is.
    %
+   % Legend and labels: The legend sits above the axes in up to three
+   % columns, fewer when three would be wider than the figure.
+   % LegendOrientation "horizontal" puts every entry in one row. The legend
+   % text follows the axes font. The legend handle comes back as L, so a
+   % caller can move it, for example to "northwest" in one column.
+   % The y label is the data variable: its VariableDescriptions and
+   % VariableUnits entries when the table sets them, else its name.
+   %
    % ShadeGroups: Shade alternating x-tick groups to tell one group of
    % boxes from the next. Defaults to true when cgroupvar is given and
    % false otherwise, because the shading marks a boundary between
@@ -124,7 +132,6 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % listed in toolbox/vendored.txt, so no separate path is needed:
    %
    %  defaultcolors (libplot)      colors the mean symbols like the boxes
-   %  makevalidvarnames (libtable) builds the y-axis label
    %  naninterp1 (libstats)        fills gaps in the group shading bounds
    %  dealout (functools)          splits the outputs
    %
@@ -206,9 +213,9 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
          {groupstats.namelists.mustBeMemberOf(opts.Legend, ...
          "legendvisibility")} = "on"
       opts.LegendString string = string.empty()
-      % Every chart in the family defaults to a vertical legend. The
-      % legend still sits above the axes; horizontal remains available for
-      % a wide row of entries.
+      % Every chart in the family defaults to a vertical legend of up to
+      % three columns above the axes; horizontal puts the entries in one
+      % row.
       opts.LegendOrientation (1, 1) string ...
          { groupstats.namelists.mustBeMemberOf(opts.LegendOrientation, ...
          "legendorientation") } = "vertical"
@@ -331,7 +338,8 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % order from the categories of CData. LegendString moves with them.
    [CData, opts] = reorderCGroups(opts, CData);
 
-   [H, L] = categoricalBoxChart(XData, YData, CData, ydatavar, opts, varargs);
+   [H, L] = categoricalBoxChart(XData, YData, CData, ...
+      axislabel(tbl, ydatavar), opts, varargs);
 
    % If "markerstyle", "none" is in varargin, fit the ylimits to the drawn
    % whiskers, boxes, and notches
@@ -354,7 +362,8 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
 end
 
 %% Local Functions
-function [H, L] = categoricalBoxChart(XData, YData, CData, YDataVar, CustomOpts, varargs)
+function [H, L] = categoricalBoxChart(XData, YData, CData, YDataLabel, ...
+      CustomOpts, varargs)
 
    % Create the box chart, in the caller's axes
    ax = CustomOpts.Parent;
@@ -366,28 +375,21 @@ function [H, L] = categoricalBoxChart(XData, YData, CData, YDataVar, CustomOpts,
    if isempty(legendtxt)
       legendtxt = unique(CData);
    end
-   % One column per entry lays the entries out in a row; one column stacks
-   % them. Either way the legend sits above the axes.
-   if CustomOpts.LegendOrientation == "horizontal"
-      numcolumns = numel(legendtxt);
-   else
-      numcolumns = 1;
-   end
-
+   % The family layout puts the legend above the axes. A vertical legend
+   % takes up to three columns that fit the figure, and a horizontal one
+   % takes one row. The legend uses the axes font.
    try
-      L = legend(ax, legendtxt, ...
-         'Orientation', CustomOpts.LegendOrientation, ...
-         'Location', 'northoutside', ...
-         'AutoUpdate', 'off', ...
-         'numcolumns', numcolumns );
+      L = legend(ax, legendtxt, 'AutoUpdate', 'off');
+      legendlayout(L, CustomOpts.LegendOrientation);
    catch
       % A legend failure must still assign L. An empty graphics
       % placeholder matches the other charts' legend-failure value.
       L = gobjects(0);
    end
 
-   % Add a ylabel
-   ylabel(ax, makevalidvarnames(YDataVar))
+   % Add a ylabel. The boxes show the values themselves, so the label is
+   % the data variable, from the table's description and units when set.
+   ylabel(ax, YDataLabel)
 
    % Format the plot
    set(ax, "YGrid", "off", "XGrid", "off", "XMinorTick", "off", "box", ...

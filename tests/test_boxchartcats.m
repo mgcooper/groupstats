@@ -699,6 +699,43 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+
+      % ---- Family legend and axis labels (groupstats-ctg)
+      %
+      % The family legend sits above the axes in up to three columns. It
+      % sets no font size of its own, so it follows the axes font. MATLAB
+      % draws a legend at 0.9 of its axes font. Axis labels come from the
+      % table's description and units of the variable, else its name.
+
+      function testLegendSitsAboveTheAxesInUpToThreeColumns(testCase)
+         % Four basins give four entries, so three columns.
+
+         data = groupstats.test.generateTestData('info');
+         [~, L, ax] = groupstats.boxchartcats(data.Info, "peak", ...
+            "month", "basin");
+
+         testCase.verifyEqual(string(L.Location), "northoutside");
+         testCase.verifyEqual(L.NumColumns, 3);
+         testCase.verifyEqual(L.FontSize, 0.9 * ax.FontSize, ...
+            'RelTol', 1e-12);
+      end
+
+      function testYLabelComesFromTheTableMetadata(testCase)
+         % The boxes show the values themselves, so the label is the
+         % variable's description and units, else its name.
+
+         [~, ~, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp");
+         testCase.verifyEqual(string(ax.YLabel.String), "Value");
+
+         tbl = testCase.Tbl;
+         tbl.Properties.VariableDescriptions{'Value'} = 'value of things';
+         tbl.Properties.VariableUnits{'Value'} = 'kg';
+         cla
+         [~, ~, ax] = groupstats.boxchartcats(tbl, "Value", "Grp");
+         testCase.verifyEqual(string(ax.YLabel.String), ...
+            "value of things (kg)");
+      end
    end
 
    methods (Access = private)
@@ -736,6 +773,7 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          expected = [1, 2, 10, 20, 100, 200];
          testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
       end
+
 
    end
 end

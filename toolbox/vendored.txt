@@ -14,7 +14,6 @@
 +groupstats/private/distinguishable_colors.m <- libplot/distinguishable_colors/distinguishable_colors.m
 +groupstats/private/allCustomProps.m <- libtable/allCustomProps.m
 +groupstats/private/cat2double.m <- libtable/cat2double.m
-+groupstats/private/makevalidvarnames.m <- libtable/makevalidvarnames.m
 +groupstats/private/mergeCustomProps.m <- libtable/mergeCustomProps.m
 +groupstats/private/stacktables.m <- libtable/stacktables.m
 +groupstats/+internal/tablecompletions.m <- libtable/tablecompletions.m

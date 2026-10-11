@@ -433,6 +433,11 @@ function [TestData, ExpectedResult] = infoCase()
    season = cos(2 * pi * (iMonth - 1) / numel(months));
    Info.peak = 10 + 4 * season + iScenario + 0.5 * iLabel;
 
+   % The peak is a synthetic magnitude with no physical unit. The charts
+   % read the description and the units for their axis labels.
+   Info.Properties.VariableDescriptions{'peak'} = 'peak magnitude';
+   Info.Properties.VariableUnits{'peak'} = 'unitless';
+
    TestData.Info = Info;
    TestData.scenarios = scenarios;
    TestData.basins = labels(2:end);

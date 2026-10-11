@@ -1093,6 +1093,69 @@ classdef test_barchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+
+      % ---- Family legend and axis labels (groupstats-ctg)
+      %
+      % The family legend sits above the axes in up to three columns. It
+      % sets no font size of its own, so it follows the axes font. MATLAB
+      % draws a legend at 0.9 of its axes font. Axis labels come from the
+      % table's description and units of the variable, else its name.
+
+      function testLegendSitsAboveTheAxesInUpToThreeColumns(testCase)
+         % Four basins give four entries, so three columns.
+
+         data = groupstats.test.generateTestData('info');
+         [~, L, ax] = groupstats.barchartcats(data.Info, "peak", ...
+            "month", "basin");
+
+         testCase.verifyEqual(string(L.Location), "northoutside");
+         testCase.verifyEqual(L.NumColumns, 3);
+         testCase.verifyEqual(L.FontSize, 0.9 * ax.FontSize, ...
+            'RelTol', 1e-12);
+      end
+
+      function testLegendDropsColumnsToFitANarrowFigure(testCase)
+         % Three long scenario names in three columns are wider than a
+         % 300-pixel figure, so the legend drops columns until it fits
+         % inside the figure.
+
+         data = groupstats.test.generateTestData('info');
+         f = figure('Visible', 'off', 'Position', [100 100 300 300]);
+         testCase.addTeardown(@() close(f));
+         [~, L] = groupstats.barchartcats(data.Info, "peak", "month", ...
+            "scenario", Parent = axes(f));
+
+         testCase.verifyLessThan(L.NumColumns, 3);
+         testCase.verifyLessThanOrEqual(L.Position(3), 1);
+      end
+
+      function testHorizontalLegendIsOneRow(testCase)
+         % A horizontal legend puts all four basins in one row.
+
+         data = groupstats.test.generateTestData('info');
+         [~, L] = groupstats.barchartcats(data.Info, "peak", "month", ...
+            "basin", LegendOrientation = "horizontal");
+
+         testCase.verifyEqual(L.NumColumns, 4);
+      end
+
+      function testYLabelNamesTheMethodAndTheVariable(testCase)
+         % Without metadata the label is the method and the variable name.
+         % A description and units replace the name.
+
+         [~, ~, ax] = groupstats.barchartcats(testCase.Tbl, "Value", "Grp");
+         testCase.verifyEqual(string(ax.YLabel.String), "Mean Value");
+
+         tbl = testCase.Tbl;
+         tbl.Properties.VariableDescriptions{'Value'} = 'value of things';
+         tbl.Properties.VariableUnits{'Value'} = 'kg';
+         cla
+         [~, ~, ax] = groupstats.barchartcats(tbl, "Value", "Grp", ...
+            Method = "median");
+         testCase.verifyEqual(string(ax.YLabel.String), ...
+            "Median value of things (kg)");
+      end
+
    end
 end
 

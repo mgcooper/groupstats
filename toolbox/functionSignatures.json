@@ -865,6 +865,16 @@
             ],
             "purpose":"the legend orientation"},
          {
+            "name":"FitPDF",
+            "kind":"namevalue",
+            "type":
+            [
+               ["char", "string"],
+               ["scalar"],
+               ["choices=groupstats.namelists.fitpdf()"]
+            ],
+            "purpose":"the density to fit and overlay on each group"},
+         {
             "name":"props",
             "kind":"properties",
             "type":"matlab.graphics.chart.primitive.Histogram"}
