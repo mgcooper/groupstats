@@ -19,7 +19,10 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
    %  TBL is either a raw data table, one row per observation, or a table that
    %  a previous groupsummary or groupcounts call already summarized, one row
    %  per group. A GroupCount variable is what tells the two apart: a raw
-   %  table has none, so this function calls groupcounts first.
+   %  table has none, so this function calls groupcounts first. A grouping
+   %  variable therefore cannot be named GroupCount, or Percent, which G
+   %  also holds. Either name, in GROUPVARS or in GroupSets, raises a
+   %  reservedName error.
    %
    %  G gains one Percent_<groupvar> variable per member of GroupSets. Each
    %  one holds a within-group percent: for every member of that group
@@ -48,6 +51,8 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
    %  variable is all that path takes. Set variables that are in GROUPVARS,
    %  and every set variable of a table that already carries GroupCount,
    %  each get their Percent_ column.
+   %  groupstats:grouppercent:reservedName - a GROUPVARS or GroupSets
+   %  variable is named GroupCount or Percent.
    %
    %  Percent, which groupcounts produces, is a different quantity. It is each
    %  row's share of every observation in the table, so the whole column sums
@@ -105,6 +110,14 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
    if isempty(groupsets)
       groupsets = groupvars;
    end
+
+   % G names its count and percent columns GroupCount and Percent, and a
+   % GroupCount variable marks a counted table. This function would read a
+   % GroupCount grouping variable as the count. A Percent grouping variable
+   % would take the place of the Percent share. Reject both, as
+   % groupstats.groupsummary does.
+   validategroupvarnames([groupvars, groupsets], ...
+      ["GroupCount", "Percent"], "grouppercent")
 
    % Keep only the requested rows. Row selection needs both halves, and the
    % shared check raises the same two errors prepareTableGroups raises,

@@ -122,6 +122,7 @@
 %   groupstats/private.stacktables                 - Vertically concatenate tables
 %   groupstats/private.tcritical                   - Two-sided critical value of the Student t distribution
 %   groupstats/private.validategroupsets           - Reject a scalar "none" as a GroupSets value
+%   groupstats/private.validategroupvarnames       - Reject a grouping variable named like a result column
 %   groupstats/private.validatemember              - Confirm every group member is an exact valid member
 %   groupstats/private.validaterowselect           - Require both halves of a row-selection request
 %   groupstats/private.withwarnoff                 - Temporarily disable warnings

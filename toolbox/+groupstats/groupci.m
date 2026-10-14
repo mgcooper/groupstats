@@ -153,15 +153,8 @@ function ci = groupci(tbl, ydatavar, xgroupvar, cgroupvar, opts)
 
    % The grouping columns share the result table with the interval
    % columns, so a grouping variable cannot take one of their names.
-   groupvars = [xgroupvar cgroupvar];
    resultvars = ["N" "Estimate" "CILower" "CIUpper"];
-   clash = intersect(groupvars, resultvars);
-   if ~isempty(clash)
-      error('groupstats:groupci:reservedName', ...
-         ['Grouping variable "%s" has the name of a result column. ' ...
-         'Rename it; the result columns are %s.'], ...
-         clash(1), strjoin(resultvars, ", "))
-   end
+   validategroupvarnames([xgroupvar cgroupvar], resultvars, "groupci")
 
    % Select rows and prepare the groupings as the cats charts do, so the
    % same arguments give the same pairings.

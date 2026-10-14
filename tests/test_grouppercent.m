@@ -330,5 +330,29 @@ classdef test_grouppercent < matlab.unittest.TestCase
             testCase.verifyEqual(returned, expected.missingSet, type);
          end
       end
+
+      function testGroupVariableNamedLikeAResultColumnErrors(testCase)
+         % G holds GroupCount and Percent, and a GroupCount variable marks a
+         % counted table. grouppercent would read a raw GroupCount grouping
+         % variable as the count, and a Percent one would take the place of
+         % the Percent share. So each name is an error for every variable
+         % type, as a groupvar or a GroupSets variable, the rule groupsummary
+         % follows.
+
+         labels = ["a"; "a"; "b"];
+         values = {categorical(labels), labels, [1; 1; 2]};
+         for name = ["GroupCount", "Percent"]
+            for n = 1:numel(values)
+               tbl = table(values{n}, ["x"; "y"; "x"], ...
+                  'VariableNames', {char(name), 'Sub'});
+               testCase.verifyError(@() groupstats.grouppercent(tbl, name), ...
+                  'groupstats:grouppercent:reservedName');
+               testCase.verifyError(@() groupstats.grouppercent(tbl, ...
+                  "Sub", GroupSets = name), ...
+                  'groupstats:grouppercent:reservedName');
+            end
+         end
+      end
+
    end
 end

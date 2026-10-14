@@ -190,12 +190,8 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % count or the percents would overwrite a grouping variable with either
    % name. The check rejects that name, as groupstats.groupci rejects the
    % names of its result columns.
-   clash = intersect(summaryvars, ["GroupCount", "Percent"]);
-   if ~isempty(clash)
-      error('groupstats:groupsummary:reservedName', ...
-         ['Grouping variable "%s" has the name of a result column. ' ...
-         'Rename it; GroupCount and Percent are reserved.'], clash(1))
-   end
+   validategroupvarnames(summaryvars, ["GroupCount", "Percent"], ...
+      "groupsummary")
 
    % Resolve datavar to variable names. The default is a vartype subscript,
    % which selects columns but cannot be indexed by arrayfun or used to build

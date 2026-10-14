@@ -44,6 +44,12 @@ version the package carries is in `toolbox/version.txt`.
 - `groupstats.groupsummary` rejects a grouping variable named `GroupCount`
   or `Percent`, the names of its result columns
   (`groupstats:groupsummary:reservedName`). Rename the variable first.
+- `groupstats.grouppercent` rejects a grouping variable named `GroupCount`
+  or `Percent` (`groupstats:grouppercent:reservedName`), as
+  `groupsummary` does. It read a raw table with a `GroupCount` grouping
+  variable as already counted. A categorical or string one raised a type
+  error, and a numeric one returned wrong percents. A `Percent` grouping
+  variable took the place of the `Percent` share.
 - `groupstats.grouppercent` with a `GroupSets` variable outside `groupvars`
   keeps a cellstr group or set column as cellstr, as the count without
   that variable does. It returned string.
