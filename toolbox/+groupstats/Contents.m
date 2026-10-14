@@ -108,6 +108,7 @@
 %   groupstats/private.isvariable                  - Determine if VARNAME is a variable in table TBL
 %   groupstats/private.legendlayout                - Place a chart legend by the chart family's rule
 %   groupstats/private.mcallername                 - Get the name of the calling function on the stack
+%   groupstats/private.memberrows                  - Return each member of a group column and the rows it holds
 %   groupstats/private.mergeCustomProps            - Merge custom properties of tables
 %   groupstats/private.mergegroupmembers           - Pool named members of a categorical group column
 %   groupstats/private.naninterp1                  - 1-d interpolation over NaN values in vector V

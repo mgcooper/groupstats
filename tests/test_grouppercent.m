@@ -307,5 +307,28 @@ classdef test_grouppercent < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
       end
 
+      function testMissingSetValueFormsOneSet(testCase)
+         % grouppercent counts a set variable outside groupvars one set at a
+         % time. A missing set value equals no member, so its rows must form
+         % one more set, sorted last, as groupcounts treats a missing group.
+         % Otherwise three of the fixture's seven rows drop out.
+
+         [data, expected] = groupstats.test.generateTestData('missingsets');
+         expected = expected.grouppercent;
+         for type = string(fieldnames(data.tbl))'
+            G = groupstats.grouppercent(data.tbl.(type), "g", ...
+               GroupSets = "s");
+
+            returned = G.g;
+            testCase.verifyEqual(returned, expected.g, type);
+            returned = G.GroupCount;
+            testCase.verifyEqual(returned, expected.GroupCount, type);
+            returned = G.Percent_s;
+            testCase.verifyEqual(returned, expected.Percent_s, ...
+               'AbsTol', 1e-12, type);
+            returned = ismissing(G.s);
+            testCase.verifyEqual(returned, expected.missingSet, type);
+         end
+      end
    end
 end

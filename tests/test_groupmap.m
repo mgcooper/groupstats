@@ -118,6 +118,25 @@ classdef test_groupmap < matlab.unittest.TestCase
             'MATLAB:validation:UnableToConvert');
       end
 
+      function testMissingGroupValuesFormOneGroup(testCase)
+         % A missing group value equals no member. A split by unique and
+         % ismember drops its rows and adds one empty row per missing value.
+         % The missing rows form one group instead, sorted last, as
+         % groupcounts treats them, and fcn sees all of them at once.
+
+         [data, expected] = groupstats.test.generateTestData('missingsets');
+         expected = expected.groupmap;
+         countrows = @(t) table(height(t), 'VariableNames', {'n'});
+         for type = string(fieldnames(data.tbl))'
+            M = groupstats.groupmap(data.tbl.(type), "s", countrows);
+
+            returned = M.n;
+            testCase.verifyEqual(returned, expected.rows, type);
+            returned = ismissing(M.s);
+            testCase.verifyEqual(returned, expected.missingGroup, type);
+         end
+      end
+
    end
 end
 

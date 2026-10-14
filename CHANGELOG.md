@@ -83,6 +83,13 @@ version the package carries is in `toolbox/version.txt`.
   unknown-variable error there.
 - `groupstats.grouppercent` gives the rows of a missing group member their
   within-member percents, where it returned NaN.
+- `groupstats.grouppercent` counts the rows whose `GroupSets` value is
+  missing when the set variable is outside `groupvars`. They form one set,
+  after the other sets. The count left them out.
+- `groupstats.groupmap` applies its function once to the rows whose group
+  value is missing, and returns them in one `<undefined>` row after the
+  other groups. It left those rows out and added an empty group for each
+  missing value.
 - `groupstats.groupmap` stacks function results that hold two char
   variables of different widths. It raised a join error.
 - `groupstats.groupci` and the `ErrorBar="ci"` whiskers of

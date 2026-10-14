@@ -41,6 +41,10 @@ function varargout = generateTestData(whichfunction)
    %                Alpha levels from 1e-310 to 1 - 2^-53. The expected
    %                struct holds the exact t critical values at one and two
    %                degrees of freedom and each sample's interval half-width.
+   %   "missingsets" A seven-row table whose set variable s has three
+   %                missing rows, as categorical, string, double, and
+   %                cellstr. The expected struct holds the hand counts per
+   %                set for grouppercent GroupSets and for groupmap.
    %
    %  This function is the one place test data is defined. Demos and scripts
    %  call it too, so no fixture class or demo may define its own copy.
@@ -53,7 +57,8 @@ function varargout = generateTestData(whichfunction)
 
    % One list of case names so the error message cannot drift from the switch.
    knowncases = ["groupbayes", "groupmap", "dropcats", "info", ...
-      "groupcompare", "groupsummary", "groupheatmap", "groupci"];
+      "groupcompare", "groupsummary", "groupheatmap", "groupci", ...
+      "missingsets"];
 
    switch lower(whichfunction)
 
@@ -125,6 +130,10 @@ function varargout = generateTestData(whichfunction)
       case 'groupci'
 
          [TestData, ExpectedResult] = groupciCase();
+
+      case 'missingsets'
+
+         [TestData, ExpectedResult] = missingsetsCase();
 
       otherwise
 
@@ -298,6 +307,39 @@ function [TestData, ExpectedResult] = groupciCase()
    ExpectedResult.t1 = t1;
    ExpectedResult.t2 = t2;
    ExpectedResult.halfwidth = [t1; t2 / sqrt(3)];
+end
+
+function [TestData, ExpectedResult] = missingsetsCase()
+   %MISSINGSETSCASE Build a table whose set variable has missing values.
+   %
+   % Seven rows: g is a a b a b b b, and s is x x x m m m y, where m is
+   % missing. A split that skips the missing value loses three of the seven
+   % rows. TestData.tbl holds one table per type of s, each with its own
+   % missing value: categorical <undefined>, string <missing>, double NaN
+   % (x is 1, y is 2), and cellstr ''.
+
+   g = ["a"; "a"; "b"; "a"; "b"; "b"; "b"];
+   s = ["x"; "x"; "x"; missing; missing; missing; "y"];
+   variants = struct(categorical = categorical(s), string = s, ...
+      double = [1; 1; 1; NaN; NaN; NaN; 2], ...
+      cellstr = {{'x'; 'x'; 'x'; ''; ''; ''; 'y'}});
+   for type = string(fieldnames(variants))'
+      TestData.tbl.(type) = table(g, variants.(type), ...
+         'VariableNames', {'g', 's'});
+   end
+
+   % grouppercent(tbl, "g", GroupSets = "s") counts set x, then y, then the
+   % missing set. Within a set, groupcounts sorts g. Set x holds a 2 and
+   % b 1, y holds b 1, and the missing set holds a 1 and b 2.
+   ExpectedResult.grouppercent.g = ["a"; "b"; "b"; "a"; "b"];
+   ExpectedResult.grouppercent.GroupCount = [2; 1; 1; 1; 2];
+   ExpectedResult.grouppercent.Percent_s = [200; 100; 300; 100; 200] / 3;
+   ExpectedResult.grouppercent.missingSet = [false; false; false; true; true];
+
+   % groupmap(tbl, "s", fcn) applies fcn to x (3 rows), y (1 row), and the
+   % missing rows (3), in that order.
+   ExpectedResult.groupmap.rows = [3; 1; 3];
+   ExpectedResult.groupmap.missingGroup = [false; false; true];
 end
 
 function [TestData, ExpectedResult] = groupheatmapCase()

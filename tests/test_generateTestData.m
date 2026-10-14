@@ -13,7 +13,8 @@ classdef test_generateTestData < matlab.unittest.TestCase
       % Every case name the generator documents. Keep this list equal to the
       % generator's knowncases, which the last test in this file checks.
       casename = {'groupbayes', 'groupmap', 'dropcats', 'info', ...
-         'groupcompare', 'groupsummary', 'groupheatmap', 'groupci'}
+         'groupcompare', 'groupsummary', 'groupheatmap', 'groupci', ...
+         'missingsets'}
    end
 
    methods (Test)
