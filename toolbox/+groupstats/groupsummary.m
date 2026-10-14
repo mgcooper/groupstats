@@ -45,8 +45,10 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    %             stays categorical, so a method that takes categorical data,
    %             such as "mode", works, and "mean" is the builtin's error.
    % groupbins - one binning scheme per groupvar, in a cell array, or the
-   %             scalar string "none" to bin nothing. Explicit edges must
-   %             span the data; see Errors below.
+   %             scalar string "none" to bin nothing. With one groupvar,
+   %             a bare named bin such as "month" is the same as
+   %             {"month"}. Explicit edges must span the data; see Errors
+   %             below.
    %
    % IncludedEdge - "left" (default) or "right", the bin edge a value on an
    %             edge belongs to, passed to the builtin for every binned
@@ -90,7 +92,10 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    %
    % A binned group variable keeps its name in G, for bin edges, a bin
    % count, and a named time bin. Pass a named bin in a cell, such as
-   % {"month"}; the bare text is a badGroupBins error.
+   % {"month"}. With one groupvar, the bare text "month" is an alias for
+   % {"month"}, as in the builtin. With more groupvars, the bare text is a
+   % badGroupBins error; give one scheme per groupvar, such as
+   % {"month", "none"}.
    %
    % Errors:
    %
@@ -106,7 +111,8 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    %
    % groupstats:groupsummary:badGroupBins - groupbins is not a scalar string
    % "none" and does not hold one scheme per variable in groupvars, one
-   % scheme in total, or a valid non-cell scheme.
+   % scheme in total, or a valid non-cell scheme. Bare text other than
+   % "none" is a valid non-cell scheme only for one groupvar.
    %
    % groupstats:groupsummary:rowSelectVarWithoutMembers and
    % groupstats:groupsummary:membersWithoutGroupVar - RowSelectVar or
@@ -366,18 +372,21 @@ function groupbins = parseGroupBins(groupbins, groupvars)
    % groupsummary raises for that case is hard to interpret.
 
    if ~iscell(groupbins)
-      if isstring(groupbins) || ischar(groupbins)
-         if ~all(string(groupbins) == "none")
-            error('groupstats:groupsummary:badGroupBins', ...
-               ['groupbins must be a cell array with one binning scheme ' ...
-               'per variable in groupvars or a scalar string "none"'])
-         end
-
+      istext = isstring(groupbins) || ischar(groupbins);
+      if istext && all(string(groupbins) == "none")
          % A scalar "none" bins nothing, whatever the number of groupvars.
          groupbins = repmat({"none"}, 1, numel(groupvars));
+      elseif istext && ~(isscalar(string(groupbins)) && isscalar(groupvars))
+         % Bare text names one scheme for one groupvar only. With more
+         % groupvars it names no variable, so the caller must use a cell.
+         error('groupstats:groupsummary:badGroupBins', ...
+            ['groupbins must be a cell array with one binning scheme ' ...
+            'per variable in groupvars or a scalar string "none". A ' ...
+            'bare named bin such as "month" needs one groupvar.'])
       else
-         % A bare scheme, such as bin edges or a bin count. It is one scheme,
-         % so wrap it and let the count check below broadcast it.
+         % A bare scheme: bin edges, a bin count, or, for one groupvar, a
+         % named bin such as "month", the builtin's bare form. It is one
+         % scheme, so wrap it and let the count check below broadcast it.
          groupbins = {groupbins};
       end
    end

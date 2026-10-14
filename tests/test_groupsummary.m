@@ -302,12 +302,26 @@ classdef test_groupsummary < matlab.unittest.TestCase
       end
 
       function testUnknownGroupBinsTextErrors(testCase)
-         % Text other than "none" names no binning scheme.
+         % Text other than "none" names no binning scheme. With two group
+         % variables, bare text is a badGroupBins error. With one, bare
+         % text is the alias of its cell form, so an unknown name raises
+         % the error the cell form raises.
 
          testCase.verifyError( ...
-            @() groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
-            "Value", "quarterly"), ...
+            @() groupstats.groupsummary(testCase.Tbl, ["Grp", "Sub"], ...
+            "mean", "Value", "quarterly"), ...
             'groupstats:groupsummary:badGroupBins');
+
+         exception = MException.empty();
+         try
+            groupstats.groupsummary(testCase.Tbl, "Grp", "mean", "Value", ...
+               {"quarterly"});
+         catch exception
+         end
+         testCase.assertNotEmpty(exception);
+         testCase.verifyError( ...
+            @() groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
+            "Value", "quarterly"), exception.identifier);
       end
 
       function testNoDataVariablesErrors(testCase)
@@ -648,6 +662,58 @@ classdef test_groupsummary < matlab.unittest.TestCase
             expected = [2 1.5; 1 3; 3 5];
             testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
          end
+      end
+
+      function testBareNamedBinWithOneGroupVariableIsTheCellForm(testCase)
+         % With one group variable, bare "month" is an alias for {"month"},
+         % the builtin's bare form. The month bins of the six dates hold
+         % 2, 1, and 3 rows, with means 1.5, 3, and 5. The alias holds for
+         % a timetable's row times, a table's datetime variable, char text,
+         % and a call that adds GroupSets.
+
+         t = datetime(2020, [1; 1; 2; 3; 3; 3], [1; 15; 1; 1; 10; 20]);
+         x = (1:6)';
+         k = ["p"; "q"; "p"; "q"; "p"; "q"];
+         inputs = {timetable(t, x, k), table(t, x, k)};
+         for n = 1:numel(inputs)
+            expected = groupstats.groupsummary(inputs{n}, "t", "mean", "x", ...
+               {"month"});
+            for bin = {"month", 'month'}
+               returned = groupstats.groupsummary(inputs{n}, "t", "mean", ...
+                  "x", bin{1});
+               testCase.verifyEqual(returned, expected);
+            end
+
+            returned = [returned.GroupCount, returned.mean_x];
+            expected = [2 1.5; 1 3; 3 5];
+            testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+
+            expected = groupstats.groupsummary(inputs{n}, "t", "mean", "x", ...
+               {"month"}, GroupSets = "k");
+            returned = groupstats.groupsummary(inputs{n}, "t", "mean", "x", ...
+               "month", GroupSets = "k");
+            testCase.verifyEqual(returned, expected);
+         end
+      end
+
+      function testBareNamedBinWithTwoGroupVariablesErrors(testCase)
+         % The alias covers one group variable only. With two, bare text
+         % names no variable, so it is a badGroupBins error. The cell form,
+         % one scheme per variable, works: January holds p 2 and q 1, and
+         % February p 1.
+
+         t = datetime(2020, [1; 1; 1; 2], [1; 15; 20; 1]);
+         tbl = table(t, ["p"; "p"; "q"; "p"], (1:4)', ...
+            'VariableNames', {'t', 'k', 'x'});
+
+         testCase.verifyError(@() groupstats.groupsummary(tbl, ["t", "k"], ...
+            "mean", "x", "month"), 'groupstats:groupsummary:badGroupBins');
+
+         G = groupstats.groupsummary(tbl, ["t", "k"], "mean", "x", ...
+            {"month", "none"});
+         returned = G.GroupCount;
+         expected = [2; 1; 1];
+         testCase.verifyEqual(returned, expected);
       end
 
    end

@@ -32,6 +32,10 @@ version the package carries is in `toolbox/version.txt`.
   of each bar as its whisker. `"spread"`, the default, keeps the standard
   deviation or interquartile range whisker. `Alpha` sets the level of the
   mean interval.
+- `groupstats.groupsummary` takes a bare named bin such as `"month"` for
+  one grouping variable, the same as `{"month"}`, as the builtin does.
+  With two or more grouping variables, bare text is a `badGroupBins`
+  error; give one scheme per variable in a cell.
 
 ### Changed
 
