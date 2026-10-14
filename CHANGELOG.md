@@ -44,6 +44,9 @@ version the package carries is in `toolbox/version.txt`.
 - `groupstats.groupsummary` rejects a grouping variable named `GroupCount`
   or `Percent`, the names of its result columns
   (`groupstats:groupsummary:reservedName`). Rename the variable first.
+- `groupstats.grouppercent` with a `GroupSets` variable outside `groupvars`
+  keeps a cellstr group or set column as cellstr, as the count without
+  that variable does. It returned string.
 - `groupstats.barchartcats`, `boxchartcats`, `histogram`, and `scatter` put
   the legend above the axes in up to three columns. They use fewer columns
   when three would not fit the figure. The legend text follows the axes
@@ -80,6 +83,8 @@ version the package carries is in `toolbox/version.txt`.
   unknown-variable error there.
 - `groupstats.grouppercent` gives the rows of a missing group member their
   within-member percents, where it returned NaN.
+- `groupstats.groupmap` stacks function results that hold two char
+  variables of different widths. It raised a join error.
 - `groupstats.groupci` and the `ErrorBar="ci"` whiskers of
   `groupstats.barchartcats` keep the mean interval finite and accurate at
   extreme `Alpha`. The half-width was 0 as `Alpha` neared 1. It was Inf for

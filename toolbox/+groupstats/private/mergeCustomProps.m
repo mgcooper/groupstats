@@ -18,7 +18,7 @@ function mergedProps = mergeCustomProps(tbls, opts)
    % See also: stacktables
 
    arguments (Repeating)
-      tbls table
+      tbls tabular
    end
 
    arguments

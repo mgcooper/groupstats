@@ -54,9 +54,10 @@ function checkTask(context)
    files = files(~endsWith(files, fullfile("+groupstats", "private", ...
       "permutest.m")));
 
-   % The vendored matfunclib copies are byte-identical to their source and
-   % are not restyled here, the same rule permutest follows. The
-   % dependencies task lists them.
+   % The vendored matfunclib copies are verbatim copies that the
+   % dependencies task writes and lists. They are not restyled here, the
+   % same rule permutest follows. No task compares them with a live
+   % checkout; rerun the dependencies task to refresh them.
    addpath(toolboxfolder)
    files = files(~ismember(files, ...
       groupstats.internal.vendoredfiles(toolboxfolder)));
