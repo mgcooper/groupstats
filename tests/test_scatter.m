@@ -522,6 +522,51 @@ classdef test_scatter < matlab.unittest.TestCase
             'RelTol', 1e-12);
       end
 
+      function testLegendDropsColumnsToFitItsTile(testCase)
+         % In a 1-by-2 tiled layout of a 560-pixel figure, the three long
+         % scenario names in three columns are wider than their tile but
+         % narrower than the figure. The legend drops columns until it fits
+         % its tile, so it does not overlap the next tile. The short basin
+         % names fit their tile in three columns.
+
+         data = groupstats.test.generateTestData('info');
+         tbl = data.Info;
+         tbl.runoff = 2 * tbl.peak;
+         f = figure('Visible', 'off', 'Position', [100 100 560 420]);
+         testCase.addTeardown(@() close(f));
+         tiles = tiledlayout(f, 1, 2);
+         ax1 = nexttile(tiles);
+         [~, L1] = groupstats.scatter(tbl, "peak", "runoff", "scenario", ...
+            Parent = ax1);
+         ax2 = nexttile(tiles);
+         [~, L2] = groupstats.scatter(tbl, "peak", "runoff", "basin", ...
+            Parent = ax2);
+
+         testCase.verifyLessThan(L1.NumColumns, 3);
+         testCase.verifyLessThanOrEqual(L1.Position(3), ax1.OuterPosition(3));
+         testCase.verifyEqual(L2.NumColumns, 3);
+      end
+
+      function testLegendFitsAnAxesInPixelUnits(testCase)
+         % A caller's axes may use pixel units. In a 300-pixel figure the
+         % three long scenario names in three columns are wider than the
+         % axes, so the legend drops columns until its pixel width fits the
+         % axes' outer box.
+
+         data = groupstats.test.generateTestData('info');
+         tbl = data.Info;
+         tbl.runoff = 2 * tbl.peak;
+         f = figure('Visible', 'off', 'Position', [100 100 300 300]);
+         testCase.addTeardown(@() close(f));
+         ax = axes(f, 'Units', 'pixels', 'OuterPosition', [1 1 300 300]);
+         [~, L] = groupstats.scatter(tbl, "peak", "runoff", "scenario", ...
+            Parent = ax);
+
+         L.Units = 'pixels';
+         testCase.verifyLessThan(L.NumColumns, 3);
+         testCase.verifyLessThanOrEqual(L.Position(3), ax.OuterPosition(3));
+      end
+
       function testAxisLabelsComeFromTheTableMetadata(testCase)
          % Each axis names its variable: the description and units when
          % the table sets them, else the name.

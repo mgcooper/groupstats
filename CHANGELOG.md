@@ -59,9 +59,10 @@ version the package carries is in `toolbox/version.txt`.
   that variable does. It returned string.
 - `groupstats.barchartcats`, `boxchartcats`, `histogram`, and `scatter` put
   the legend above the axes in up to three columns. They use fewer columns
-  when three would not fit the figure. The legend text follows the axes
-  font. `barchartcats` and `histogram` drew a legend with a fixed font size
-  of 12 at the upper left. `scatter` drew it to the right of the axes.
+  when three would not fit the chart's tile, subplot, or figure. The
+  legend text follows the axes font. `barchartcats` and
+  `histogram` drew a legend with a fixed font size of 12 at the upper
+  left. `scatter` drew it to the right of the axes.
 - Chart axis labels come from the table's `VariableDescriptions` and
   `VariableUnits` for the variable, else its name. The `barchartcats` y
   label names its `Method`, as in "Mean peak", and `groupstats.histogram`

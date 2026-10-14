@@ -86,13 +86,19 @@ title("Legend turned off")
 %% Plot into an existing axes
 %
 % Parent defaults to gca, so repeated calls reuse the current axes rather
-% than opening a figure each time.
+% than opening a figure each time. A legend drops columns until it fits
+% its tile. The scenario names are too long for three columns in a tile.
+% runoff rises with peak, so the upper left of the axes is empty, and that
+% legend moves there in one column. The short basin names keep three
+% columns above their axes.
 
 figure
 tiles = tiledlayout(1, 2);
 
 ax1 = nexttile(tiles);
-groupstats.scatter(Info, "peak", "runoff", "scenario", Parent = ax1);
+[~, L1] = groupstats.scatter(Info, "peak", "runoff", "scenario", Parent = ax1);
+L1.Location = "northwest";
+L1.NumColumns = 1;
 title(ax1, "Colored by scenario")
 
 ax2 = nexttile(tiles);

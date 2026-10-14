@@ -93,9 +93,10 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
    % findobj(ax, "Type", "line").
    %
    % Legend and labels: the legend sits above the axes in up to three
-   % columns, fewer when three would be wider than the figure.
-   % LegendOrientation "horizontal" puts every entry in one row. The legend
-   % text follows the axes font. With a table, the x label names the data
+   % columns, fewer when three would be wider than its tile, subplot, or
+   % figure. LegendOrientation "horizontal" puts every entry in one row,
+   % wrapped when that row is wider than its tile, subplot, or figure. The
+   % legend text follows the axes font. With a table, the x label names the data
    % variable: its VariableDescriptions and VariableUnits entries when set,
    % else its name. The y label names the Normalization.
    %
@@ -402,7 +403,8 @@ function L = createLegend(opts)
    end
 
    % The family layout puts the legend above the axes in up to three
-   % columns that fit the figure. The legend uses the axes font.
+   % columns that fit its tile, subplot, or figure. The legend uses the
+   % axes font.
    try
       withwarnoff('MATLAB:legend:IgnoringExtraEntries');
       L = legend(opts.Parent, opts.LegendString, 'AutoUpdate', 'off');

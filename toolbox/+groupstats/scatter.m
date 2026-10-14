@@ -63,10 +63,12 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    %                   the member names stand.
    %  LegendOrientation "vertical" or "horizontal". The legend sits above
    %                   the axes in up to three columns, fewer when three
-   %                   would be wider than the figure; "horizontal" puts
-   %                   every entry in one row. The legend text follows the
-   %                   axes font. L, the legend handle, lets a caller move
-   %                   it, for example to "northwest" in one column.
+   %                   would be wider than its tile, subplot, or figure.
+   %                   "horizontal" puts every entry in one row, wrapped when
+   %                   that row is wider than its tile, subplot, or figure.
+   %                   The legend text follows the axes font. L, the legend
+   %                   handle, lets a caller move it, for example to
+   %                   "northwest" in one column.
    %
    %  Axis labels come from the table: each variable's VariableDescriptions
    %  and VariableUnits entries when set, else its name. The markers are
@@ -472,7 +474,7 @@ function L = groupLegend(cleg, sleg, CGrps, SGrps, legendnames, opts)
 
    % One combined legend holds the color entries then the symbol entries.
    % The family layout puts it above the axes in up to three columns that
-   % fit the figure. The legend uses the axes font.
+   % fit its tile, subplot, or figure. The legend uses the axes font.
    L = legend(opts.Parent, [cleg(:); sleg(:)], entries);
    legendlayout(L, opts.LegendOrientation);
 end

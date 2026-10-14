@@ -66,10 +66,11 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % and leaves the legend as it is.
    %
    % Legend and labels: The legend sits above the axes in up to three
-   % columns, fewer when three would be wider than the figure.
-   % LegendOrientation "horizontal" puts every entry in one row. The legend
-   % text follows the axes font. The legend handle comes back as L, so a
-   % caller can move it, for example to "northwest" in one column.
+   % columns, fewer when three would be wider than its tile, subplot, or
+   % figure. LegendOrientation "horizontal" puts every entry in one row,
+   % wrapped when that row is wider than its tile, subplot, or figure. The
+   % legend text follows the axes font. The legend handle comes back as L,
+   % so a caller can move it, for example to "northwest" in one column.
    % The y label is the data variable: its VariableDescriptions and
    % VariableUnits entries when the table sets them, else its name.
    %
@@ -376,8 +377,9 @@ function [H, L] = categoricalBoxChart(XData, YData, CData, YDataLabel, ...
       legendtxt = unique(CData);
    end
    % The family layout puts the legend above the axes. A vertical legend
-   % takes up to three columns that fit the figure, and a horizontal one
-   % takes one row. The legend uses the axes font.
+   % takes up to three columns, and a horizontal one takes one row; either
+   % wraps to fit its tile, subplot, or figure. The legend uses the axes
+   % font.
    try
       L = legend(ax, legendtxt, 'AutoUpdate', 'off');
       legendlayout(L, CustomOpts.LegendOrientation);
