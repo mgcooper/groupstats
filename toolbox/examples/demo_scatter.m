@@ -87,10 +87,8 @@ title("Legend turned off")
 %
 % Parent defaults to gca, so repeated calls reuse the current axes rather
 % than opening a figure each time. A legend drops columns until it fits
-% its tile. The scenario names are too long for three columns in a tile.
-% runoff rises with peak, so the upper left of the axes is empty, and that
-% legend moves there in one column. The short basin names keep three
-% columns above their axes.
+% its tile. runoff rises with peak, so the upper left of each axes is
+% empty. Both legends move there in one column, so the two tiles match.
 
 figure
 tiles = tiledlayout(1, 2);
@@ -102,5 +100,7 @@ L1.NumColumns = 1;
 title(ax1, "Colored by scenario")
 
 ax2 = nexttile(tiles);
-groupstats.scatter(Info, "peak", "runoff", "basin", Parent = ax2);
+[~, L2] = groupstats.scatter(Info, "peak", "runoff", "basin", Parent = ax2);
+L2.Location = "northwest";
+L2.NumColumns = 1;
 title(ax2, "Colored by basin")
