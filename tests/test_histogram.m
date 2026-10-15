@@ -134,6 +134,39 @@ classdef test_histogram < matlab.unittest.TestCase
          testCase.verifyEmpty(L);
       end
 
+      function testGroupColorsFollowThePaletteAndWrap(testCase)
+         % histogram colors its k-th group with the k-th defaultcolors row,
+         % as the other charts do, and starts over after the last row. The
+         % axes color order holds seven colors, so a chart that used it
+         % would give group 8 the color of group 1. Each fitted curve takes
+         % its group's color.
+
+         defaultcolors = groupstats.internal.privatefunction( ...
+            'defaultcolors');
+         palette = defaultcolors();
+         ngroups = size(palette, 1) + 1;
+
+         % Three rows per group with some spread, so each group gets a
+         % curve, and one group more than the palette holds.
+         g = categorical(repelem(string(1:ngroups)', 3, 1), ...
+            string(1:ngroups));
+         tbl = table(g, repmat([1; 2; 4], ngroups, 1), ...
+            'VariableNames', {'g', 'y'});
+
+         [H, ~, ax] = groupstats.histogram(tbl, "y", "g", ...
+            FitPDF = "normal");
+
+         expected = palette([1:end, 1], :);
+         testCase.verifyEqual(vertcat(H.FaceColor), expected, ...
+            'AbsTol', 1e-12);
+
+         % findobj lists the newest curve first, so flip it into drawing
+         % order, which is group order.
+         curves = flip(findobj(ax, 'Type', 'Line'));
+         testCase.verifyEqual(vertcat(curves.Color), expected, ...
+            'AbsTol', 1e-12);
+      end
+
 
       function testDataVariableIsRequired(testCase)
          % datavar is required so that MATLAB never reads it as a

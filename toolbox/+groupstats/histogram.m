@@ -100,6 +100,10 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
    % variable: its VariableDescriptions and VariableUnits entries when set,
    % else its name. The y label names the Normalization.
    %
+   % Colors: the k-th group takes the k-th row of defaultcolors, as in
+   % every chart of the family. The palette holds 21 colors, and the 22nd
+   % group starts over at the first. Pass FaceColor to override it.
+   %
    % Legend: "on" or "off". The default is "on", except with no groupvar and
    % no LegendString, where the built-in shows no legend either. That
    % unset-by-default state is deliberate: an ungrouped histogram has one
@@ -373,6 +377,16 @@ function H = createHistogram(XData, YData, opts, props)
    if ~washeld
       hold(opts.Parent, "off")
    end
+
+   % Color each group from the family palette, so the k-th group has one
+   % color in every chart. The axes color order repeats after seven
+   % colors. A FaceColor the caller passed wins.
+   if ~ismember("FaceColor", string(props(1:2:end)))
+      colors = groupcolors(numel(H));
+      for n = 1:numel(H)
+         H(n).FaceColor = colors(n, :);
+      end
+   end
 end
 
 %% Format the plot
@@ -438,9 +452,11 @@ function plotNormalPdfs(H, XData, YData, ax)
    %PLOTNORMALPDFS Draw each group's fitted normal PDF over its histogram.
    %
    % H(n) holds the n-th member of unique(XData), as createHistogram draws
-   % them. Each curve takes its histogram's SeriesIndex, so it takes the
-   % same color from the axes ColorOrder. The scale turns the density into
-   % the units of the histogram's Normalization.
+   % them. Each curve takes its histogram's SeriesIndex and face color, so
+   % it takes the group's color. A face set to "auto" or "none" has no
+   % color to copy, so its curve keeps the series color from the axes
+   % ColorOrder. The scale turns the density into the units of the
+   % histogram's Normalization.
 
    members = unique(XData);
    washeld = ishold(ax);
@@ -460,8 +476,14 @@ function plotNormalPdfs(H, XData, YData, ax)
          max(H(n).BinLimits(2), mu + 3 * sigma), 201);
       density = exp(-0.5 * ((x - mu) / sigma) .^ 2) / (sigma * sqrt(2 * pi));
 
-      plot(ax, x, pdfScale(H(n), numel(y)) * density, ...
-         'SeriesIndex', H(n).SeriesIndex);
+      % Pair the curve with its histogram's series, and copy the face
+      % color when it is a triplet. Color comes last, so it wins.
+      if isnumeric(H(n).FaceColor)
+         color = {'SeriesIndex', H(n).SeriesIndex, 'Color', H(n).FaceColor};
+      else
+         color = {'SeriesIndex', H(n).SeriesIndex};
+      end
+      plot(ax, x, pdfScale(H(n), numel(y)) * density, color{:});
    end
    if ~washeld
       hold(ax, "off")

@@ -171,10 +171,12 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    %
    % Colors
    %
-   % Each color group takes the next row of defaultcolors, the palette
-   % boxchartcats and scatter read, so the k-th color group of any chart
-   % in the family has the same color. Pass FaceColor to override it, or
-   % CData to color the bars through the colormap as bar does.
+   % Each color group takes the next row of defaultcolors. boxchartcats,
+   % histogram, and scatter read the same palette, so the k-th color group
+   % has one color in every chart of the family. The palette holds 21
+   % colors, and the 22nd group starts over at the first. Pass FaceColor to
+   % override it, or CData to color the bars through the colormap as bar
+   % does.
    %
    % Dependencies
    %
@@ -740,11 +742,10 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
 
    % Color the bars
 
-   % The k-th color group takes the k-th row of defaultcolors, the palette
-   % boxchartcats and scatter read, so the family colors its groups alike.
-   % The palette holds 21 colors; more series than that wrap around.
-   colors = defaultcolors();
-   colors = colors(mod((1:numel(H)) - 1, size(colors, 1)) + 1, :);
+   % The k-th color group takes the k-th row of defaultcolors. Every chart
+   % in the family reads that palette, so the family colors its groups
+   % alike. The palette holds 21 colors; more series than that wrap around.
+   colors = groupcolors(numel(H));
 
    % bar already took the caller's properties, so setting one here would
    % discard what they asked for. Apply each default only when they left it

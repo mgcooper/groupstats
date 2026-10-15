@@ -79,6 +79,10 @@ version the package carries is in `toolbox/version.txt`.
   differ for skewed data. The whisker was the median plus or minus the
   full interquartile range, twice the height of the box. For [1 2 3 10]
   it runs from 1.5 to 6.5, where it ran from -2.5 to 7.5.
+- `groupstats.histogram` colors its k-th group with the k-th row of
+  `defaultcolors`, as the other charts do, and each fitted curve takes its
+  group's color. The groups took the axes color order, so group 8 had the
+  color of group 1.
 
 ### Fixed
 
@@ -122,6 +126,15 @@ version the package carries is in `toolbox/version.txt`.
   again in the section after the one that draws it.
 - The Getting Started and Using GroupStats pages draw figure text at the
   proportion of the demo pages. Their text was about 1.5 times too large.
+- `groupstats.boxchartcats` draws 22 or more color groups, where it raised
+  an index error. Its boxes, outliers, and mean symbols take the k-th row
+  of `defaultcolors`, as `barchartcats` and `scatter` do. The 22nd group
+  starts over at the first color. The boxes took the axes color
+  order, so past seven groups a mean symbol and its box had different
+  colors. A caller's `BoxFaceColor` also colors the outliers and the means.
+- `groupstats.boxchartcats` with `Legend="off"` makes no legend and
+  returns the empty placeholder, as the other charts do. It returned a
+  deleted legend handle.
 
 ## 1.0.0 - 2026-09-09
 

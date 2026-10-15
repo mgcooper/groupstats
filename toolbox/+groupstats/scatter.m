@@ -10,6 +10,9 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    % Description
    %  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR) plots TBL.(YDATAVAR)
    %  against TBL.(XDATAVAR), coloring each point by its CGROUPVAR member.
+   %  The k-th color group takes the k-th row of defaultcolors, as in every
+   %  chart of the family. The palette holds 21 colors, and the 22nd group
+   %  starts over at the first.
    %
    %  H = SCATTER(_, SGROUPVAR) also varies the marker symbol and size by
    %  SGROUPVAR member, so one chart shows two groupings at once.
@@ -413,11 +416,10 @@ end
 %%
 function [colors, symbols, sizes] = getPlotDecorators(CGrps)
 
-   % The box and scatter charts read defaultcolors, so the k-th color
-   % group of either chart has the k-th palette color. Its list holds 21
+   % Every chart in the family reads defaultcolors, so the k-th color
+   % group of any chart has the k-th palette color. Its list holds 21
    % colors; more color groups than that wrap around.
-   colors = defaultcolors();
-   colors = colors(mod((1:numel(CGrps)) - 1, size(colors, 1)) + 1, :);
+   colors = groupcolors(numel(CGrps));
    [symbols, sizes] = defaultmarkers();
 
    % The shared marker sizes read small beside the axes text. They read

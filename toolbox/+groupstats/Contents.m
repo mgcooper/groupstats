@@ -102,6 +102,7 @@
 %   groupstats/private.distinguishable_colors      - : pick colors that are maximally perceptually distinct
 %   distinguishable_colors_LICENSE.txt
 %   groupstats/private.getMissingValue             - Return default missing value for class
+%   groupstats/private.groupcolors                 - Palette colors for N color groups, one row per group
 %   groupstats/private.groupmembers                - Return unique members of a table column (variable)
 %   groupstats/private.isnumericscalar             - Return true if input X is a numeric scalar
 %   groupstats/private.isoneof                     - Validate if x is one member of a menu

@@ -238,6 +238,85 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+      function testLegendOffReturnsAnEmptyPlaceholder(testCase)
+         % With the legend off, the chart makes no legend, and L is the
+         % empty placeholder the other charts return. A deleted legend
+         % handle is not empty, so a caller's isempty(L) check would read
+         % it as a legend. The axes fill the figure as a plain box chart's
+         % do.
+
+         [~, L, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub", Legend = "off");
+
+         testCase.verifyClass(L, 'matlab.graphics.GraphicsPlaceholder');
+         testCase.verifyEmpty(L);
+         testCase.verifyEmpty(findobj(ancestor(ax, 'figure'), ...
+            'Type', 'Legend'));
+
+         % A plain box chart with no legend sets the expected axes size.
+         plain = axes(figure);
+         testCase.addTeardown(@close, ancestor(plain, 'figure'));
+         boxchart(plain, testCase.Tbl.Grp, testCase.Tbl.Value, ...
+            'GroupByColor', testCase.Tbl.Sub);
+
+         returned = ax.InnerPosition;
+         expected = plain.InnerPosition;
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-9);
+      end
+
+      function testBoxesFollowThePaletteAndWrap(testCase)
+         % Every chart in the family colors its k-th color group with the
+         % k-th defaultcolors row and starts over after the last row. The
+         % outliers and the mean marker of each box take its color, so
+         % they match past the seven colors of the axes color order.
+
+         defaultcolors = groupstats.internal.privatefunction( ...
+            'defaultcolors');
+         palette = defaultcolors();
+         ngroups = size(palette, 1) + 1;
+
+         % Four rows per color group, and one group more than the palette
+         % holds, so the last group wraps to the first color.
+         cg = categorical(repelem(string(1:ngroups)', 4, 1), ...
+            string(1:ngroups));
+         xg = categorical(repmat("x", 4 * ngroups, 1));
+         tbl = table(xg, cg, repmat((1:4)', ngroups, 1), ...
+            'VariableNames', {'xg', 'cg', 'y'});
+
+         [H, ~, ax] = groupstats.boxchartcats(tbl, "y", "xg", "cg", ...
+            PlotMeans = true);
+
+         expected = palette([1:end, 1], :);
+         testCase.verifyEqual(vertcat(H.BoxFaceColor), expected, ...
+            'AbsTol', 1e-12);
+         testCase.verifyEqual(vertcat(H.MarkerColor), expected, ...
+            'AbsTol', 1e-12);
+
+         % The chart draws one Scatter of means per color group. findobj
+         % lists the newest first, so flip it into drawing order.
+         means = flip(findobj(ax, 'Type', 'Scatter'));
+         testCase.verifyEqual(vertcat(means.CData), expected, ...
+            'AbsTol', 1e-12);
+      end
+
+      function testACallerBoxColorAlsoColorsOutliersAndMeans(testCase)
+         % A BoxFaceColor the caller names wins over the palette. The
+         % outliers and the mean markers take the color of the drawn box.
+
+         red = [1 0 0];
+         [H, ~, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub", BoxFaceColor = red, PlotMeans = true);
+
+         expected = repmat(red, numel(H), 1);
+         testCase.verifyEqual(vertcat(H.BoxFaceColor), expected);
+         testCase.verifyEqual(vertcat(H.MarkerColor), expected);
+
+         means = findobj(ax, 'Type', 'Scatter');
+         returned = vertcat(means.CData);
+         expected = repmat(red, numel(means), 1);
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testSortByAscendOrdersTheXGroups(testCase)
          % SortBy orders the x-groups by their group mean. The branch that
          % would have done this was commented out.

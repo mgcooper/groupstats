@@ -80,6 +80,11 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % colored boxes that a single-series chart does not have. Pass
    % ShadeGroups=true to shade a single-series chart anyway.
    %
+   % Colors: the k-th color group takes the k-th row of defaultcolors, as
+   % in every chart of the family. The palette holds 21 colors, and the
+   % 22nd group starts over at the first. The outliers and the mean symbol
+   % of a box take its color. Pass BoxFaceColor to override it.
+   %
    % Note: a box holding one observation collapses to a zero-height box
    % with zero-length whiskers, so the mean symbol is its only visible
    % mark. The chart warns when every box is like that.
@@ -92,8 +97,8 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % Output Arguments
    %
    % H: A handle to the created box chart.
-   % L: The legend, or an empty graphics placeholder when the legend could
-   %    not be created.
+   % L: The legend, or an empty graphics placeholder when the legend is off
+   %    or could not be created. With no legend, the axes fill the figure.
    % AX: The axes the chart was drawn into.
    %
    % Example
@@ -132,7 +137,7 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % These ship in +groupstats/private, vendored from matfunclib and
    % listed in toolbox/vendored.txt, so no separate path is needed:
    %
-   %  defaultcolors (libplot)      colors the mean symbols like the boxes
+   %  defaultcolors (libplot)      colors the boxes and their mean symbols
    %  naninterp1 (libstats)        fills gaps in the group shading bounds
    %  dealout (functools)          splits the outputs
    %
@@ -352,9 +357,6 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % Add shaded bars to distinguish groups if requested
    shadeboxchartgroups(opts,H);
 
-   if opts.Legend == "off"
-      legend(ax, 'off')
-   end
    hold(ax, 'off')
 
    % The third output is the axes the chart was drawn into, matching the
@@ -369,6 +371,39 @@ function [H, L] = categoricalBoxChart(XData, YData, CData, YDataLabel, ...
    % Create the box chart, in the caller's axes
    ax = CustomOpts.Parent;
    H = boxchart(ax, XData, YData, 'GroupByColor', CData, varargs{:});
+
+   % Color each box from the family palette, so the k-th color group has
+   % one color in every chart. The axes color order repeats after seven
+   % colors. BoxFaceColor also sets the box edge and the median line. The
+   % outliers keep the series color, so they take the box color here. A
+   % color the caller passed wins.
+   colors = groupcolors(numel(H));
+   given = string(varargs(1:2:end));
+   for n = 1:numel(H)
+      if ~ismember("BoxFaceColor", given)
+         H(n).BoxFaceColor = colors(n, :);
+      end
+      if ~ismember("MarkerColor", given)
+         H(n).MarkerColor = H(n).BoxFaceColor;
+      end
+   end
+
+   % Add a ylabel. The boxes show the values themselves, so the label is
+   % the data variable, from the table's description and units when set.
+   ylabel(ax, YDataLabel)
+
+   % Format the plot
+   set(ax, "YGrid", "off", "XGrid", "off", "XMinorTick", "off", "box", ...
+      "on", "TickLength", [0 0]);
+
+   % With the legend off, make none. L is then the empty placeholder that
+   % barchartcats, histogram, and scatter return, and the axes fill the
+   % figure. A deleted legend would come back as a handle that is not
+   % empty.
+   if CustomOpts.Legend == "off"
+      L = gobjects(0);
+      return
+   end
 
    % Add the legend
    withwarnoff('MATLAB:legend:IgnoringExtraEntries');
@@ -388,14 +423,6 @@ function [H, L] = categoricalBoxChart(XData, YData, CData, YDataLabel, ...
       % placeholder matches the other charts' legend-failure value.
       L = gobjects(0);
    end
-
-   % Add a ylabel. The boxes show the values themselves, so the label is
-   % the data variable, from the table's description and units when set.
-   ylabel(ax, YDataLabel)
-
-   % Format the plot
-   set(ax, "YGrid", "off", "XGrid", "off", "XMinorTick", "off", "box", ...
-      "on", "TickLength", [0 0]);
 end
 
 function [CData, opts] = reorderCGroups(opts, CData)
@@ -481,16 +508,15 @@ function plotboxchartstats(opts,H,XData,YData,CData)
    ax = opts.Parent;
    hold(ax, 'on');
 
-   % Load default colors to match the mean symbols to the boxcharts
-   colors = defaultcolors;
-
    % Get the x-coordinate of each boxchart center and the mean of each boxchart
    [mu, med, xlocs] = boxchartstats(H, XData, YData, CData);
 
-   % Plot the means
+   % Plot the means. Each mean symbol takes the color of its drawn box, so
+   % it matches the box whether the color came from the palette or from
+   % the caller.
    if opts.PlotMeans
-      arrayfun(@(n) scatter(ax, xlocs(n,:), mu(n,:), 30, colors(n, :), ...
-         'filled', 's'), 1:numel(H));
+      arrayfun(@(n) scatter(ax, xlocs(n,:), mu(n,:), 30, ...
+         H(n).BoxFaceColor, 'filled', 's'), 1:numel(H));
    end
 
    % Connect the means. plot reads each column as one line, and xlocs holds
