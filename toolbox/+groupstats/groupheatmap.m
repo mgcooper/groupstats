@@ -45,6 +45,8 @@ function h = groupheatmap(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)
    %  SortGroupMembers   CGROUPVAR members whose rows enter the sort mean.
    %                     Empty, the default, uses every row. Give merged
    %                     names after a merge.
+   %  ColorbarLabel      The colorbar label. Empty, the default, names the
+   %                     mapped quantity; the scalar "" removes the label.
    %  Parent             A figure, panel, tab, or tiled chart layout. The
    %                     chart replaces the current axes or chart in that
    %                     container, and other figures stay as they are. In a
@@ -61,14 +63,19 @@ function h = groupheatmap(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)
    %  names its input.
    %
    % Defaults that follow the chart family
-   %  FontSize is the parent figure's axes font size, so the heatmap text
-   %  matches the other charts. HeatmapChart otherwise keeps 12. The title
-   %  names the mapped quantity, "<Method> of <label>", because the colorbar
-   %  has no label. The label is YDATAVAR's description and units when the
-   %  table sets them. For Method="count", a range of 16 or fewer whole
-   %  counts gets a discrete colormap, one color per count, with each count
-   %  centered on its color. A caller's FontSize, Title, Colormap,
-   %  ColorLimits, or ColorScaling replaces these defaults.
+   %  FontSize is 0.75 of the parent figure's axes font size, so the
+   %  heatmap text scales with the other charts and stays inside the cells.
+   %  HeatmapChart otherwise keeps a fixed size, 12 or 10 by release. The
+   %  colorbar label names the mapped quantity, "<Method> of <label>", where
+   %  <label> is YDATAVAR's description and units when the table sets them.
+   %  A count label leaves out the units, which a count does not carry.
+   %  HeatmapChart keeps its colorbar in a hidden property, so a release
+   %  without that property draws the chart without the label. The title is
+   %  empty unless the caller sets Title. For Method="count", a range of 16
+   %  or fewer whole counts gets a discrete colormap, one color per count,
+   %  with each count centered on its color. A caller's FontSize,
+   %  ColorbarLabel, Colormap, ColorLimits, or ColorScaling replaces these
+   %  defaults.
    %
    % Empty pairings and missing values
    %  The built-in heatmap removes rows with a NaN YDATAVAR value before it
@@ -134,6 +141,10 @@ function h = groupheatmap(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)
          "sortorder")} = "none"
       % Empty, the family's no-selection sentinel, uses every row.
       opts.SortGroupMembers (:, 1) string = string.empty()
+
+      % Empty means the default label, which names the mapped quantity.
+      % The scalar "" removes the label.
+      opts.ColorbarLabel string {mustBeScalarOrEmpty} = string.empty()
 
       % No default: without Parent the built-in uses the current figure,
       % and a default here would have to create one.
@@ -225,19 +236,51 @@ function h = groupheatmap(tbl, ydatavar, xgroupvar, cgroupvar, opts, props)
    orderColumns(h, opts);
 
    % Family defaults the HeatmapChart lacks, each replaced by a caller
-   % value. The font follows the figure's axes font, and the title names
-   % what the colors map.
+   % value. The font scales with the figure's axes font. Cell labels need
+   % smaller text than axis labels, so the chart takes 0.75 of it. The
+   % colorbar label names what the colors map.
+   fontscale = 0.75;
    if ~isfield(props, 'FontSize')
-      h.FontSize = get(ancestor(h, 'figure'), 'DefaultAxesFontSize');
+      h.FontSize = fontscale ...
+         * get(ancestor(h, 'figure'), 'DefaultAxesFontSize');
    end
+   % A count does not carry the units of the variable it counts.
+   label = opts.ColorbarLabel;
+   if isempty(label)
+      label = upper(extractBefore(opts.Method, 2)) ...
+         + extractAfter(opts.Method, 1) + " of " ...
+         + axislabel(tbl, ydatavar, Units = opts.Method ~= "count");
+   end
+   labelcolorbar(h, label);
+
+   % The built-in titles a table heatmap with its method and variable. The
+   % colorbar label carries that text, so the default title is empty.
    if ~isfield(props, 'Title')
-      h.Title = upper(extractBefore(opts.Method, 2)) ...
-         + extractAfter(opts.Method, 1) + " of " + axislabel(tbl, ydatavar);
+      h.Title = "";
    end
    if opts.Method == "count" && ~any(isfield(props, ...
          {'Colormap', 'ColorLimits', 'ColorScaling'}))
       useDiscreteCountColors(h);
    end
+end
+
+function labelcolorbar(h, label)
+   %LABELCOLORBAR Set the colorbar label of HeatmapChart H to LABEL.
+   %
+   % HeatmapChart has no public colorbar property. Its colorbar is the
+   % hidden property Colorbar, which struct reads with the warning
+   % MATLAB:structOnObject; this function turns that warning off for the
+   % read only. A release that drops or renames the property keeps the
+   % chart and loses only the label.
+
+   job = withwarnoff('MATLAB:structOnObject');
+   try
+      cb = struct(h).Colorbar;
+      cb.Label.String = label;
+   catch
+      % No colorbar to label in this release; the chart stands without it.
+   end
+   delete(job)
 end
 
 function useDiscreteCountColors(h)

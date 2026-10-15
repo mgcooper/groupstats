@@ -67,8 +67,9 @@ version the package carries is in `toolbox/version.txt`.
   `VariableUnits` for the variable, else its name. The `barchartcats` y
   label names its `Method`, as in "Mean peak", and `groupstats.histogram`
   labels its x axis with the data variable.
-- `groupstats.groupheatmap` takes the axes font size, and its default
-  title names the mapped quantity, as in "Mean of peak". For
+- `groupstats.groupheatmap` takes 0.75 of the axes font size. Its colorbar
+  label names the mapped quantity, as in "Mean of peak", and the new
+  `ColorbarLabel` option replaces it. The chart sets no default title. For
   `Method="count"`, 16 or fewer count levels get a discrete colormap.
 - `groupstats.scatter` draws its markers 1.25 times the shared default
   sizes.

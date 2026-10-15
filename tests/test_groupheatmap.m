@@ -389,15 +389,17 @@ classdef test_groupheatmap < matlab.unittest.TestCase
 
       % ---- Readability (groupstats-ctg.6)
 
-      function testFontSizeFollowsTheAxesFont(testCase)
-         % HeatmapChart keeps its own font size of 12 otherwise. The chart
-         % takes the parent figure's axes font, and a caller value wins.
+      function testFontSizeIsThreeQuartersOfTheAxesFont(testCase)
+         % HeatmapChart keeps its own font size otherwise, which does not
+         % scale with the figure. Cell labels need smaller text than axis
+         % labels, so the chart takes 0.75 of the figure's axes font, 15.75
+         % for 21. A caller value wins.
 
          f = figure('Visible', 'off', 'DefaultAxesFontSize', 21);
          testCase.addTeardown(@() close(f));
          h = groupstats.groupheatmap(testCase.Data.tbl, "Value", "Grp", ...
             "Sub", Parent = f);
-         testCase.verifyEqual(h.FontSize, 21);
+         testCase.verifyEqual(h.FontSize, 15.75, 'AbsTol', 1e-12);
 
          g = figure('Visible', 'off', 'DefaultAxesFontSize', 21);
          testCase.addTeardown(@() close(g));
@@ -406,10 +408,15 @@ classdef test_groupheatmap < matlab.unittest.TestCase
          testCase.verifyEqual(h.FontSize, 9);
       end
 
-      function testDefaultTitleNamesTheMappedQuantity(testCase)
-         % The title says which statistic of which variable the colors
-         % map, from the table's description and units when set.
+      function testColorbarLabelNamesTheMappedQuantity(testCase)
+         % The colorbar label says which statistic of which variable the
+         % colors map, from the table's description and units when set.
+         % The label carries that text, so the default title is empty.
+         % HeatmapChart keeps its colorbar in a hidden property, which
+         % struct reads with a warning.
 
+         testCase.applyFixture(matlab.unittest.fixtures. ...
+            SuppressedWarningsFixture('MATLAB:structOnObject'));
          tbl = testCase.Data.tbl;
          tbl.Properties.VariableDescriptions{'Value'} = 'value of things';
          tbl.Properties.VariableUnits{'Value'} = 'kg';
@@ -417,8 +424,32 @@ classdef test_groupheatmap < matlab.unittest.TestCase
          h = groupstats.groupheatmap(tbl, "Value", "Grp", "Sub", ...
             Method = "median");
 
-         testCase.verifyEqual(string(h.Title), ...
-            "Median of value of things (kg)");
+         returned = string(struct(h).Colorbar.Label.String);
+         expected = "Median of value of things (kg)";
+         testCase.verifyEqual(returned, expected);
+         testCase.verifyEqual(string(h.Title), "");
+
+         % A count has no units of its own, so its label drops them.
+         h = groupstats.groupheatmap(tbl, "Value", "Grp", "Sub", ...
+            Method = "count");
+         returned = string(struct(h).Colorbar.Label.String);
+         expected = "Count of value of things";
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testColorbarLabelAndTitleTakeCallerValues(testCase)
+         % ColorbarLabel replaces the default label, and Title still sets
+         % a title.
+
+         testCase.applyFixture(matlab.unittest.fixtures. ...
+            SuppressedWarningsFixture('MATLAB:structOnObject'));
+
+         h = groupstats.groupheatmap(testCase.Data.tbl, "Value", "Grp", ...
+            "Sub", ColorbarLabel = "Rows", Title = "Value by pairing");
+
+         returned = string(struct(h).Colorbar.Label.String);
+         testCase.verifyEqual(returned, "Rows");
+         testCase.verifyEqual(string(h.Title), "Value by pairing");
       end
 
       function testCountUsesADiscreteColormap(testCase)
