@@ -4,9 +4,11 @@ classdef test_namelists < matlab.unittest.TestCase
    % Every list of valid option values is written down once, in
    % +groupstats/+namelists. Two consumers read it: an arguments block,
    % through groupstats.namelists.mustBeMemberOf, and functionSignatures.json,
-   % through a choices entry. The last test compares those two consumers,
+   % through a choices entry. The drift tests compare those two consumers,
    % because a value accepted by one and offered by the other is the failure
-   % this package exists to prevent.
+   % this package exists to prevent. The last test also compares each
+   % signature's input kinds, defaults, and properties class with the
+   % arguments block.
    %
    % See also: groupstats.namelists.mustBeMemberOf
 
@@ -135,7 +137,8 @@ classdef test_namelists < matlab.unittest.TestCase
          checked = 0;
          for f = 1:numel(functions)
             fname = strrep(functions(f), "_", ".");
-            declared = readNameValueOptions(fname);
+            declared = readArguments(fname);
+            declared = declared.Name(declared.Kind == "namevalue");
 
             % A function with no arguments block declares nothing to compare.
             if isempty(declared)
@@ -190,6 +193,106 @@ classdef test_namelists < matlab.unittest.TestCase
                testCase.verifyEqual(offered.(optname), ...
                   validators.(optname), ...
                   sprintf('%s option %s.', fname, optname));
+            end
+         end
+
+         % A parsing mistake would pass every case above by checking none.
+         testCase.verifyGreaterThan(checked, 0);
+      end
+
+      function testSignaturesMatchTheArgumentsBlocks(testCase)
+         % Tab completion must describe the inputs the function declares.
+         % A positional input with a default is optional, a listed default
+         % is the declared default, and the properties class is the class
+         % the function passes through. For example, a ShadeGroups default
+         % of true is wrong for barchartcats, whose code resolves an empty
+         % default. Scatter properties are wrong for scatter, which passes
+         % Line properties.
+
+         signatures = readSignatures();
+
+         functions = string(fieldnames(signatures));
+         functions = functions(functions ~= "x_schemaVersion");
+
+         checked = 0;
+         for f = 1:numel(functions)
+            fname = strrep(functions(f), "_", ".");
+            declared = readArguments(fname);
+
+            % A function with no arguments block declares nothing to compare.
+            if isempty(declared)
+               continue
+            end
+
+            inputs = signatures.(functions(f)).inputs;
+            listed = strings(numel(inputs), 1);
+            listedkinds = strings(numel(inputs), 1);
+            for k = 1:numel(inputs)
+               input = getInput(inputs, k);
+               message = sprintf('%s input %s.', fname, input.name);
+
+               % Keep each listed name and kind for the reverse check below.
+               listed(k) = input.name;
+               listedkinds(k) = input.kind;
+
+               % A function declares a repeating input in its own arguments
+               % block, which readArguments does not read.
+               if isfield(input, 'repeating') && input.repeating
+                  continue
+               end
+               checked = checked + 1;
+
+               % The properties entry names the class the function passes
+               % through, and it has no default or positional kind.
+               if input.kind == "properties"
+                  returned = string(input.type);
+                  expected = declared.Class(declared.Kind == "properties");
+                  testCase.verifyEqual(returned, expected, message);
+                  continue
+               end
+
+               % Every other listed input must have one declaration.
+               row = declared(declared.Name == input.name, :);
+               testCase.assertEqual(height(row), 1, sprintf( ...
+                  '%s lists %s, and its arguments block does not declare it.', ...
+                  fname, input.name));
+
+               % The signature file lists a name-value option as namevalue
+               % and a positional input as another kind.
+               returned = input.kind == "namevalue";
+               expected = row.Kind == "namevalue";
+               testCase.verifyEqual(returned, expected, message);
+
+               % Only a positional input without a default is required.
+               if row.Kind == "positional"
+                  returned = input.kind == "required";
+                  expected = ismissing(row.Default);
+                  testCase.verifyEqual(returned, expected, message);
+               end
+
+               % A listed default must be the default the code declares.
+               % A computed default, such as an empty sentinel the code
+               % resolves later, must not be listed as a fixed value.
+               if isfield(input, 'default')
+                  returned = normalizeDefault(input.default);
+                  expected = normalizeDefault(row.Default);
+                  testCase.verifyEqual(returned, expected, message);
+               end
+            end
+
+            % The other direction: tab completion never offers an input
+            % the signature file leaves out. The properties row has no
+            % listed name, so match it by its kind.
+            for k = 1:height(declared)
+               if declared.Kind(k) == "properties"
+                  returned = any(listedkinds == "properties");
+               else
+                  returned = any(listed == declared.Name(k));
+               end
+               testCase.verifyTrue(returned, sprintf(['%s declares %s, ' ...
+                  'and functionSignatures.json does not list it.'], ...
+                  fname, declared.Name(k)));
+               checked = checked + 1;
             end
          end
 
@@ -277,33 +380,115 @@ function list = signatureNamelist(input)
    end
 end
 
-function options = readNameValueOptions(functionname)
-   %READNAMEVALUEOPTIONS Return the name-value options a function declares.
+function declared = readArguments(functionname)
+   %READARGUMENTS Return each input the first arguments block declares.
    %
-   % Reads the arguments block for entries of the form opts.Name or
-   % Opts.Name, which is how this toolbox declares a name-value option.
-   % Returns an empty string array when the file declares none.
+   % Returns a table with one row per declaration and these variables:
+   %
+   %   Name     The input name, or the option name of opts.Name.
+   %   Kind     "positional", "namevalue" for opts.Name or Opts.Name, or
+   %            "properties" for props.?Class.
+   %   Default  The text after the default's =, or a missing string when
+   %            the declaration has none.
+   %   Class    The class of a properties row, or a missing string.
+   %
+   % A function with no arguments block returns a table with no rows.
+   % readArguments does not read the repeating block of a varargin input.
 
+   % Every return gives the same columns, so a caller can index an empty
+   % result.
+   declared = table(string.empty(0, 1), string.empty(0, 1), ...
+      string.empty(0, 1), string.empty(0, 1), ...
+      'VariableNames', {'Name', 'Kind', 'Default', 'Class'});
+
+   % A function MATLAB cannot find declares nothing.
    located = which(functionname);
    if isempty(located)
-      options = string.empty();
       return
    end
 
-   lines = readlines(located);
+   % Join continuation lines, so one declaration reads as one line.
+   code = string(fileread(located));
+   code = regexprep(code, '\.\.\.[^\n]*\r?\n\s*', ' ');
+   lines = strtrim(splitlines(code));
 
    % Read the arguments block alone, so a name-value pair passed in a call
    % further down does not read as a declaration.
-   first = find(strcmp(strtrim(lines), "arguments"), 1);
+   first = find(lines == "arguments", 1);
    if isempty(first)
-      options = string.empty();
       return
    end
-   last = first + find(strcmp(strtrim(lines(first + 1:end)), "end"), 1) - 1;
+   last = first + find(lines(first + 1:end) == "end", 1) - 1;
+   lines = lines(first + 1:last);
 
-   found = regexp(lines(first:last), '^\s*[Oo]pts\.(\w+)', 'tokens', 'once');
-   found = found(~cellfun(@isempty, found));
-   options = string(cellfun(@(t) t{1}, found, 'UniformOutput', false));
+   % Blank lines and comment lines declare nothing.
+   lines = lines(lines ~= "" & ~startsWith(lines, "%"));
+
+   % Read each declaration into one row, then stack the rows once.
+   rows = cell(numel(lines), 1);
+   for k = 1:numel(lines)
+      rows{k} = readDeclaration(lines(k));
+   end
+   declared = vertcat(declared, rows{:});
+end
+
+function row = readDeclaration(line)
+   %READDECLARATION Return one arguments-block declaration as a table row.
+   %
+   % LINE is one declaration with its continuations joined. The default
+   % is the text after the first lone = outside the validator braces. A
+   % validator can hold an = of its own only inside those braces, so the
+   % function strips them first.
+
+   % A declaration is positional, with no default, unless its text says
+   % otherwise.
+   kind = "positional";
+   default = string(missing);
+   class = string(missing);
+
+   % props.?Class passes graphics properties through and has no default.
+   % opts.Name declares a name-value option, and any other name is
+   % positional.
+   found = regexp(line, '^(\w+)\.\?([\w.]+)', 'tokens', 'once');
+   if ~isempty(found)
+      name = found(1);
+      kind = "properties";
+      class = found(2);
+   else
+      [found, matched] = regexp(line, '^(?:[Oo]pts\.)?(\w+)', ...
+         'tokens', 'match', 'once');
+      name = found(1);
+      if startsWith(line, ["opts.", "Opts."])
+         kind = "namevalue";
+      end
+
+      % Braces can nest, so strip the innermost pair until none is left.
+      rest = extractAfter(line, strlength(matched));
+      while contains(rest, "{")
+         rest = regexprep(rest, '\{[^{}]*\}', '');
+      end
+
+      % The first lone = starts the default. ==, ~=, <=, and >= compare.
+      value = regexp(rest, '(?<![=~<>])=(?!=)\s*(.*)$', 'tokens', 'once');
+      if ~isempty(value)
+         default = strtrim(value(1));
+      end
+   end
+
+   % One row with the columns readArguments stacks.
+   row = table(name, kind, default, class, ...
+      'VariableNames', {'Name', 'Kind', 'Default', 'Class'});
+end
+
+function text = normalizeDefault(text)
+   %NORMALIZEDEFAULT Return default text in one form for comparison.
+   %
+   % The signature file quotes a text default as 'mean', and an arguments
+   % block writes it as "mean". Drop a trailing semicolon and one pair of
+   % enclosing quotes, and compare without case.
+
+   text = regexprep(strtrim(string(text)), ';$', '');
+   text = lower(regexprep(text, '^([''"])(.*)\1$', '$2'));
 end
 
 function validators = readValidators(functionname)

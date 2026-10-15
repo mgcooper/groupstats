@@ -34,7 +34,7 @@
          },
          {
             "name":"cgroupvar",
-            "kind":"required",
+            "kind":"ordered",
             "type":
             [
                ["cellstr","char","string","vartype","pattern"],
@@ -121,8 +121,7 @@
             "name":"ShadeGroups",
             "kind":"namevalue",
             "type":["logical", "scalar"],
-            "default":"true",
-            "purpose":"shade alternate x-tick groups"
+            "purpose":"shade alternate x-tick groups; on with cgroupvar, off without"
          },
          {
             "name":"PlotError",
@@ -320,7 +319,8 @@
          {"name":"SortBy", "kind":"namevalue", "type":["char", "string", "scalar", "choices=groupstats.namelists.sortorder()"], "default":"'none'", "purpose":"order the columns by their mean cell value"},
          {"name":"SortGroupMembers", "kind":"namevalue", "type":"choices=groupstats.internal.tablecompletions(tbl, 'selectby', cgroupvar)", "purpose":"the cgroupvar rows that enter the sort mean"},
          {"name":"ColorbarLabel", "kind":"namevalue", "type":["char", "string", "scalar"], "purpose":"the colorbar label; empty names the mapped quantity, and \"\" removes it"},
-         {"name":"Parent", "kind":"namevalue", "type":[["matlab.ui.Figure"],["matlab.ui.container.Panel"],["matlab.ui.container.Tab"],["matlab.graphics.layout.TiledChartLayout"]], "purpose":"the figure, panel, tab, or tiled layout to draw in"}
+         {"name":"Parent", "kind":"namevalue", "type":[["matlab.ui.Figure"],["matlab.ui.container.Panel"],["matlab.ui.container.Tab"],["matlab.graphics.layout.TiledChartLayout"]], "purpose":"the figure, panel, tab, or tiled layout to draw in"},
+         {"name":"props", "kind":"properties", "type":"matlab.graphics.chart.HeatmapChart"}
       ],
       "outputs":
       [
@@ -364,7 +364,8 @@
          {"name": "groupA", "kind": "required", "purpose": "the first group, as labels or logical column names"},
          {"name": "groupB", "kind": "required", "purpose": "the second group, as labels or logical column names"},
          {"name": "groupvar", "kind": "ordered", "type": [["cellstr", "char", "string"], ["scalar"], ["choices=groupstats.internal.tablecompletions(tbl)"]], "purpose": "the variable holding the group labels"},
-         {"name": "Population", "kind": "namevalue", "type": [["char", "string"], ["scalar"], ["choices=groupstats.namelists.populationoption()"]], "default": "'union'", "purpose": "which rows the marginal probabilities are out of"}
+         {"name": "Population", "kind": "namevalue", "type": [["char", "string"], ["scalar"], ["choices=groupstats.namelists.populationoption()"]], "default": "'union'", "purpose": "which rows the marginal probabilities are out of"},
+         {"name": "Pairwise", "kind": "namevalue", "type": ["logical", "scalar"], "default": "false", "purpose": "declare that groupA and groupB overlap on purpose"}
       ]
    },
 
@@ -402,7 +403,7 @@
          },
          {
             "name":"cgroupvar",
-            "kind":"required",
+            "kind":"ordered",
             "type":
             [
                ["cellstr","char","string","vartype","pattern"],
@@ -668,7 +669,7 @@
          },
          {
             "name":"varnames",
-            "kind":"required",
+            "kind":"ordered",
             "type":
             [
                ["cellstr","char","string","vartype","pattern"],
@@ -843,8 +844,7 @@
                ["scalar"],
                ["choices=groupstats.namelists.legendvisibility()"]
             ],
-            "default":"'on'",
-            "purpose":"toggle to turn legend on or off"
+            "purpose":"toggle to turn legend on or off; on unless groupvar and LegendString are both omitted"
          },
          {
             "name":"LegendString",
@@ -1080,14 +1080,14 @@
          {
             "name":"props",
             "kind":"properties",
-            "type":"matlab.graphics.chart.primitive.Scatter"}
+            "type":"matlab.graphics.primitive.Line"}
       ],
       "outputs":
       [
          {
             "name":"H",
-            "type":"matlab.graphics.chart.primitive.Scatter",
-            "purpose":"the scatter chart handle"
+            "type":"matlab.graphics.primitive.Line",
+            "purpose":"the lines, one row per color group and one column per size group"
          },
          {
             "name":"L",

@@ -141,6 +141,13 @@ version the package carries is in `toolbox/version.txt`.
 - `groupstats.boxchartcats` with `Legend="off"` makes no legend and
   returns the empty placeholder, as the other charts do. It returned a
   deleted legend handle.
+- Tab completion lists `cgroupvar` of `barchartcats` and `boxchartcats`
+  and `varnames` of `dropcats` as optional. It lists no fixed default for
+  the `ShadeGroups` option of `barchartcats` or the `Legend` option of
+  `histogram`, whose defaults depend on the call. It offers `Line`
+  properties for `scatter`, which draws lines. It offers the `Pairwise`
+  option of `groupbayes` and the `HeatmapChart` properties of
+  `groupheatmap`, which it left out.
 
 ## 1.0.0 - 2026-09-09
 
