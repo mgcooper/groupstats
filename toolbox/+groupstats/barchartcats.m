@@ -119,8 +119,8 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % Output Arguments
    %
    % H: A handle to the created bar chart.
-   % L: The legend, or an empty graphics placeholder when the legend could
-   %    not be created.
+   % L: The legend, or an empty graphics placeholder when the legend is off
+   %    or could not be created. With no legend, the axes fill the figure.
    % AX: The axes the chart was drawn into.
    %
    % Example
@@ -759,14 +759,20 @@ function [H, L, ax] = createCategoricalBarChart(XData, YData, CData, ...
       end
 
    end
+
+   % With the legend off, make none. A hidden legend still holds its space
+   % above the axes, so the axes would not fill the figure. The empty
+   % placeholder is what histogram and scatter return.
+   if opts.Legend == "off"
+      L = gobjects(0);
+      return
+   end
    try
       % The family layout puts the legend above the axes in up to three
       % columns that fit its tile, subplot, or figure. The legend uses the
       % axes font.
       L = legend(ax, legendtxt, 'AutoUpdate', 'off');
       legendlayout(L, opts.LegendOrientation);
-
-      set(L, 'Visible', opts.Legend)
    catch
       % A legend failure must still assign L, or the (H, L, ax) return
       % throws on an unassigned output. An empty placeholder matches the

@@ -103,6 +103,9 @@ version the package carries is in `toolbox/version.txt`.
   missing value.
 - `groupstats.groupmap` stacks function results that hold two char
   variables of different widths. It raised a join error.
+- `groupstats.barchartcats` with `Legend="off"`, or with no color group
+  and no `LegendString`, makes no legend, so the axes fill the figure. It
+  made a hidden legend that kept its space above the axes.
 - `groupstats.groupci` and the `ErrorBar="ci"` whiskers of
   `groupstats.barchartcats` keep the mean interval finite and accurate at
   extreme `Alpha`. The half-width was 0 as `Alpha` neared 1. It was Inf for

@@ -1000,20 +1000,21 @@ classdef test_barchartcats < matlab.unittest.TestCase
          % formatting go into Parent, and the current axes stays empty and
          % unheld. This chart has no cgroupvar, so ShadeGroups now
          % defaults off; pass it explicitly to keep exercising the
-         % shading's Parent routing.
+         % shading's Parent routing. A chart with no cgroupvar draws no
+         % legend, so a second chart with one checks the legend.
 
          target = axes(figure('Visible', 'off'));
          testCase.addTeardown(@close, ancestor(target, 'figure'));
          other = axes(figure('Visible', 'off'));
          testCase.addTeardown(@close, ancestor(other, 'figure'));
 
-         [H, L, ax] = groupstats.barchartcats(testCase.Tbl, "Value", ...
+         [H, ~, ax] = groupstats.barchartcats(testCase.Tbl, "Value", ...
             "Grp", Parent = target, PlotError = true, ShadeGroups = true);
 
-         returned = {ax; H.Parent; L.Axes; ...
+         returned = {ax; H.Parent; ...
             findobj(target, 'Type', 'ErrorBar').Parent; ...
             findobj(target, 'Type', 'Patch').Parent};
-         expected = repmat({target}, 5, 1);
+         expected = repmat({target}, 4, 1);
          testCase.verifyEqual(returned, expected);
 
          returned = [string(target.YGrid); string(target.Box)];
@@ -1024,6 +1025,13 @@ classdef test_barchartcats < matlab.unittest.TestCase
             isequal(gca, other)];
          expected = [0; false; true];
          testCase.verifyEqual(returned, expected);
+
+         % The second chart comes last, because its axes become current.
+         legendtarget = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(legendtarget, 'figure'));
+         [~, L] = groupstats.barchartcats(testCase.Tbl, "Value", "Grp", ...
+            "Sub", Parent = legendtarget);
+         testCase.verifyEqual(L.Axes, legendtarget);
       end
 
 
@@ -1137,6 +1145,39 @@ classdef test_barchartcats < matlab.unittest.TestCase
             "basin", LegendOrientation = "horizontal");
 
          testCase.verifyEqual(L.NumColumns, 4);
+      end
+
+      function testLegendOffLeavesTheAxesTheFullFigure(testCase)
+         % With the legend off, and with no color group, no legend exists,
+         % hidden or not, so the axes keep the space a chart without a
+         % legend gets. A plain plot in the same figure size sets that
+         % space.
+
+         data = groupstats.test.generateTestData('info');
+         f = figure('Visible', 'off', 'Position', [100 100 560 420]);
+         testCase.addTeardown(@() close(f));
+         plain = axes(f);
+         plot(plain, 1:3)
+         drawnow
+         expected = plain.Position;
+
+         % Legend off, with a color group.
+         clf(f)
+         [~, L, ax] = groupstats.barchartcats(data.Info, "peak", "month", ...
+            "scenario", Legend = "off", Parent = axes(f));
+         drawnow
+         testCase.verifyEmpty(L);
+         testCase.verifyEmpty(findall(f, 'Type', 'legend'));
+         testCase.verifyEqual(ax.Position, expected, 'AbsTol', 1e-6);
+
+         % No color group, which turns the legend off.
+         clf(f)
+         [~, L, ax] = groupstats.barchartcats(data.Info, "peak", "month", ...
+            Parent = axes(f));
+         drawnow
+         testCase.verifyEmpty(L);
+         testCase.verifyEmpty(findall(f, 'Type', 'legend'));
+         testCase.verifyEqual(ax.Position, expected, 'AbsTol', 1e-6);
       end
 
       function testYLabelNamesTheMethodAndTheVariable(testCase)
