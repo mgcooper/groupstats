@@ -49,17 +49,19 @@ function varargout = barchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % Method - the method used in the call to groupsummary to compute the values
    % plotted as bars, "mean" (default) or "median". Give one method. For
    % 'mean', the standard deviation is also computed in the call to
-   % groupsummary to support the addition of whiskers to the bars. If
-   % 'median' is passed in as the method, the whiskers represent the
-   % interquartile range. Set PlotError to draw them. PlotError needs one
-   % bar per x-tick, so omit cgroupvar, or select or merge its members down
-   % to one.
+   % groupsummary to support the addition of whiskers to the bars. For
+   % 'median', each whisker runs from the lower quartile to the upper
+   % quartile of the bar's rows. Those are the box edges
+   % groupstats.boxchartcats draws, so the two arms differ for skewed data.
+   % Set PlotError to draw them. PlotError needs one bar per x-tick, so
+   % omit cgroupvar, or select or merge its members down to one.
    %
    % ErrorBar - what the PlotError whisker shows. "spread" (default) is the
    % spread above: the mean plus or minus the standard deviation, or the
-   % median plus or minus the interquartile range. "ci" is the confidence
-   % interval that groupstats.groupci returns for the same rows. That is the
-   % Student t interval of the mean, or the boxchart notch of the median.
+   % lower quartile to the upper quartile around the median. "ci" is the
+   % confidence interval that groupstats.groupci returns for the same rows.
+   % That is the Student t interval of the mean, or the boxchart notch of
+   % the median.
    % The whisker tips equal the groupci bounds. A bar with fewer than two
    % values has no interval, so it gets no whisker. ErrorBar="ci" needs
    % PlotError=true.
@@ -418,32 +420,38 @@ end
 
 function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
       xgroupvar, cgroupvar, method, errortype, alpha)
-   %SUMMARIZETABLEGROUPS Bar heights and whisker half-widths per pairing.
+   %SUMMARIZETABLEGROUPS Bar heights and whisker arms per pairing.
    %
    % The bar height is METHOD. With ERRORTYPE "spread", the whisker is the
-   % spread that pairs with it. With ERRORTYPE "ci", it is the half-width
-   % of the groupci interval at level ALPHA.
+   % spread that pairs with it. With ERRORTYPE "ci", it is the groupci
+   % interval at level ALPHA. EData holds the lower arm on its first page
+   % and the upper arm on its second, each a distance from the bar height.
 
    % cgroupvar leads the grouping list because it controls the row order
    % groupsummary returns, which the reshape below and bar's series
    % layout rely on.
 
    % groupsummary names a function-handle method's column fun<N>_<var>,
-   % so read the whisker by position: it is the last column either way.
+   % so read the arms by position: they are the last columns either way.
    if errortype == "ci"
       % The interval comes from the helper groupci uses, so each whisker tip
       % equals the groupci bound for the same rows.
-      whisker = @(y) cihalfwidth(y, method, alpha);
+      whisker = {@(y) cihalfwidth(y, method, alpha)};
    elseif method == "mean"
-      whisker = "std";
+      whisker = {"std"};
    else
-      % The spread that pairs with a median is the interquartile range.
-      whisker = @iqr;
+      % The spread that pairs with a median runs from the lower quartile to
+      % the upper one, so its two arms differ for skewed data.
+      whisker = {@(y) quartilearm(y, 1), @(y) quartilearm(y, 2)};
    end
-   G = groupsummary(tbl, [cgroupvar xgroupvar], {method, whisker}, ydatavar);
+   G = groupsummary(tbl, [cgroupvar xgroupvar], [{method}, whisker], ...
+      ydatavar);
    XData = G.(xgroupvar);
    YData = G.(method + "_" + ydatavar);
-   EData = G{:, end};
+
+   % A symmetric whisker has one column, which serves as both arms.
+   arms = G{:, end - numel(whisker) + 1:end};
+   arms = arms(:, [1 end]);
 
    % Each column of Y needs to correspond to a group of bars. Each bar in a
    % group is a different color, and each group is a different x-tick.
@@ -463,11 +471,15 @@ function [XData, YData, CData, EData] = summarizeTableGroups(tbl, ydatavar, ...
    end
    slot = sub2ind([numel(XData), ncols], ix, ic);
    ydata = YData;
-   edata = EData;
    YData = nan(numel(XData), ncols);
-   EData = nan(numel(XData), ncols);
    YData(slot) = ydata;
-   EData(slot) = edata;
+
+   % Each arm takes the slot of its bar. A row of the flat array is one
+   % slot, so the reshape puts the lower arms on page 1 and the upper arms
+   % on page 2.
+   EData = nan(numel(XData) * ncols, 2);
+   EData(slot, :) = arms;
+   EData = reshape(EData, numel(XData), ncols, 2);
 
    % cgroupvar may be empty; the logical stand-in makes bar treat
    % everything as one color group, matching boxchartcats.
@@ -490,6 +502,22 @@ function halfwidth = cihalfwidth(y, method, alpha)
 
    [~, bounds] = sampleci(y, method, alpha);
    halfwidth = diff(bounds) / 2;
+end
+
+function arm = quartilearm(y, side)
+   %QUARTILEARM Distance from the median of Y to one of its quartiles.
+   %
+   % SIDE 1 reads the lower quartile and SIDE 2 the upper one. The
+   % quartiles are the box edges groupstats.boxchartydata returns, so the
+   % whisker tips equal the box edges boxchartcats draws for the same rows.
+   % boxchartydata drops NaN values first, and so does the groupsummary
+   % median that sets the bar height.
+
+   % Import each package member this local function requires.
+   import groupstats.boxchartydata
+
+   ycoords = boxchartydata(y);
+   arm = abs(ycoords.boxedge(side) - ycoords.boxline);
 end
 
 function [CData, YData] = mergemembermean(CData, YData, mergegroups)
@@ -588,7 +616,8 @@ function [YData, EData, CData, opts] = reorderCGroups(opts, YData, ...
 
    YData = YData(:, idx);
    if ~isempty(EData)
-      EData = EData(:, idx);
+      % EData holds a lower and an upper page, so keep both.
+      EData = EData(:, idx, :);
    end
    if numel(opts.LegendString) == numel(members)
       opts.LegendString = opts.LegendString(idx);
@@ -602,11 +631,12 @@ end
 function plotBarErrors(opts, H, YData, EData)
    %PLOTBARERRORS Draw one whisker per bar, from the spread of its group.
    %
-   % The whisker is the standard deviation for method "mean", and the
-   % interquartile range for method "median". summarizeTableGroups computes
-   % whichever pairs with the method. With ErrorBar="ci", EData holds the
-   % half-width of the groupci interval, so the same call draws the
-   % interval.
+   % The whisker shows the standard deviation for method "mean". For method
+   % "median", it runs from the lower quartile to the upper quartile.
+   % summarizeTableGroups computes whichever pairs with the method. With
+   % ErrorBar="ci", EData holds the half-width of the groupci interval, so
+   % the same call draws the interval. EData holds the lower arm on page 1
+   % and the upper arm on page 2.
 
    if ~opts.PlotError || isempty(EData)
       return
@@ -632,7 +662,7 @@ function plotBarErrors(opts, H, YData, EData)
    washeld = ishold(ax);
    hold(ax, 'on')
 
-   errorbar(ax, H.XEndPoints, YData(:, 1), EData(:, 1), ...
+   errorbar(ax, H.XEndPoints, YData(:, 1), EData(:, 1, 1), EData(:, 1, 2), ...
       'LineStyle', 'none', 'Color', 'k', 'LineWidth', 1, 'CapSize', 4);
 
    if ~washeld

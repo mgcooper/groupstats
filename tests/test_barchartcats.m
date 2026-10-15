@@ -171,6 +171,32 @@ classdef test_barchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected.std_Value, 'AbsTol', 1e-12);
       end
 
+      function testMedianWhiskerSpansTheQuartiles(testCase)
+         % With Method="median", each whisker runs from the lower quartile
+         % to the upper quartile of its bar's rows, so skewed data gives
+         % arms of different lengths. The hand values put the i-th of n
+         % sorted values at quantile (i - 0.5)/n and interpolate linearly
+         % between them. The chart drops NaN values first.
+         %
+         %   a: [1 2 3 10]        Q1 1.5, median 2.5, Q3 6.5
+         %   b: [2 4 4 5 20]      Q1 3.5, median 4,   Q3 8.75
+         %   c: [NaN 1 2 3 4]     Q1 1.5, median 2.5, Q3 3.5
+
+         y = [1; 2; 3; 10; 2; 4; 4; 5; 20; NaN; 1; 2; 3; 4];
+         x = categorical(repelem(["a"; "b"; "c"], [4; 5; 5]));
+         tbl = table(x, y);
+
+         [H, ~, ax] = groupstats.barchartcats(tbl, "y", "x", ...
+            Method = "median", PlotError = true);
+
+         whisker = findobj(ax, 'Type', 'ErrorBar');
+         returned = [H.YData(:).'; ...
+            H.YData(:).' - whisker.YNegativeDelta(:).'; ...
+            H.YData(:).' + whisker.YPositiveDelta(:).'];
+         expected = [2.5, 4, 2.5; 1.5, 3.5, 1.5; 6.5, 8.75, 3.5];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
       function testPlotErrorRejectsSeveralSeries(testCase)
          % A categorical x-axis places every whisker on the tick center.
          % With more than one bar per tick the whiskers would not line up

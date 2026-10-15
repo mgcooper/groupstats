@@ -73,6 +73,12 @@ version the package carries is in `toolbox/version.txt`.
   `Method="count"`, 16 or fewer count levels get a discrete colormap.
 - `groupstats.scatter` draws its markers 1.25 times the shared default
   sizes.
+- `groupstats.barchartcats` with `Method="median"` and `PlotError=true`
+  draws each whisker from the lower quartile to the upper quartile of the
+  bar's rows. These are the box edges `boxchartcats` draws, so the two arms
+  differ for skewed data. The whisker was the median plus or minus the
+  full interquartile range, twice the height of the box. For [1 2 3 10]
+  it runs from 1.5 to 6.5, where it ran from -2.5 to 7.5.
 
 ### Fixed
 

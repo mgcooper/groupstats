@@ -84,7 +84,8 @@ title("SSP585-HOT-FAR drawn first")
 %% Error bars
 %
 % PlotError draws the spread of each group. For method "mean" that is the
-% standard deviation, and for "median" the interquartile range. It needs one
+% standard deviation. For "median" it runs from the lower quartile to the
+% upper quartile, so the whisker covers the interquartile range. It needs one
 % bar per x-tick, because a categorical axis puts every whisker on the tick
 % center, so omit the color group.
 
