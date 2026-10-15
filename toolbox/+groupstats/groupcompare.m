@@ -83,10 +83,11 @@ function [stats, samples] = groupcompare(tbl, groupvar, datavar, opts)
    %  stats(:, ["Group", "P", "H", "MedianDiff"])
    %
    % Dependencies
-   %  ranksum, signrank, and quantile need the Statistics and Machine
-   %  Learning Toolbox. Test="permutation" runs the vendored permutest,
-   %  which needs that toolbox too, for tinv, and the Image Processing
-   %  Toolbox, for bwconncomp.
+   %  ranksum and signrank need the Statistics and Machine Learning
+   %  Toolbox. Test="permutation" runs the vendored permutest, which needs
+   %  that toolbox too, for tinv, and the Image Processing Toolbox, for
+   %  bwconncomp. The bootstrap needs only base MATLAB, which includes
+   %  quantile.
    %
    % See also: groupstats.groupsamples, ranksum, signrank,
    % groupstats.namelists.comparetest, groupstats.namelists.testtail

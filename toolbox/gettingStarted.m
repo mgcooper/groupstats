@@ -8,8 +8,8 @@
 %[text] - Build and install the package with `buildtool release`, then double-click  `release/GroupStatsToolbox.mltbx`. \
 %[text] Functions are in the +groupstats namespace, so either import the namespace or call them directly e.g., `groupstats.groupsummary`.
 %[text] ## System requirements
-%[text] The code requires R2021a+ for `arguments` blocks and `props.?Class` property validation. The test suite passes on R2024b and R2025b.
-%[text] `groupstats.groupcompare` and `groupstats.scatter` require the Statistics and Machine Learning Toolbox. The permutation test in `groupcompare` requires the Image Processing Toolbox.
+%[text] The toolbox requires R2024b or later. The test suite passes on R2024b and R2025b, and older releases are untested.
+%[text] `groupstats.groupcompare` and `groupstats.scatter` require the Statistics and Machine Learning Toolbox. The permutation test in `groupcompare` also requires the Image Processing Toolbox.
 %[text] ## A first example
 %[text] Every function accepts a table and the names of its grouping variables.
 data = groupstats.test.generateTestData('info');

@@ -53,14 +53,14 @@ Charts for categorical (grouped) table data:
 
 ## Requirements
 
-- MATLAB R2021a or later. The code uses `arguments` blocks (R2019b),
-  `props.?Class` property validation (R2021a), and `name = value` syntax
-  (R2021a). The test suite passes on R2024b and R2025b, the same releases
-  the toolbox is developed on. Older releases are untested.
+- MATLAB R2024b or later. The test suite passes on R2024b and R2025b, the
+  same releases the toolbox is developed on. Older releases are untested.
+  Base MATLAB before R2022a also lacks `quantile`. The box charts,
+  `groupci`, and the median whiskers of `barchartcats` need it.
 - `groupstats.groupcompare` needs the Statistics and Machine Learning
-  Toolbox for `ranksum`, `signrank`, `tinv`, and `quantile`. Its
-  `Test="permutation"` option also needs the Image Processing
-  Toolbox.
+  Toolbox for `ranksum` and `signrank`. Its `Test="permutation"` option
+  runs the vendored `permutest`, which also needs that toolbox for `tinv`
+  and the Image Processing Toolbox for `bwconncomp`.
 - `groupstats.scatter` needs the Statistics and Machine Learning Toolbox
   for `gscatter`. The rest of the toolbox requires only base MATLAB.
 

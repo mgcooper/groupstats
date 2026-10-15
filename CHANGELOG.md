@@ -83,6 +83,12 @@ version the package carries is in `toolbox/version.txt`.
   `defaultcolors`, as the other charts do, and each fitted curve takes its
   group's color. The groups took the axes color order, so group 8 had the
   color of group 1.
+- The toolbox states R2024b as its minimum release, the oldest release the
+  test suite runs on. The README, the getting-started pages, and
+  `info.xml` stated R2021a, which no test covered. Base MATLAB before
+  R2022a also lacks `quantile`, which the box charts and `groupci` call.
+  The packaged toolbox declares no minimum release. The README and the
+  `groupcompare` help name `quantile` as base MATLAB.
 
 ### Fixed
 

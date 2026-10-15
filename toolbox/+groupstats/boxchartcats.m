@@ -138,7 +138,7 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % listed in toolbox/vendored.txt, so no separate path is needed:
    %
    %  defaultcolors (libplot)      colors the boxes and their mean symbols
-   %  naninterp1 (libstats)        fills gaps in the group shading bounds
+   %  naninterp1 (libmath)         fills gaps in the group shading bounds
    %  dealout (functools)          splits the outputs
    %
    % Errors and warnings

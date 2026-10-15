@@ -70,4 +70,5 @@
 % The package is self-contained: every helper it calls ships inside it.
 % |groupstats.groupcompare| and |groupstats.scatter| need the Statistics
 % and Machine Learning Toolbox; the permutation test of |groupcompare| also
-% needs the Image Processing Toolbox. The rest needs MATLAB R2021a or later.
+% needs the Image Processing Toolbox. The rest needs only MATLAB R2024b or
+% later, the oldest release the test suite runs on.
