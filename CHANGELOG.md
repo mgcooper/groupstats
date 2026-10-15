@@ -149,6 +149,12 @@ version the package carries is in `toolbox/version.txt`.
   option of `groupbayes` and the `HeatmapChart` properties of
   `groupheatmap`, which it left out.
 
+### Removed
+
+- The empty `toolbox/+groupstats/permutest` folder and its MATLAB Project
+  entries. A package built from the project listed the folder as a MATLAB
+  path. The vendored `permutest` stays in `toolbox/+groupstats/private/`.
+
 ## 1.0.0 - 2026-09-09
 
 The vendor-ready quality pass.
