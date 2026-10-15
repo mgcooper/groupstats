@@ -60,20 +60,28 @@ function updatecontents(folder)
    % loop.
    perfiles = repmat({cell(0, 1)}, length(dirs), 1);
    perh1 = repmat({cell(0, 1)}, length(dirs), 1);
+
+   % A package or class folder follows a separator. Windows accepts either
+   % separator; elsewhere a backslash is part of a folder name.
+   if ispc
+      marksep = '[\\/][+@]';
+   else
+      marksep = '/[+@]';
+   end
    for d = 1:length(dirs)
       temp = getcontents(dirs{d},'filter','files','sort',true);
       if ~isempty(temp)
          temp = temp(~contains(temp, '~'));    % remove temporary files
          temp = temp(~contains(temp, '.mex')); % remove compiled mex files
          temp = temp(cellfun(@(x) ~strcmp(x,filename),temp)); % remove Contents.m
-         % determine package prefix
-         pkgprefix = strrep(dirs{d},[filesep '+'],'.');
-         pkgprefix = strrep(pkgprefix,[filesep '@'],'.');
-         dots = strfind(pkgprefix,'.');
-         if ~isempty(dots)
-            pkgprefix = [pkgprefix(dots(1)+1:end) '.'];
-         else
+         % determine package prefix. It starts at the first +package or
+         % @class folder. A dot in an ordinary parent folder, such as a
+         % temporary folder, is not a package marker.
+         marker = regexp(dirs{d}, marksep, 'once');
+         if isempty(marker)
             pkgprefix = '';
+         else
+            pkgprefix = [regexprep(dirs{d}(marker+2:end), marksep, '.') '.'];
          end
          h1 = cell(length(temp), 1);
          for f = 1:length(temp) % read H1 lines

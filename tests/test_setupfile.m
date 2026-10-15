@@ -99,6 +99,57 @@ classdef test_setupfile < matlab.unittest.TestCase
          testCase.verifyTrue(returned);
       end
 
+      function testAddsAProjectBelowADottedFolder(testCase)
+         % A dot in a parent folder, such as in a temporary folder name, does
+         % not hide the project. The project and its ordinary subfolder go on
+         % the path. A subfolder whose own name starts with a dot does not.
+
+         project = fullfile(testCase.ProjectPath, 'my.parent', 'proj');
+         mkdir(fullfile(project, 'code'))
+         mkdir(fullfile(project, '.hidden'))
+
+         setupfile('testproject', project);
+
+         entries = string(strsplit(path(), pathsep));
+         returned = [any(entries == project); ...
+            any(entries == fullfile(project, 'code')); ...
+            any(entries == fullfile(project, '.hidden'))];
+         expected = [true; true; false];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testAddsAStringProjectPathBelowADotFolder(testCase)
+         % A project path may come as a string, and a parent folder name may
+         % start with a dot, as some tools name their temporary folders.
+         % Only names below the project path count, so the project goes on
+         % the path.
+
+         project = fullfile(testCase.ProjectPath, '.ctx', 'proj');
+         mkdir(fullfile(project, 'code'))
+
+         setupfile('testproject', string(project));
+
+         entries = string(strsplit(path(), pathsep));
+         returned = [any(entries == project); ...
+            any(entries == fullfile(project, 'code'))];
+         expected = [true; true];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testKeepsAFolderWithABackslashInItsNameOnUnix(testCase)
+         % Outside Windows a backslash is part of a folder name, not a
+         % separator, so a\.b is an ordinary folder that goes on the path.
+
+         testCase.assumeFalse(ispc, 'A backslash is a separator on Windows.');
+         project = fullfile(testCase.ProjectPath, 'proj');
+         mkdir(fullfile(project, 'a\.b'))
+
+         setupfile('testproject', project);
+
+         entries = string(strsplit(path(), pathsep));
+         testCase.verifyTrue(any(entries == fullfile(project, 'a\.b')));
+      end
+
       function testSetsTheProjectEnvironmentVariables(testCase)
          % Scripts and hooks read these variables to find the project.
 

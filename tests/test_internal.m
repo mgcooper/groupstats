@@ -1118,6 +1118,57 @@ classdef test_internal < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+      function testUpdatecontentsIgnoresDotsInParentFolders(testCase)
+         % A dot in a parent folder, such as in a temporary folder name, is
+         % not a package marker. A plain file keeps its name, and a +package
+         % folder below still gives its prefix.
+
+         updatecontents = groupstats.internal.privatefunction('updatecontents');
+         root = fullfile(testCase.ScratchDir, "my.parent", "pkg");
+         mkdir(fullfile(root, "+tbx"))
+         writelines(["function alpha()"; "%ALPHA First line."], ...
+            fullfile(root, "alpha.m"))
+         writelines(["function beta()"; "%BETA Second line."], ...
+            fullfile(root, "+tbx", "beta.m"))
+
+         % updatecontents writes Contents.m to the current folder.
+         here = pwd;
+         testCase.addTeardown(@() cd(here));
+         cd(root)
+
+         updatecontents(char(root));
+
+         lines = readlines(fullfile(root, "Contents.m"));
+         returned = [any(startsWith(lines, "%   alpha ")); ...
+            any(startsWith(lines, "%   tbx.beta "))];
+         expected = [true; true];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testUpdatecontentsKeepsABackslashNameOnUnix(testCase)
+         % Outside Windows a backslash is part of a folder name. The folder
+         % foo\+bar inside +tbx is not a package, so its file keeps the
+         % folder in its row, as private folders do: tbx/foo\+bar.gamma.
+
+         testCase.assumeFalse(ispc, 'A backslash is a separator on Windows.');
+         updatecontents = groupstats.internal.privatefunction('updatecontents');
+         root = fullfile(testCase.ScratchDir, "pkg");
+         mkdir(fullfile(root, "+tbx", "foo\+bar"))
+         writelines(["function gamma()"; "%GAMMA Third line."], ...
+            fullfile(root, "+tbx", "foo\+bar", "gamma.m"))
+
+         % updatecontents writes Contents.m to the current folder.
+         here = pwd;
+         testCase.addTeardown(@() cd(here));
+         cd(root)
+
+         updatecontents(char(root));
+
+         lines = readlines(fullfile(root, "Contents.m"));
+         returned = any(startsWith(lines, "%   tbx/foo\+bar.gamma "));
+         testCase.verifyTrue(returned);
+      end
+
       function testUpdatecontentsListsEveryFolderAndFile(testCase)
          % Every folder that holds a file gets a name row. Every file gets
          % a row with its H1 line, at every depth. A folder with no file
