@@ -95,7 +95,9 @@ function G = groupsummary(tbl, groupvars, methods, datavar, ...
    % {"month"}. With one groupvar, the bare text "month" is an alias for
    % {"month"}, as in the builtin. With more groupvars, the bare text is a
    % badGroupBins error; give one scheme per groupvar, such as
-   % {"month", "none"}.
+   % {"month", "none"}. An unknown bin name in a cell, or bare with one
+   % groupvar, raises the builtin's error. That error does not name the
+   % bin, because the builtin reads the name as a method.
    %
    % Errors:
    %
