@@ -148,6 +148,10 @@ version the package carries is in `toolbox/version.txt`.
   properties for `scatter`, which draws lines. It offers the `Pairwise`
   option of `groupbayes` and the `HeatmapChart` properties of
   `groupheatmap`, which it left out.
+- The `groupstats.test.fixtures.InvisibleFigure` test fixture holds the
+  root `defaultAxesColorOrder` value for each test and restores it after.
+  The palette tests then pass whether or not R2025b applies a dark theme
+  during a test.
 
 ### Removed
 
