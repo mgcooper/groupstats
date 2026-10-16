@@ -65,7 +65,7 @@ groupstats.barchartcats(Info, "peak", "basin", ...
 %[text] Order the groups explicitly. Naming one puts it first and leaves the rest behind it:
 figure
 groupstats.boxchartcats(Info, "peak", "basin", "scenario", ...
-   XGroupOrder = "Outlet")
+   XGroupOrder = "basinC")
 %%
 %[text] `groupstats.histogram` takes the built-in's call shape for categorical data. This section counts the months when a large flood, one with a peak above 13.5, reached the outlet. The peak follows a seasonal cycle that is highest in January, so April to October hold no large flood, and the bar heights differ:
 floods = Info(Info.basin == "Outlet" & Info.peak > 13.5, :);

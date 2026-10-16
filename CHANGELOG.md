@@ -153,6 +153,9 @@ version the package carries is in `toolbox/version.txt`.
   colormaps or transparency as different figures. It leaves images outside
   the page folder alone, and it changes no file when an image cannot be
   read. The pass is a copy of the shared toolbox template's helper.
+- The Using GroupStats page orders its box chart by `basinC`. It named
+  `Outlet`, the first basin already, so the ordered chart matched the
+  first one.
 - The `groupstats.test.fixtures.InvisibleFigure` test fixture holds the
   root `defaultAxesColorOrder` value for each test and restores it after.
   The palette tests then pass whether or not R2025b applies a dark theme
