@@ -6,7 +6,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and the toolbox follows [Semantic Versioning](https://semver.org/). The
 version the package carries is in `toolbox/version.txt`.
 
-## [Unreleased]
+## 1.1.0 - 2026-10-16
+
+This release adds `groupstats.groupci` and `groupstats.groupheatmap`. It
+also fixes charts, grouping inputs, and the docs build, and it states a
+minimum release. The test suite passed on R2024b and R2025b, and R2025b
+built the package. The toolbox declares R2024b or later; releases after
+R2025b are untested.
 
 ### Added
 
