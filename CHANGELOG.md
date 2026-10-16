@@ -148,6 +148,11 @@ version the package carries is in `toolbox/version.txt`.
   properties for `scatter`, which draws lines. It offers the `Pairwise`
   option of `groupbayes` and the `HeatmapChart` properties of
   `groupheatmap`, which it left out.
+- The docs build keeps the first of two tags that name one image, and it
+  keeps a PNG that a kept tag still shows. It treats images with different
+  colormaps or transparency as different figures. It leaves images outside
+  the page folder alone, and it changes no file when an image cannot be
+  read. The pass is a copy of the shared toolbox template's helper.
 - The `groupstats.test.fixtures.InvisibleFigure` test fixture holds the
   root `defaultAxesColorOrder` value for each test and restores it after.
   The palette tests then pass whether or not R2025b applies a dark theme
