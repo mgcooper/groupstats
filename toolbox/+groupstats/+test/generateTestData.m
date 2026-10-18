@@ -34,6 +34,17 @@ function varargout = generateTestData(whichfunction)
    %                one set has an all-zero reference. Those two properties
    %                make the reference-group choice and the signrank-against-
    %                zero case observable.
+   %   "groupheatmap" A table whose heatmap cells all differ: columns Grp
+   %                p, q, r by rows Sub u, v, w. The expected struct holds
+   %                the hand value of every cell for each heatmap Method.
+   %   "groupci"    Two zero-centered samples, [-1 1] and [-1 0 1], and
+   %                Alpha levels from 1e-310 to 1 - 2^-53. The expected
+   %                struct holds the exact t critical values at one and two
+   %                degrees of freedom and each sample's interval half-width.
+   %   "missingsets" A seven-row table whose set variable s has three
+   %                missing rows, as categorical, string, double, and
+   %                cellstr. The expected struct holds the hand counts per
+   %                set for grouppercent GroupSets and for groupmap.
    %
    %  This function is the one place test data is defined. Demos and scripts
    %  call it too, so no fixture class or demo may define its own copy.
@@ -46,7 +57,8 @@ function varargout = generateTestData(whichfunction)
 
    % One list of case names so the error message cannot drift from the switch.
    knowncases = ["groupbayes", "groupmap", "dropcats", "info", ...
-      "groupcompare", "groupsummary"];
+      "groupcompare", "groupsummary", "groupheatmap", "groupci", ...
+      "missingsets"];
 
    switch lower(whichfunction)
 
@@ -110,6 +122,18 @@ function varargout = generateTestData(whichfunction)
       case 'groupsummary'
 
          [TestData, ExpectedResult] = groupsummaryCase();
+
+      case 'groupheatmap'
+
+         [TestData, ExpectedResult] = groupheatmapCase();
+
+      case 'groupci'
+
+         [TestData, ExpectedResult] = groupciCase();
+
+      case 'missingsets'
+
+         [TestData, ExpectedResult] = missingsetsCase();
 
       otherwise
 
@@ -250,6 +274,116 @@ function [TestData, ExpectedResult] = groupsummaryCase()
    ExpectedResult.height = 12;
 end
 
+function [TestData, ExpectedResult] = groupciCase()
+   %GROUPCICASE Two zero-centered samples and extreme Alpha levels.
+   %
+   % Grp a holds [-1 1] and Grp b holds [-1 0 1]. Each mean is exactly 0,
+   % so each interval runs from minus to plus its half-width, and a tiny
+   % width stays visible. a has N = 2, s = sqrt(2), and one degree of
+   % freedom, so its half-width is t1. b has N = 3, s = 1, and two degrees
+   % of freedom, so its half-width is t2 / sqrt(3).
+   %
+   % t1 and t2 come from exact identities, found by integrating the Student
+   % t density, not from an inverse beta function:
+   %
+   %     t1 = cot(pi * Alpha / 2) = tan(pi * (1 - Alpha) / 2),
+   %     t2 = (1 - Alpha) * sqrt(2 / (2 - Alpha)) / sqrt(Alpha).
+   %
+   % The tan form serves Alpha above 1/2, where 1 - Alpha is exact in
+   % double. At Alpha = 1e-310, t1 is about 6.4e309, beyond the double
+   % range, so it is Inf.
+
+   TestData.tbl = table(categorical(["a"; "a"; "b"; "b"; "b"]), ...
+      [-1; 1; -1; 0; 1], 'VariableNames', {'Grp', 'Value'});
+   TestData.alpha = [1e-310, 1e-300, 1e-200, 1e-100, 1e-20, 1e-6, 0.05, ...
+      0.5, 0.9, 1 - 1e-6, 1 - 1e-10, 1 - 2^-53];
+
+   alpha = TestData.alpha;
+   upper = alpha > 1 / 2;
+   t1 = 1 ./ tan(pi * alpha / 2);
+   t1(upper) = tan(pi * (1 - alpha(upper)) / 2);
+   t2 = (1 - alpha) .* sqrt(2 ./ (2 - alpha)) ./ sqrt(alpha);
+
+   ExpectedResult.t1 = t1;
+   ExpectedResult.t2 = t2;
+   ExpectedResult.halfwidth = [t1; t2 / sqrt(3)];
+end
+
+function [TestData, ExpectedResult] = missingsetsCase()
+   %MISSINGSETSCASE Build a table whose set variable has missing values.
+   %
+   % Seven rows: g is a a b a b b b, and s is x x x m m m y, where m is
+   % missing. A split that skips the missing value loses three of the seven
+   % rows. TestData.tbl holds one table per type of s, each with its own
+   % missing value: categorical <undefined>, string <missing>, double NaN
+   % (x is 1, y is 2), and cellstr ''.
+
+   g = ["a"; "a"; "b"; "a"; "b"; "b"; "b"];
+   s = ["x"; "x"; "x"; missing; missing; missing; "y"];
+   variants = struct(categorical = categorical(s), string = s, ...
+      double = [1; 1; 1; NaN; NaN; NaN; 2], ...
+      cellstr = {{'x'; 'x'; 'x'; ''; ''; ''; 'y'}});
+   for type = string(fieldnames(variants))'
+      TestData.tbl.(type) = table(g, variants.(type), ...
+         'VariableNames', {'g', 's'});
+   end
+
+   % grouppercent(tbl, "g", GroupSets = "s") counts set x, then y, then the
+   % missing set. Within a set, groupcounts sorts g. Set x holds a 2 and
+   % b 1, y holds b 1, and the missing set holds a 1 and b 2.
+   ExpectedResult.grouppercent.g = ["a"; "b"; "b"; "a"; "b"];
+   ExpectedResult.grouppercent.GroupCount = [2; 1; 1; 1; 2];
+   ExpectedResult.grouppercent.Percent_s = [200; 100; 300; 100; 200] / 3;
+   ExpectedResult.grouppercent.missingSet = [false; false; false; true; true];
+
+   % groupmap(tbl, "s", fcn) applies fcn to x (3 rows), y (1 row), and the
+   % missing rows (3), in that order.
+   ExpectedResult.groupmap.rows = [3; 1; 3];
+   ExpectedResult.groupmap.missingGroup = [false; false; true];
+end
+
+function [TestData, ExpectedResult] = groupheatmapCase()
+   %GROUPHEATMAPCASE Build a table whose heatmap cells all differ.
+   %
+   % Columns Grp p, q, r by rows Sub u, v, w. No two pairings with values
+   % share a mean, median, count, sum, min, or max, so a cell that shows
+   % another pairing's value fails. Pairing p-v holds one NaN among five
+   % values, q-v holds only NaN, and r-v has no rows.
+   %
+   % Each pairing lists its values. The rows of the table repeat each
+   % pairing's labels once per value.
+
+   cells = {
+      "p", "u", [1 2 9]
+      "q", "u", [10 11]
+      "r", "u", [20 21 22 37]
+      "p", "v", [5 NaN 7 30 8 40]
+      "q", "v", [NaN NaN]
+      "p", "w", 50
+      "q", "w", [60 61 62 63 64 100]
+      "r", "w", [-1 -2 -3 -4 -5 -6 0]
+      };
+   counts = cellfun(@numel, cells(:, 3));
+   grp = repelem(string(cells(:, 1)), counts);
+   sub = repelem(string(cells(:, 2)), counts);
+   value = [cells{:, 3}]';
+
+   TestData.tbl = table(categorical(grp), categorical(sub), value, ...
+      'VariableNames', {'Grp', 'Sub', 'Value'});
+
+   % Hand values, rows Sub u, v, w by columns Grp p, q, r. Pairing p-v uses
+   % its five numbers. Pairings q-v and r-v show NaN for mean, median, min,
+   % and max and 0 for count and sum.
+   ExpectedResult.mean = [4 10.5 25; 18 NaN NaN; 50 410/6 -3];
+   ExpectedResult.median = [2 10.5 21.5; 8 NaN NaN; 50 62.5 -3];
+   ExpectedResult.count = [3 2 4; 5 0 0; 1 6 7];
+   ExpectedResult.sum = [12 21 100; 90 0 0; 50 410 -21];
+   ExpectedResult.min = [1 10 20; 5 NaN NaN; 50 60 -6];
+   ExpectedResult.max = [9 11 37; 40 NaN NaN; 50 100 0];
+   ExpectedResult.xmembers = ["p"; "q"; "r"];
+   ExpectedResult.cmembers = ["u"; "v"; "w"];
+end
+
 function [TestData, ExpectedResult] = groupcompareCase()
    %GROUPCOMPARECASE Build a table with three groups and two condition sets.
    %
@@ -340,6 +474,11 @@ function [TestData, ExpectedResult] = infoCase()
    % a full grid of one row per combination cannot show on its own.
    season = cos(2 * pi * (iMonth - 1) / numel(months));
    Info.peak = 10 + 4 * season + iScenario + 0.5 * iLabel;
+
+   % The peak is a synthetic magnitude with no physical unit. The charts
+   % read the description and the units for their axis labels.
+   Info.Properties.VariableDescriptions{'peak'} = 'peak magnitude';
+   Info.Properties.VariableUnits{'peak'} = 'unitless';
 
    TestData.Info = Info;
    TestData.scenarios = scenarios;

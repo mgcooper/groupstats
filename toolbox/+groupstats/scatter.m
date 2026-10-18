@@ -10,6 +10,9 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    % Description
    %  H = SCATTER(TBL, XDATAVAR, YDATAVAR, CGROUPVAR) plots TBL.(YDATAVAR)
    %  against TBL.(XDATAVAR), coloring each point by its CGROUPVAR member.
+   %  The k-th color group takes the k-th row of defaultcolors, as in every
+   %  chart of the family. The palette holds 21 colors, and the 22nd group
+   %  starts over at the first.
    %
    %  H = SCATTER(_, SGROUPVAR) also varies the marker symbol and size by
    %  SGROUPVAR member, so one chart shows two groupings at once.
@@ -61,7 +64,18 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    %                   with the groups, so an entry stays on its member. A
    %                   list that does not cover every entry is ignored and
    %                   the member names stand.
-   %  LegendOrientation "vertical" or "horizontal".
+   %  LegendOrientation "vertical" or "horizontal". The legend sits above
+   %                   the axes in up to three columns, fewer when three
+   %                   would be wider than its tile, subplot, or figure.
+   %                   "horizontal" puts every entry in one row, wrapped when
+   %                   that row is wider than its tile, subplot, or figure.
+   %                   The legend text follows the axes font. L, the legend
+   %                   handle, lets a caller move it, for example to
+   %                   "northwest" in one column.
+   %
+   %  Axis labels come from the table: each variable's VariableDescriptions
+   %  and VariableUnits entries when set, else its name. The markers are
+   %  1.25 times the defaultmarkers sizes.
    %
    %  Any Line property may also be passed by name. gscatter draws the
    %  points as Line objects, so H holds Line handles and takes Line
@@ -227,8 +241,8 @@ function varargout = scatter(tbl, xdatavar, ydatavar, cgroupvar, ...
    % Name the axes. createGScatterPlot1 restores the caller's current axes
    % as it returns, so an unqualified call here labels whichever axes was
    % current before, and leaves opts.Parent held.
-   xlabel(opts.Parent, strrep(xdatavar, '_', ' '));
-   ylabel(opts.Parent, strrep(ydatavar, '_', ' '));
+   xlabel(opts.Parent, axislabel(tbl, xdatavar));
+   ylabel(opts.Parent, axislabel(tbl, ydatavar));
 
    % A ranked categorical variable shows its categories at the ranks.
    if ~isempty(xcats)
@@ -402,12 +416,16 @@ end
 %%
 function [colors, symbols, sizes] = getPlotDecorators(CGrps)
 
-   % The box and scatter charts read defaultcolors, so the k-th color
-   % group of either chart has the k-th palette color. Its list holds 21
+   % Every chart in the family reads defaultcolors, so the k-th color
+   % group of any chart has the k-th palette color. Its list holds 21
    % colors; more color groups than that wrap around.
-   colors = defaultcolors();
-   colors = colors(mod((1:numel(CGrps)) - 1, size(colors, 1)) + 1, :);
+   colors = groupcolors(numel(CGrps));
    [symbols, sizes] = defaultmarkers();
+
+   % The shared marker sizes read small beside the axes text. They read
+   % smallest on the published pages, whose build scales fonts but not
+   % explicit marker sizes. Draw them 1.25 times larger.
+   sizes = 1.25 * sizes;
 end
 
 %%
@@ -457,9 +475,10 @@ function L = groupLegend(cleg, sleg, CGrps, SGrps, legendnames, opts)
    entries = [centries; sentries];
 
    % One combined legend holds the color entries then the symbol entries.
-   L = legend(opts.Parent, [cleg(:); sleg(:)], entries, ...
-      'Location', 'eastoutside', ...
-      'Orientation', opts.LegendOrientation);
+   % The family layout puts it above the axes in up to three columns that
+   % fit its tile, subplot, or figure. The legend uses the axes font.
+   L = legend(opts.Parent, [cleg(:); sleg(:)], entries);
+   legendlayout(L, opts.LegendOrientation);
 end
 
 %% LICENSE

@@ -16,8 +16,8 @@
 % dependencies are included with the toolbox.
 
 %% Requirements
-% The test suite passes on R2024b and R2025b. The toolbox needs R2021a
-% or later, for |arguments| blocks and |props.?Class| property validation.
+% The toolbox needs R2024b or later. The test suite passes on R2024b and
+% R2025b, and older releases are untested.
 % |groupstats.groupcompare| and |groupstats.scatter| need the Statistics
 % and Machine Learning Toolbox; the permutation test in |groupcompare| also
 % needs the Image Processing Toolbox.

@@ -86,6 +86,183 @@ classdef test_makedocs < matlab.unittest.TestCase
          testCase.verifyEmpty(dir(fullfile(testCase.OutputFolder, '*.html')));
       end
 
+      function testRepeatedImagesAreDropped(testCase)
+         % publish can snap a figure again, unchanged, in the cell after
+         % the one that draws it. The repeat is pixel-identical. The pass
+         % keeps the first of equal images, removes the later tag and its
+         % file, and keeps a different image and the order.
+
+         folder = testCase.OutputFolder;
+         mkdir(folder)
+         first = zeros(8, 8, 3, 'uint8');
+         first(:, :, 1) = 200;
+         other = first;
+         other(:, :, 3) = 200;
+         imwrite(first, fullfile(folder, "p_01.png"))
+         imwrite(first, fullfile(folder, "p_02.png"))
+         imwrite(other, fullfile(folder, "p_03.png"))
+         img = @(n) sprintf( ...
+            '<img vspace="5" hspace="5" src="p_%02d.png" alt="">', n);
+         page = fullfile(folder, "p.html");
+         writelines(["<html><body>", img(1), "<p>next</p>", img(2), img(3), ...
+            "</body></html>"], page)
+
+         droprepeatedimages = groupstats.internal.privatefunction( ...
+            'droprepeatedimages');
+         droprepeatedimages(page)
+
+         returned = string(regexp(fileread(page), 'src="([^"]+)"', ...
+            'tokens'));
+         expected = ["p_01.png", "p_03.png"];
+         testCase.verifyEqual(returned, expected);
+         returned = isfile(fullfile(folder, ...
+            ["p_01.png" "p_02.png" "p_03.png"]));
+         expected = [true false true];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testRepeatedReferenceKeepsTheFirstTagAndItsFile(testCase)
+         % Two tags can name one PNG. The pass removes the later tag only,
+         % and keeps the file that the first tag shows.
+
+         folder = testCase.OutputFolder;
+         mkdir(folder)
+         imwrite(uint8(magic(4)), fullfile(folder, "same.png"))
+         page = fullfile(folder, "p.html");
+         writePage(page, '<img src="same.png"><p>next</p><img src="same.png">')
+
+         dropRepeats(page)
+
+         returned = fileread(page, 'Encoding', 'UTF-8');
+         expected = '<img src="same.png"><p>next</p>';
+         testCase.verifyEqual(returned, expected);
+         testCase.verifyTrue(isfile(fullfile(folder, "same.png")));
+      end
+
+      function testAFileAKeptTagUsesIsNotDeleted(testCase)
+         % Tags x, y, x, where y.png equals x.png: both later tags go, and
+         % y.png goes. x.png stays, because the first tag still shows it.
+
+         folder = testCase.OutputFolder;
+         mkdir(folder)
+         pixels = uint8(magic(4));
+         imwrite(pixels, fullfile(folder, "x.png"))
+         imwrite(pixels, fullfile(folder, "y.png"))
+         page = fullfile(folder, "p.html");
+         writePage(page, ['<img src="x.png"><p>a</p><img src="y.png">' ...
+            '<p>b</p><img src="x.png">'])
+
+         dropRepeats(page)
+
+         returned = fileread(page, 'Encoding', 'UTF-8');
+         expected = '<img src="x.png"><p>a</p><p>b</p>';
+         testCase.verifyEqual(returned, expected);
+         returned = isfile(fullfile(folder, ["x.png" "y.png"]));
+         expected = [true false];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testIndexedImagesWithOtherColormapsAreKept(testCase)
+         % Equal indices show different colors under different colormaps,
+         % so the two images are different figures.
+
+         folder = testCase.OutputFolder;
+         mkdir(folder)
+         indices = uint8([0 1; 1 0]);
+         imwrite(indices, [1 0 0; 0 1 0], fullfile(folder, "red.png"))
+         imwrite(indices, [0 0 1; 0 1 0], fullfile(folder, "blue.png"))
+         page = fullfile(folder, "p.html");
+         expected = '<img src="red.png"><img src="blue.png">';
+         writePage(page, expected)
+
+         dropRepeats(page)
+
+         returned = fileread(page, 'Encoding', 'UTF-8');
+         testCase.verifyEqual(returned, expected);
+         testCase.verifyTrue(isfile(fullfile(folder, "blue.png")));
+      end
+
+      function testImagesWithOtherAlphaAreKept(testCase)
+         % Equal RGB values with different transparency look different, so
+         % the two images are different figures.
+
+         folder = testCase.OutputFolder;
+         mkdir(folder)
+         rgb = uint8(100 * ones(2, 2, 3));
+         imwrite(rgb, fullfile(folder, "opaque.png"), ...
+            'Alpha', uint8(255 * ones(2)))
+         imwrite(rgb, fullfile(folder, "clear.png"), 'Alpha', uint8(zeros(2)))
+         page = fullfile(folder, "p.html");
+         expected = '<img src="opaque.png"><img src="clear.png">';
+         writePage(page, expected)
+
+         dropRepeats(page)
+
+         returned = fileread(page, 'Encoding', 'UTF-8');
+         testCase.verifyEqual(returned, expected);
+         testCase.verifyTrue(isfile(fullfile(folder, "clear.png")));
+      end
+
+      function testAnImageOutsideThePageFolderIsKept(testCase)
+         % The pass cleans the published folder only. A tag that names a
+         % file in another folder stays, with its file, even when the image
+         % equals one beside the page.
+
+         folder = testCase.OutputFolder;
+         mkdir(folder)
+         pixels = uint8(magic(4));
+         imwrite(pixels, fullfile(folder, "local.png"))
+         imwrite(pixels, fullfile(fileparts(folder), "input.png"))
+         page = fullfile(folder, "p.html");
+         expected = '<img src="local.png"><img src="../input.png">';
+         writePage(page, expected)
+
+         dropRepeats(page)
+
+         returned = fileread(page, 'Encoding', 'UTF-8');
+         testCase.verifyEqual(returned, expected);
+         testCase.verifyTrue(isfile(fullfile(fileparts(folder), "input.png")));
+      end
+
+      function testAnUnreadableImageChangesNothing(testCase)
+         % The pass reads every image before it changes a file. When a
+         % later image cannot be read, it errors, and the page and every
+         % file stay as they were.
+
+         folder = testCase.OutputFolder;
+         mkdir(folder)
+         pixels = uint8(magic(4));
+         imwrite(pixels, fullfile(folder, "first.png"))
+         imwrite(pixels, fullfile(folder, "second.png"))
+         page = fullfile(folder, "p.html");
+         expected = ['<img src="first.png"><img src="second.png">' ...
+            '<img src="missing.png">'];
+         writePage(page, expected)
+
+         testCase.verifyError(@() dropRepeats(page), ?MException);
+
+         returned = fileread(page, 'Encoding', 'UTF-8');
+         testCase.verifyEqual(returned, expected);
+         testCase.verifyTrue(isfile(fullfile(folder, "second.png")));
+      end
+
+      function testDemoPageShowsEachFigureOnce(testCase)
+         testCase.assumeFalse(isMATLABReleaseOlderThan("R2025a"), ...
+            "export reads plain-text live scripts from R2025a.");
+         % demo_groupci calls figure three times: once in the notch
+         % section and twice in the error-bar section. When publish snaps
+         % a figure again in the next section, the page shows a fourth or
+         % fifth image.
+
+         groupstats.internal.makedocs(Parts = "demos", ...
+            Demos = "demo_groupci", OutputFolder = testCase.OutputFolder);
+
+         page = fileread(fullfile(testCase.OutputFolder, "demo_groupci.html"));
+         returned = numel(regexp(page, '<img\s', 'start'));
+         expected = 3;
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testDemosWritesWhitePngsNotBlack(testCase)
          testCase.assumeFalse(isMATLABReleaseOlderThan("R2025a"), ...
             "export reads plain-text live scripts from R2025a.");
@@ -166,6 +343,47 @@ classdef test_makedocs < matlab.unittest.TestCase
             expected = round(pixels / 2);
             testCase.verifyEqual(returned, expected);
          end
+      end
+
+      function testLiveScriptTextKeepsThePublishedProportion(testCase)
+         testCase.assumeFalse(isMATLABReleaseOlderThan("R2025a"), ...
+            "export reads plain-text live scripts from R2025a.");
+         % export draws a live-script figure 560 pixels wide at twice the
+         % headless print resolution. publish draws the default figure
+         % and its fonts at twice their size. Text keeps one proportion
+         % on both pages when the live-script axes font is the default
+         % font times 560 over the default figure width. A 700-pixel
+         % default figure with a 10-point font gives 8 points. An axes
+         % CreateFcn default records each font. demo_groupmap draws no
+         % figure, but publish can make an axes of its own at the publish
+         % scale, 20 points. Every other axes comes from a live script.
+
+         oldposition = get(groot, 'defaultFigurePosition');
+         oldfont = get(groot, 'defaultAxesFontSize');
+         oldcreate = get(groot, 'defaultAxesCreateFcn');
+         testCase.addTeardown(@() set(groot, ...
+            'defaultFigurePosition', oldposition, ...
+            'defaultAxesFontSize', oldfont, ...
+            'defaultAxesCreateFcn', oldcreate));
+         testCase.addTeardown(@() rmappdata(groot, 'test_makedocs_fonts'));
+         setappdata(groot, 'test_makedocs_fonts', [])
+         set(groot, 'defaultFigurePosition', [100 100 700 525], ...
+            'defaultAxesFontSize', 10, ...
+            'defaultAxesCreateFcn', @(ax, ~) setappdata(groot, ...
+            'test_makedocs_fonts', ...
+            [getappdata(groot, 'test_makedocs_fonts'), ax.FontSize]));
+         figuresbefore = findall(groot, 'Type', 'figure');
+
+         groupstats.internal.makedocs(Parts = "demos", ...
+            Demos = "demo_groupmap", OutputFolder = testCase.OutputFolder);
+
+         returned = setdiff(getappdata(groot, 'test_makedocs_fonts'), 20);
+         expected = 8;
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+
+         % The build closes the figures the live scripts opened.
+         returned = setdiff(findall(groot, 'Type', 'figure'), figuresbefore);
+         testCase.verifyEmpty(returned);
       end
 
       function testFitimagesAcceptsEveryAttributeForm(testCase)
@@ -413,4 +631,23 @@ function plantStalePage(folder, name)
    end
    fid = fopen(fullfile(folder, name), 'w');
    fclose(fid);
+end
+
+function dropRepeats(page)
+   %DROPREPEATS Run the private repeated-image pass on one page.
+
+   droprepeatedimages = groupstats.internal.privatefunction( ...
+      'droprepeatedimages');
+   droprepeatedimages(page)
+end
+
+function writePage(file, text)
+   %WRITEPAGE Write TEXT to FILE as UTF-8, with no line ending added.
+   %
+   % The repeated-image tests compare the page text after the pass, so the
+   % page must hold exactly the tags the test names.
+
+   fid = fopen(file, 'w', 'n', 'UTF-8');
+   closefile = onCleanup(@() fclose(fid));
+   fprintf(fid, '%s', text);
 end

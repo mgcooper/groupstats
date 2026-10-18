@@ -115,14 +115,25 @@ function pathadd(pathstring, pathappend)
    % subfolders within any of these.
    subpaths = strsplit(genpath(pathstring), pathsep);
 
-   % Specify additional ignore folders.
-   ignorepaths = {'.git', '.svn', 'CVS', '.', '..'};
-
-   % Remove ignored folders.
-   keep = @(folders, ignore) cellfun('isempty', (strfind(folders, ignore)));
-   for n = 1:numel(ignorepaths)
-      subpaths = subpaths(keep(subpaths, ignorepaths(n)));
+   % Remove a folder whose own name, below PATHSTRING, starts with a dot,
+   % such as .git and .svn, or is CVS. Only the names below PATHSTRING
+   % count, so a dot in a parent folder, such as a temporary folder, keeps
+   % the project on the path. genpath ends its list with a separator, which
+   % leaves one empty entry to drop. Windows accepts either separator;
+   % elsewhere a backslash is part of a folder name. PATHSTRING may come as
+   % a string, so its length is read as text.
+   seps = {filesep};
+   if ispc
+      seps = {'/', '\'};
    end
+   rootlength = strlength(pathstring);
+   keep = false(size(subpaths));
+   for n = 1:numel(subpaths)
+      names = strsplit(subpaths{n}(rootlength+1:end), seps);
+      keep(n) = ~isempty(subpaths{n}) ...
+         && ~any(startsWith(names, '.') | strcmp(names, 'CVS'));
+   end
+   subpaths = subpaths(keep);
 
    % Rebuild the path string
    pathstring = strcat(subpaths, pathsep);

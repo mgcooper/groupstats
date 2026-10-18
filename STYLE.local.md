@@ -11,8 +11,8 @@ merged into it).
   lowercase; name-value fields are PascalCase. The `arguments`-block
   structs are `opts` (options) and `props` (graphics pass-through).
 - Grouping variables: a scalar is `groupvar`, a vector is `groupvars`; the
-  cats charts and `scatter` use role-prefixed `xgroupvar`/`cgroupvar`/
-  `sgroupvar`. A grouping variable is positional, except the second
+  cats charts, `groupci`, and `scatter` use role-prefixed `xgroupvar`/
+  `cgroupvar`/`sgroupvar`. A grouping variable is positional, except the second
   grouping of `groupcompare`/`groupsamples`, the name-value `ConditionVar`.
   An optional grouping variable is declared `string {mustBeScalarOrEmpty}`
   with a `string.empty()` default. `dropcats` keeps `varnames` because it
@@ -21,10 +21,10 @@ merged into it).
 - `groupsummary`/`grouppercent` accept the standard positional inputs;
   rare or groupstats-only controls (`GroupSets`, `RowSelectVar`,
   `RowSelectMembers`) are PascalCase name-value options.
-- `SortBy` sets the sort direction on all four charts. Cats charts sort
-  `xgroupvar` only, so they have no `SortGroup`, but they have
-  `SortGroupMembers` (which `cgroupvar` members enter the sort). `scatter`
-  sorts either grouping, so it has both `SortGroup` and `SortVar`.
+- `SortBy` sets the sort direction on all five charts. Cats charts and
+  `groupheatmap` sort `xgroupvar` only, so they have no `SortGroup`, but
+  they have `SortGroupMembers` (which `cgroupvar` members enter the sort).
+  `scatter` sorts either grouping, so it has both `SortGroup` and `SortVar`.
 - Test classes are named `test_<subject>.m` in `tests/`, e.g.
   `test_dropcats.m`.
 - `toolbox/+groupstats/+test/` holds test runners, helpers, and fixtures,
@@ -42,7 +42,7 @@ merged into it).
 
 - Use `arguments` blocks for input validation in all new code, including
   `props.?Class`-style graphics pass-through. `inputParser` must not
-  appear in new code (two legacy internals still use it).
+  appear in new code.
 - Import namespace functions at the top of a function body
   (`import groupstats.groupselect`) instead of fully qualifying each call.
 - Route grouped-table preprocessing through `groupstats.prepareTableGroups`
@@ -64,3 +64,7 @@ as this:
 > This branch loops over the groupset members. The main branch below also
 > loops over groupsets. Note: multiple groupsets are untested here and are not
 > supported.
+
+## Other project conventions
+
+Agents must preserve the third-party files identified in AGENTS.local.md.

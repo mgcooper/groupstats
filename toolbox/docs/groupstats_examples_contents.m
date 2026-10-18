@@ -10,6 +10,8 @@
 % the box coordinate helpers.
 % * <demo_scatter.html demo_scatter> - grouped scatter charts.
 % * <demo_histogram.html demo_histogram> - grouped categorical histograms.
+% * <demo_groupheatmap.html demo_groupheatmap> - grouped heatmaps: each
+% method, ordering, a merge, and tiled layouts.
 
 %% Statistics
 % * <demo_groupsummary.html demo_groupsummary> - the table statistics
@@ -17,6 +19,8 @@
 % |prepareTableGroups|.
 % * <demo_groupcompare.html demo_groupcompare> - |groupcompare| and
 % |groupsamples|, one section per option.
+% * <demo_groupci.html demo_groupci> - |groupci| interval tables, the
+% |boxchartcats| notch, and |barchartcats| interval error bars.
 % * <demo_groupmap.html demo_groupmap> - |groupmap| with |groupbayes| per
 % group.
 % * <demo_groupbayes.html demo_groupbayes> - |groupbayes| on an event

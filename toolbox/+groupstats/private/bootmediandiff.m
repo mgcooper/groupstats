@@ -34,7 +34,7 @@ function results = bootmediandiff(data, opts)
    %  scalar nor one value per sample.
    %
    % Dependencies
-   %  quantile, from the Statistics and Machine Learning Toolbox.
+   %  This function needs only base MATLAB, which includes quantile.
    %
    % See also: groupstats.groupcompare, bootci
 

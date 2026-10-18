@@ -9,7 +9,9 @@
 %   groupstats.boxchartydata                       - Compute y coordinates of boxchart
 %   groupstats.dropcats                            - Remove categories that are not present in a table variable
 %   groupstats.groupbayes                          - Compute group-wise conditional (Bayesian) probabilities
+%   groupstats.groupci                             - Confidence interval of the center of each group
 %   groupstats.groupcompare                        - Compare each group member against a reference member
+%   groupstats.groupheatmap                        - Heatmap of a grouped summary, one cell per pairing
 %   groupstats.groupmap                            - Apply a function to groups within a table and recombine results
 %   groupstats.grouppercent                        - Compute group-wise frequencies (percents) including groupsets
 %   groupstats.groupsamples                        - Collect the data of each group member, reference first
@@ -44,10 +46,12 @@
 %   groupstats.internal/private.cat2double         - Convert categorical data to double
 %   groupstats.internal/private.cellmap            - Apply function to cell-array
 %   groupstats.internal/private.convertlivescripts - Convert live script to m-files
+%   groupstats.internal/private.droprepeatedimages - Remove a published image that repeats an earlier one
+%   groupstats.internal/private.fitimages          - Show each figure at its unscaled width, and no wider than the page
 %   groupstats.internal/private.getcontents        - Get the contents of a specified directory
 %   groupstats.internal/private.getRequiredFiles   - Retrieve requirements for MATLAB functions or toolboxes
 %   groupstats.internal/private.installpath        - Return toolbox installation path from user preferences group
-%   groupstats.internal/private.islogicalscalar
+%   groupstats.internal/private.islogicalscalar    - Return true if input X is a logical scalar
 %   groupstats.internal/private.isoctave           - Return true if the environment is Octave
 %   groupstats.internal/private.isscalartext       - Return true if input is scalar text
 %   groupstats.internal/private.listfiles          - List all files in folder and (optionally) subfolders
@@ -65,6 +69,9 @@
 %   +GROUPSTATS/+NAMELISTS
 %   groupstats.namelists.centralstatistic          - Valid values for a method option that summarizes a group
 %   groupstats.namelists.comparetest               - Tests groupcompare can run
+%   groupstats.namelists.errorbartype              - Valid values for barchartcats' ErrorBar option
+%   groupstats.namelists.fitpdf                    - Valid values for groupstats.histogram's FitPDF option
+%   groupstats.namelists.heatmapmethod             - Valid values for groupheatmap's Method option
 %   groupstats.namelists.legendorientation         - Valid values for a LegendOrientation option
 %   groupstats.namelists.legendvisibility          - Valid values for a Legend option
 %   groupstats.namelists.mergemethod               - Valid values for barchartcats' MergeMethod option
@@ -84,6 +91,7 @@
 %
 %   +GROUPSTATS/PRIVATE
 %   groupstats/private.allCustomProps              - Get shared and unique custom properties in a set of tables
+%   groupstats/private.axislabel                   - Axis label for a table variable, from the table's metadata
 %   groupstats/private.bootmediandiff              - Bootstrap the signed median difference against a reference
 %   groupstats/private.cat2double                  - Convert categorical data to double
 %   groupstats/private.colorspace                  - Convert a color image between color representations
@@ -94,12 +102,14 @@
 %   groupstats/private.distinguishable_colors      - : pick colors that are maximally perceptually distinct
 %   distinguishable_colors_LICENSE.txt
 %   groupstats/private.getMissingValue             - Return default missing value for class
+%   groupstats/private.groupcolors                 - Palette colors for N color groups, one row per group
 %   groupstats/private.groupmembers                - Return unique members of a table column (variable)
-%   groupstats/private.isnumericscalar
+%   groupstats/private.isnumericscalar             - Return true if input X is a numeric scalar
 %   groupstats/private.isoneof                     - Validate if x is one member of a menu
 %   groupstats/private.isvariable                  - Determine if VARNAME is a variable in table TBL
-%   groupstats/private.makevalidvarnames           - Make variable names valid
+%   groupstats/private.legendlayout                - Place a chart legend by the chart family's rule
 %   groupstats/private.mcallername                 - Get the name of the calling function on the stack
+%   groupstats/private.memberrows                  - Return each member of a group column and the rows it holds
 %   groupstats/private.mergeCustomProps            - Merge custom properties of tables
 %   groupstats/private.mergegroupmembers           - Pool named members of a categorical group column
 %   groupstats/private.naninterp1                  - 1-d interpolation over NaN values in vector V
@@ -107,11 +117,15 @@
 %   groupstats/private.permutest                   - Permutation test for dependent or independent measures of 1-D or 2-D data
 %   permutest_LICENSE.txt
 %   groupstats/private.reordergroupmembers         - Index a member list by a caller's partial order
+%   groupstats/private.restoregroupvarnames        - Give the group columns of a builtin result their names
+%   groupstats/private.sampleci                    - Center of one sample and its confidence interval
 %   groupstats/private.settablevarnames            - Set table variable names
 %   groupstats/private.stacktables                 - Vertically concatenate tables
+%   groupstats/private.tcritical                   - Two-sided critical value of the Student t distribution
 %   groupstats/private.validategroupsets           - Reject a scalar "none" as a GroupSets value
+%   groupstats/private.validategroupvarnames       - Reject a grouping variable named like a result column
 %   groupstats/private.validatemember              - Confirm every group member is an exact valid member
 %   groupstats/private.validaterowselect           - Require both halves of a row-selection request
 %   groupstats/private.withwarnoff                 - Temporarily disable warnings
 %
-%   This file was generated by updatecontents.m on 05 Sep 2026 at 23:45:16.
+%   This file was generated by updatecontents.m on 13 Oct 2026 at 21:16:22.

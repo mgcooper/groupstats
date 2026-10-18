@@ -18,6 +18,11 @@ Info = data.Info;
 rng(1)
 Info.runoff = 2 * Info.peak + randn(height(Info), 1);
 
+% A table variable's description and units label its axis. runoff is
+% synthetic like peak, so it has no unit either.
+Info.Properties.VariableDescriptions{'runoff'} = 'runoff';
+Info.Properties.VariableUnits{'runoff'} = 'unitless';
+
 %% Color by one group
 
 figure
@@ -81,15 +86,21 @@ title("Legend turned off")
 %% Plot into an existing axes
 %
 % Parent defaults to gca, so repeated calls reuse the current axes rather
-% than opening a figure each time.
+% than opening a figure each time. A legend drops columns until it fits
+% its tile. runoff rises with peak, so the upper left of each axes is
+% empty. Both legends move there in one column, so the two tiles match.
 
 figure
 tiles = tiledlayout(1, 2);
 
 ax1 = nexttile(tiles);
-groupstats.scatter(Info, "peak", "runoff", "scenario", Parent = ax1);
+[~, L1] = groupstats.scatter(Info, "peak", "runoff", "scenario", Parent = ax1);
+L1.Location = "northwest";
+L1.NumColumns = 1;
 title(ax1, "Colored by scenario")
 
 ax2 = nexttile(tiles);
-groupstats.scatter(Info, "peak", "runoff", "basin", Parent = ax2);
+[~, L2] = groupstats.scatter(Info, "peak", "runoff", "basin", Parent = ax2);
+L2.Location = "northwest";
+L2.NumColumns = 1;
 title(ax2, "Colored by basin")

@@ -31,6 +31,20 @@ figure
 groupstats.histogram(Info, "peak", "scenario");
 title("Peak values, one histogram per scenario")
 
+%% Overlay a fitted density
+%
+% Normalization="pdf" scales each histogram to a density. FitPDF="normal"
+% draws each group's fitted normal PDF over it, in the group's color: the
+% normal density of the group's sample mean and standard deviation. A
+% lower FaceAlpha keeps the overlapping groups visible. This section uses
+% every row of the fixture, because a fit to the rows above 12 would see
+% only the upper part of each distribution.
+
+figure
+groupstats.histogram(data.Info, "peak", "scenario", ...
+   Normalization = "pdf", FitPDF = "normal", FaceAlpha = 0.4);
+title("Peak density per scenario, with fitted normal densities")
+
 %% The built-in call shapes
 %
 % The built-in's array call shape for categorical data also works:
@@ -50,11 +64,14 @@ title("Wrapper on the same array, Jan through Mar kept")
 %% Restrict the categories
 %
 % GroupMembers keeps only the named members. On the categorical shape the
-% positional categories argument means the same thing.
+% positional categories argument means the same thing. This section keeps
+% the rows with a peak above 15, the largest floods. The three months then
+% hold 12, 11, and 6 rows.
 
+floods = Info(Info.peak > 15, :);
 figure
-groupstats.histogram(Info, "month", GroupMembers = ["Jan", "Feb", "Mar"]);
-title("Jan through Mar only")
+groupstats.histogram(floods, "month", GroupMembers = ["Jan", "Feb", "Mar"]);
+title("Peaks above 15, Jan through Mar only")
 
 %% Order the groups
 %

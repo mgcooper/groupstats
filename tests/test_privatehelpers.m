@@ -14,6 +14,7 @@ classdef test_privatehelpers < matlab.unittest.TestCase
       isvariable
       settablevarnames
       mergegroupmembers
+      tcritical
    end
 
    methods (TestClassSetup)
@@ -31,6 +32,8 @@ classdef test_privatehelpers < matlab.unittest.TestCase
             groupstats.internal.privatefunction('settablevarnames');
          testCase.mergegroupmembers = ...
             groupstats.internal.privatefunction('mergegroupmembers');
+         testCase.tcritical = ...
+            groupstats.internal.privatefunction('tcritical');
       end
    end
 
@@ -351,6 +354,128 @@ classdef test_privatehelpers < matlab.unittest.TestCase
 
          expected = {'col_1', 'col_2', 'col_3'};
          testCase.verifyEqual(returned.Properties.VariableNames, expected);
+      end
+
+      % ---- tcritical
+
+      function testTcriticalMatchesIndependentValues(testCase)
+         % Each value is t(1 - Alpha/2, nu), rounded to 10 decimals. None
+         % comes from MATLAB. For nu up to 1e4, a standard-library Python
+         % inversion of the regularized incomplete beta function computed
+         % them. For nu of 1e6 and 1e9, the normal value plus three series
+         % terms did. The values for nu = 1 and 2 match closed forms. The
+         % DesignSpec acceptance section and the groupci ExecPlan record
+         % them. nu = 9999 and 10000 sit on each side of the series branch.
+         % The rounding is below 1e-10, far inside the 1e-8 tolerance.
+
+         nu = [1; 2; 7; 30; 1000; 9999; 10000; 1e6; 1e9];
+         alpha = [0.05 0.10 0.01];
+         expected = [
+            12.7062047362  6.3137515147  63.6567411629
+             4.3026527297  2.9199855804   9.9248432009
+             2.3646242516  1.8945786051   3.4994832974
+             2.0422724563  1.6972608866   2.7499956536
+             1.9623390808  1.6463788173   2.5807546981
+             1.9602012636  1.6450060333   2.5763210959
+             1.9602012399  1.6450060180   2.5763210467
+             1.9599663568  1.6448551507   2.5758342201
+             1.9599639869  1.6448536285   2.5758293085
+            ];
+
+         returned = zeros(size(expected));
+         for i = 1:numel(nu)
+            for j = 1:numel(alpha)
+               returned(i, j) = testCase.tcritical(alpha(j), nu(i));
+            end
+         end
+
+         testCase.verifyEqual(returned, expected, 'RelTol', 1e-8);
+      end
+
+      function testTcriticalReportedTailCases(testCase)
+         % The four cases of the matfunclib-6be assessment. Near Alpha 1,
+         % 1/X - 1 cancels to 0; for tiny Alpha, X underflows or 1/X
+         % overflows. Each expected value is the exact identity the
+         % assessment's numerical-probe.log records: cot or tan for
+         % nu = 1, and the closed form for nu = 2.
+
+         alpha = [1 - 1e-10, 1 - 2^-53, 1e-200, 1e-310];
+         nu = [1, 1, 1, 2];
+         expected = [1.5707964567631673e-10, 1.7439342490043159e-16, ...
+            6.3661977236758136e199, 1.0000000000000014e155];
+
+         returned = arrayfun(testCase.tcritical, alpha, nu);
+
+         testCase.verifyEqual(returned, expected, 'RelTol', 1e-12);
+      end
+
+      function testTcriticalMatchesExactLowDegreeIdentities(testCase)
+         % One and two degrees of freedom have closed forms, independent
+         % of the inverse beta function. The "groupci" test data holds
+         % them for Alpha from 1e-310 to 1 - 2^-53. At 1e-310 and nu = 1,
+         % the true value exceeds the double range, so both sides are Inf.
+
+         [data, expected] = groupstats.test.generateTestData("groupci");
+
+         returned = arrayfun(@(a) testCase.tcritical(a, 1), data.alpha);
+         testCase.verifyEqual(returned, expected.t1, 'RelTol', 1e-12);
+         returned = arrayfun(@(a) testCase.tcritical(a, 2), data.alpha);
+         testCase.verifyEqual(returned, expected.t2, 'RelTol', 1e-12);
+      end
+
+      function testTcriticalTailsMatchTheLogSpaceOracle(testCase)
+         % Fractional degrees of freedom, and both sides of the 1e4 switch
+         % to the series, at extreme Alpha. A standard-library Python
+         % oracle computed each value: a log-space continued fraction for
+         % the incomplete beta, inverted by bisection on log t, so neither
+         % tail is formed by subtraction. It matches the nu = 1 and nu = 2
+         % identities to 2.3e-13. The groupstats-2rk ExecPlan retains it
+         % (t-quantile-tail-oracle.py). The series side keeps its 1e-8
+         % tolerance; the beta side holds 1e-10.
+
+         cases = [
+            1e-310      1.5    3.845737955305558e+206
+            1 - 1e-10   1.5    1.4674162291148882e-10
+            1e-300      7.3    2.837632144981013e+41
+            1 - 2^-53   7.3    1.439785329482205e-16
+            1e-310      1000   56.02916554748603
+            1 - 1e-10   1000   1.2536276086925266e-10
+            1e-310      9999   39.060636351262225
+            1e-300      9999   38.37723095969452
+            1 - 1e-10   9999   1.253345577396495e-10
+            ];
+         returned = arrayfun(testCase.tcritical, cases(:, 1), cases(:, 2));
+         testCase.verifyEqual(returned, cases(:, 3), 'RelTol', 1e-10);
+
+         cases = [
+            1e-310      10000  39.06049429290715
+            1 - 1e-10   10000  1.2533455742628126e-10
+            ];
+         returned = arrayfun(testCase.tcritical, cases(:, 1), cases(:, 2));
+         testCase.verifyEqual(returned, cases(:, 3), 'RelTol', 1e-8);
+      end
+
+      function testTcriticalTailResiduals(testCase)
+         % The two-sided tail of the returned t, from the forward
+         % incomplete beta, gives back Alpha. Below 1/2 the tail is
+         % I(nu / (nu + t^2); nu/2, 1/2). Above 1/2 the complement
+         % I(t^2 / (nu + t^2); 1/2, nu/2) gives 1 - Alpha, which is exact
+         % in double there. Alpha stays above 1e-280, where the helper
+         % inverts rather than calls betainc itself.
+
+         for nu = [3, 30, 300, 3000, 9999.5]
+            for alpha = [1e-250, 1e-6, 0.3, 1 - 1e-12]
+               t = testCase.tcritical(alpha, nu);
+               if alpha <= 1 / 2
+                  returned = betainc(nu / (nu + t^2), nu / 2, 1 / 2) / alpha;
+               else
+                  returned = betainc(t^2 / (nu + t^2), 1 / 2, nu / 2) ...
+                     / (1 - alpha);
+               end
+               testCase.verifyEqual(returned, 1, 'RelTol', 1e-10, ...
+                  sprintf('Alpha %g, nu %g', alpha, nu));
+            end
+         end
       end
    end
 end

@@ -29,6 +29,8 @@
 % rank-sum, sign-rank, or permutation test, with an optional bootstrapped
 % median difference.
 % * |groupstats.groupsamples| - the data of each group, reference first.
+% * |groupstats.groupci| - the confidence interval of each group's mean or
+% median, one table row per pairing of the cats-chart groupings.
 % * |groupstats.groupselect| - select the rows matching group members.
 % * |groupstats.groupmap| - apply a function to each group and recombine
 % the results.
@@ -38,12 +40,14 @@
 
 %% Charts for grouped data
 % * |groupstats.barchartcats| - bar chart grouped along x and colored
-% within groups.
+% within groups, with spread or confidence-interval error bars.
 % * |groupstats.boxchartcats| - box chart grouped along x and colored
 % within groups.
 % * |groupstats.scatter| - scatter chart colored and sized by group.
 % * |groupstats.histogram| - histogram of a categorical variable, with
 % grouping.
+% * |groupstats.groupheatmap| - heatmap with one cell per pairing of two
+% groupings, colored by a summary of the data.
 % * |groupstats.boxchartxdata| and |groupstats.boxchartydata| - the box
 % coordinates, for annotating a box chart.
 
@@ -66,4 +70,5 @@
 % The package is self-contained: every helper it calls ships inside it.
 % |groupstats.groupcompare| and |groupstats.scatter| need the Statistics
 % and Machine Learning Toolbox; the permutation test of |groupcompare| also
-% needs the Image Processing Toolbox. The rest needs MATLAB R2021a or later.
+% needs the Image Processing Toolbox. The rest needs only MATLAB R2024b or
+% later, the oldest release the test suite runs on.

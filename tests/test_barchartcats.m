@@ -171,6 +171,32 @@ classdef test_barchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected.std_Value, 'AbsTol', 1e-12);
       end
 
+      function testMedianWhiskerSpansTheQuartiles(testCase)
+         % With Method="median", each whisker runs from the lower quartile
+         % to the upper quartile of its bar's rows, so skewed data gives
+         % arms of different lengths. The hand values put the i-th of n
+         % sorted values at quantile (i - 0.5)/n and interpolate linearly
+         % between them. The chart drops NaN values first.
+         %
+         %   a: [1 2 3 10]        Q1 1.5, median 2.5, Q3 6.5
+         %   b: [2 4 4 5 20]      Q1 3.5, median 4,   Q3 8.75
+         %   c: [NaN 1 2 3 4]     Q1 1.5, median 2.5, Q3 3.5
+
+         y = [1; 2; 3; 10; 2; 4; 4; 5; 20; NaN; 1; 2; 3; 4];
+         x = categorical(repelem(["a"; "b"; "c"], [4; 5; 5]));
+         tbl = table(x, y);
+
+         [H, ~, ax] = groupstats.barchartcats(tbl, "y", "x", ...
+            Method = "median", PlotError = true);
+
+         whisker = findobj(ax, 'Type', 'ErrorBar');
+         returned = [H.YData(:).'; ...
+            H.YData(:).' - whisker.YNegativeDelta(:).'; ...
+            H.YData(:).' + whisker.YPositiveDelta(:).'];
+         expected = [2.5, 4, 2.5; 1.5, 3.5, 1.5; 6.5, 8.75, 3.5];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
       function testPlotErrorRejectsSeveralSeries(testCase)
          % A categorical x-axis places every whisker on the tick center.
          % With more than one bar per tick the whiskers would not line up
@@ -200,6 +226,206 @@ classdef test_barchartcats < matlab.unittest.TestCase
          returned = ishold(ax);
          expected = false;
          testCase.verifyEqual(returned, expected);
+      end
+
+      % ---- ErrorBar="ci"
+      %
+      % The expected bounds are hand values. Each fixture pairing holds two
+      % values two apart, so s / sqrt(N) = 1. The mean interval is then the
+      % mean plus or minus t(0.975, 1) = 12.7062047362. The median notch is
+      % the median plus or minus 1.57 * 2 / sqrt(2) = 2.22031529. Each Grp
+      % member holds four consecutive values, with s = sqrt(5/3). Its mean
+      % half-width is t(0.975, 3) * sqrt(5/3) / 2 = 2.05426026. An
+      % independent table gives t(0.975, 3) = 3.1824463053.
+
+      function testCiWhiskerTipsAreTheMeanInterval(testCase)
+         % CGroupMembers="x" leaves one series, with pairings a-x {1, 3},
+         % b-x {5, 7}, and c-x {9, 11}.
+
+         args = {"Value", "Grp", "Sub", "CGroupMembers", "x"};
+         groupstats.barchartcats(testCase.Tbl, args{:}, ...
+            PlotError = true, ErrorBar = "ci");
+
+         returned = whiskerTips(gca);
+         ci = groupstats.groupci(testCase.Tbl, args{:});
+         testCase.verifyEqual(returned, [ci.CILower ci.CIUpper], ...
+            'AbsTol', 1e-12);
+         testCase.verifyEqual(returned, ...
+            [2; 6; 10] + [-12.70620474 12.70620474], 'AbsTol', 1e-6);
+      end
+
+      function testCiWhiskerTipsAreTheMedianNotch(testCase)
+         % The notch boxchartcats draws for the same pairings.
+
+         args = {"Value", "Grp", "Sub", "CGroupMembers", "x", ...
+            "Method", "median"};
+         groupstats.barchartcats(testCase.Tbl, args{:}, ...
+            PlotError = true, ErrorBar = "ci");
+
+         returned = whiskerTips(gca);
+         ci = groupstats.groupci(testCase.Tbl, args{:});
+         testCase.verifyEqual(returned, [ci.CILower ci.CIUpper], ...
+            'AbsTol', 1e-12);
+         testCase.verifyEqual(returned, ...
+            [2; 6; 10] + [-2.22031529 2.22031529], 'AbsTol', 1e-6);
+      end
+
+      function testCiWhiskerAlphaSetsTheLevel(testCase)
+         % At Alpha 0.10 the t value is t(0.95, 1) = 6.3137515147.
+
+         args = {"Value", "Grp", "Sub", "CGroupMembers", "x", ...
+            "Alpha", 0.10};
+         groupstats.barchartcats(testCase.Tbl, args{:}, ...
+            PlotError = true, ErrorBar = "ci");
+
+         returned = whiskerTips(gca);
+         ci = groupstats.groupci(testCase.Tbl, args{:});
+         testCase.verifyEqual(returned, [ci.CILower ci.CIUpper], ...
+            'AbsTol', 1e-12);
+         testCase.verifyEqual(returned, ...
+            [2; 6; 10] + [-6.3137515147 6.3137515147], 'AbsTol', 1e-6);
+      end
+
+      function testCiWhiskerAtExtremeAlpha(testCase)
+         % Each bar of [-1 1] and [-1 0 1] has height 0, so its whisker
+         % tips are minus and plus the exact half-width of the "groupci"
+         % test data. Alpha 1e-310 is left out: its [-1 1] whisker is
+         % infinite, which the groupci test covers.
+
+         [data, expected] = groupstats.test.generateTestData("groupci");
+
+         for n = 2:numel(data.alpha)
+            cla
+            groupstats.barchartcats(data.tbl, "Value", "Grp", ...
+               PlotError = true, ErrorBar = "ci", Alpha = data.alpha(n));
+
+            halfwidth = expected.halfwidth(:, n);
+            testCase.verifyEqual(whiskerTips(gca), ...
+               [-halfwidth halfwidth], 'RelTol', 1e-12, ...
+               sprintf('Alpha %g', data.alpha(n)));
+         end
+      end
+
+      function testCiWhiskerOfAPooledMerge(testCase)
+         % Merging x and y pools each Grp member's four values into one
+         % bar: a {1:4}, b {5:8}, c {9:12}.
+
+         args = {"Value", "Grp", "Sub", "MergeGroupMembers", ["x", "y"]};
+         groupstats.barchartcats(testCase.Tbl, args{:}, ...
+            PlotError = true, ErrorBar = "ci");
+
+         returned = whiskerTips(gca);
+         ci = groupstats.groupci(testCase.Tbl, args{:});
+         testCase.verifyEqual(returned, [ci.CILower ci.CIUpper], ...
+            'AbsTol', 1e-12);
+         testCase.verifyEqual(returned, ...
+            [2.5; 6.5; 10.5] + [-2.05426026 2.05426026], 'AbsTol', 1e-6);
+      end
+
+      function testCiWhiskerWithRowSelection(testCase)
+         % Set p holds rows 1:6, so Grp a keeps 1:4 and Grp b keeps 5 and
+         % 6. Grp b has s = sqrt(1/2) and a half-width of 12.7062047362 / 2.
+
+         args = {"Value", "Grp", "RowSelectVar", "Set", ...
+            "RowSelectMembers", "p"};
+         groupstats.barchartcats(testCase.Tbl, args{:}, ...
+            PlotError = true, ErrorBar = "ci");
+
+         returned = whiskerTips(gca);
+         ci = groupstats.groupci(testCase.Tbl, args{:});
+         testCase.verifyEqual(returned, [ci.CILower ci.CIUpper], ...
+            'AbsTol', 1e-12);
+         testCase.verifyEqual(returned, ...
+            [2.5 + [-2.05426026 2.05426026]; ...
+            5.5 + [-6.35310237 6.35310237]], 'AbsTol', 1e-6);
+      end
+
+      function testCiWhiskerSkipsABarWithOneValue(testCase)
+         % One value has no interval, so its bar gets no whisker. The other
+         % bar keeps its {1, 3} interval.
+
+         tbl = table(categorical(["a"; "a"; "b"]), [1; 3; 5], ...
+            'VariableNames', {'Grp', 'Value'});
+
+         groupstats.barchartcats(tbl, "Value", "Grp", ...
+            PlotError = true, ErrorBar = "ci");
+
+         returned = whiskerTips(gca);
+         expected = [-10.70620474 14.70620474; NaN NaN];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-6);
+      end
+
+      function testSpreadWhiskerIsTheDefault(testCase)
+         % ErrorBar="spread", the default, draws the standard deviation of
+         % each group as the whisker, with or without the option named.
+
+         explicit = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(explicit, 'figure'));
+         groupstats.barchartcats(testCase.Tbl, "Value", "Grp", ...
+            PlotError = true, ErrorBar = "spread", Parent = explicit);
+         spread = findobj(explicit, 'Type', 'errorbar');
+         implicit = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(implicit, 'figure'));
+         groupstats.barchartcats(testCase.Tbl, "Value", "Grp", ...
+            PlotError = true, Parent = implicit);
+         default = findobj(implicit, 'Type', 'errorbar');
+
+         returned = spread.YNegativeDelta(:);
+         expected = std(reshape(testCase.Tbl.Value, 4, 3))';
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+         testCase.verifyEqual(default.YNegativeDelta(:), expected, ...
+            'AbsTol', 1e-12);
+      end
+
+      function testCiWithoutPlotErrorErrors(testCase)
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", ErrorBar = "ci"), ...
+            'groupstats:barchartcats:errorBarWithoutPlotError');
+      end
+
+      function testAlphaWithoutTheMeanIntervalErrors(testCase)
+         % Alpha sets the level of the mean interval alone.
+
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", PlotError = true, Alpha = 0.1), ...
+            'groupstats:barchartcats:alphaWithoutMeanCI');
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", PlotError = true, ErrorBar = "ci", ...
+            Method = "median", Alpha = 0.1), ...
+            'groupstats:barchartcats:alphaWithoutMeanCI');
+      end
+
+      function testCiKeepsTheOneSeriesAndMemberMeanErrors(testCase)
+         % The interval whiskers have the same layout limits as the spread
+         % whiskers.
+
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", "Sub", PlotError = true, ErrorBar = "ci"), ...
+            'groupstats:barchartcats:plotErrorNeedsOneSeries');
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", "Sub", MergeGroupMembers = ["x", "y"], ...
+            MergeMethod = "membermean", PlotError = true, ...
+            ErrorBar = "ci"), ...
+            'groupstats:barchartcats:plotErrorNeedsUnmergedGroups');
+      end
+
+      function testMethodTakesOneValue(testCase)
+         % Each bar is one statistic, so a list of methods is rejected.
+
+         testCase.verifyError(@() groupstats.barchartcats(testCase.Tbl, ...
+            "Value", "Grp", Method = ["mean", "median"]), ...
+            'MATLAB:validation:IncompatibleSize');
+      end
+
+      function testNeedsNoStatisticsToolbox(testCase)
+         % The interval whiskers use the base-MATLAB t quantile.
+
+         [~, products] = matlab.codetools.requiredFilesAndProducts( ...
+            which('groupstats.barchartcats'));
+
+         returned = string({products.Name});
+         testCase.verifyFalse(ismember( ...
+            "Statistics and Machine Learning Toolbox", returned));
       end
 
       function testCGroupOrderPairsEachLabelWithItsOwnData(testCase)
@@ -800,20 +1026,21 @@ classdef test_barchartcats < matlab.unittest.TestCase
          % formatting go into Parent, and the current axes stays empty and
          % unheld. This chart has no cgroupvar, so ShadeGroups now
          % defaults off; pass it explicitly to keep exercising the
-         % shading's Parent routing.
+         % shading's Parent routing. A chart with no cgroupvar draws no
+         % legend, so a second chart with one checks the legend.
 
          target = axes(figure('Visible', 'off'));
          testCase.addTeardown(@close, ancestor(target, 'figure'));
          other = axes(figure('Visible', 'off'));
          testCase.addTeardown(@close, ancestor(other, 'figure'));
 
-         [H, L, ax] = groupstats.barchartcats(testCase.Tbl, "Value", ...
+         [H, ~, ax] = groupstats.barchartcats(testCase.Tbl, "Value", ...
             "Grp", Parent = target, PlotError = true, ShadeGroups = true);
 
-         returned = {ax; H.Parent; L.Axes; ...
+         returned = {ax; H.Parent; ...
             findobj(target, 'Type', 'ErrorBar').Parent; ...
             findobj(target, 'Type', 'Patch').Parent};
-         expected = repmat({target}, 5, 1);
+         expected = repmat({target}, 4, 1);
          testCase.verifyEqual(returned, expected);
 
          returned = [string(target.YGrid); string(target.Box)];
@@ -824,6 +1051,13 @@ classdef test_barchartcats < matlab.unittest.TestCase
             isequal(gca, other)];
          expected = [0; false; true];
          testCase.verifyEqual(returned, expected);
+
+         % The second chart comes last, because its axes become current.
+         legendtarget = axes(figure('Visible', 'off'));
+         testCase.addTeardown(@close, ancestor(legendtarget, 'figure'));
+         [~, L] = groupstats.barchartcats(testCase.Tbl, "Value", "Grp", ...
+            "Sub", Parent = legendtarget);
+         testCase.verifyEqual(L.Axes, legendtarget);
       end
 
 
@@ -893,7 +1127,113 @@ classdef test_barchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+
+      % ---- Family legend and axis labels (groupstats-ctg)
+      %
+      % The family legend sits above the axes in up to three columns. It
+      % sets no font size of its own, so it follows the axes font. MATLAB
+      % draws a legend at 0.9 of its axes font. Axis labels come from the
+      % table's description and units of the variable, else its name.
+
+      function testLegendSitsAboveTheAxesInUpToThreeColumns(testCase)
+         % Four basins give four entries, so three columns.
+
+         data = groupstats.test.generateTestData('info');
+         [~, L, ax] = groupstats.barchartcats(data.Info, "peak", ...
+            "month", "basin");
+
+         testCase.verifyEqual(string(L.Location), "northoutside");
+         testCase.verifyEqual(L.NumColumns, 3);
+         testCase.verifyEqual(L.FontSize, 0.9 * ax.FontSize, ...
+            'RelTol', 1e-12);
+      end
+
+      function testLegendDropsColumnsToFitANarrowFigure(testCase)
+         % Three long scenario names in three columns are wider than a
+         % 300-pixel figure, so the legend drops columns until it fits
+         % inside the figure.
+
+         data = groupstats.test.generateTestData('info');
+         f = figure('Visible', 'off', 'Position', [100 100 300 300]);
+         testCase.addTeardown(@() close(f));
+         [~, L] = groupstats.barchartcats(data.Info, "peak", "month", ...
+            "scenario", Parent = axes(f));
+
+         testCase.verifyLessThan(L.NumColumns, 3);
+         testCase.verifyLessThanOrEqual(L.Position(3), 1);
+      end
+
+      function testHorizontalLegendIsOneRow(testCase)
+         % A horizontal legend puts all four basins in one row.
+
+         data = groupstats.test.generateTestData('info');
+         [~, L] = groupstats.barchartcats(data.Info, "peak", "month", ...
+            "basin", LegendOrientation = "horizontal");
+
+         testCase.verifyEqual(L.NumColumns, 4);
+      end
+
+      function testLegendOffLeavesTheAxesTheFullFigure(testCase)
+         % With the legend off, and with no color group, no legend exists,
+         % hidden or not, so the axes keep the space a chart without a
+         % legend gets. A plain plot in the same figure size sets that
+         % space.
+
+         data = groupstats.test.generateTestData('info');
+         f = figure('Visible', 'off', 'Position', [100 100 560 420]);
+         testCase.addTeardown(@() close(f));
+         plain = axes(f);
+         plot(plain, 1:3)
+         drawnow
+         expected = plain.Position;
+
+         % Legend off, with a color group.
+         clf(f)
+         [~, L, ax] = groupstats.barchartcats(data.Info, "peak", "month", ...
+            "scenario", Legend = "off", Parent = axes(f));
+         drawnow
+         testCase.verifyEmpty(L);
+         testCase.verifyEmpty(findall(f, 'Type', 'legend'));
+         testCase.verifyEqual(ax.Position, expected, 'AbsTol', 1e-6);
+
+         % No color group, which turns the legend off.
+         clf(f)
+         [~, L, ax] = groupstats.barchartcats(data.Info, "peak", "month", ...
+            Parent = axes(f));
+         drawnow
+         testCase.verifyEmpty(L);
+         testCase.verifyEmpty(findall(f, 'Type', 'legend'));
+         testCase.verifyEqual(ax.Position, expected, 'AbsTol', 1e-6);
+      end
+
+      function testYLabelNamesTheMethodAndTheVariable(testCase)
+         % Without metadata the label is the method and the variable name.
+         % A description and units replace the name.
+
+         [~, ~, ax] = groupstats.barchartcats(testCase.Tbl, "Value", "Grp");
+         testCase.verifyEqual(string(ax.YLabel.String), "Mean Value");
+
+         tbl = testCase.Tbl;
+         tbl.Properties.VariableDescriptions{'Value'} = 'value of things';
+         tbl.Properties.VariableUnits{'Value'} = 'kg';
+         cla
+         [~, ~, ax] = groupstats.barchartcats(tbl, "Value", "Grp", ...
+            Method = "median");
+         testCase.verifyEqual(string(ax.YLabel.String), ...
+            "Median value of things (kg)");
+      end
+
    end
+end
+
+function tips = whiskerTips(ax)
+   %WHISKERTIPS The lower and upper tip of each drawn whisker, one row per bar.
+   %
+   % errorbar draws YData minus YNegativeDelta to YData plus YPositiveDelta.
+   % A NaN delta draws no whisker, so its tips read NaN.
+
+   E = findobj(ax, 'Type', 'errorbar');
+   tips = [E.YData(:) - E.YNegativeDelta(:), E.YData(:) + E.YPositiveDelta(:)];
 end
 
 function fourBarOutputs(tbl)

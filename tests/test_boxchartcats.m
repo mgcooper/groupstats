@@ -238,6 +238,85 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+      function testLegendOffReturnsAnEmptyPlaceholder(testCase)
+         % With the legend off, the chart makes no legend, and L is the
+         % empty placeholder the other charts return. A deleted legend
+         % handle is not empty, so a caller's isempty(L) check would read
+         % it as a legend. The axes fill the figure as a plain box chart's
+         % do.
+
+         [~, L, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub", Legend = "off");
+
+         testCase.verifyClass(L, 'matlab.graphics.GraphicsPlaceholder');
+         testCase.verifyEmpty(L);
+         testCase.verifyEmpty(findobj(ancestor(ax, 'figure'), ...
+            'Type', 'Legend'));
+
+         % A plain box chart with no legend sets the expected axes size.
+         plain = axes(figure);
+         testCase.addTeardown(@close, ancestor(plain, 'figure'));
+         boxchart(plain, testCase.Tbl.Grp, testCase.Tbl.Value, ...
+            'GroupByColor', testCase.Tbl.Sub);
+
+         returned = ax.InnerPosition;
+         expected = plain.InnerPosition;
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-9);
+      end
+
+      function testBoxesFollowThePaletteAndWrap(testCase)
+         % Every chart in the family colors its k-th color group with the
+         % k-th defaultcolors row and starts over after the last row. The
+         % outliers and the mean marker of each box take its color, so
+         % they match past the seven colors of the axes color order.
+
+         defaultcolors = groupstats.internal.privatefunction( ...
+            'defaultcolors');
+         palette = defaultcolors();
+         ngroups = size(palette, 1) + 1;
+
+         % Four rows per color group, and one group more than the palette
+         % holds, so the last group wraps to the first color.
+         cg = categorical(repelem(string(1:ngroups)', 4, 1), ...
+            string(1:ngroups));
+         xg = categorical(repmat("x", 4 * ngroups, 1));
+         tbl = table(xg, cg, repmat((1:4)', ngroups, 1), ...
+            'VariableNames', {'xg', 'cg', 'y'});
+
+         [H, ~, ax] = groupstats.boxchartcats(tbl, "y", "xg", "cg", ...
+            PlotMeans = true);
+
+         expected = palette([1:end, 1], :);
+         testCase.verifyEqual(vertcat(H.BoxFaceColor), expected, ...
+            'AbsTol', 1e-12);
+         testCase.verifyEqual(vertcat(H.MarkerColor), expected, ...
+            'AbsTol', 1e-12);
+
+         % The chart draws one Scatter of means per color group. findobj
+         % lists the newest first, so flip it into drawing order.
+         means = flip(findobj(ax, 'Type', 'Scatter'));
+         testCase.verifyEqual(vertcat(means.CData), expected, ...
+            'AbsTol', 1e-12);
+      end
+
+      function testACallerBoxColorAlsoColorsOutliersAndMeans(testCase)
+         % A BoxFaceColor the caller names wins over the palette. The
+         % outliers and the mean markers take the color of the drawn box.
+
+         red = [1 0 0];
+         [H, ~, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp", "Sub", BoxFaceColor = red, PlotMeans = true);
+
+         expected = repmat(red, numel(H), 1);
+         testCase.verifyEqual(vertcat(H.BoxFaceColor), expected);
+         testCase.verifyEqual(vertcat(H.MarkerColor), expected);
+
+         means = findobj(ax, 'Type', 'Scatter');
+         returned = vertcat(means.CData);
+         expected = repmat(red, numel(means), 1);
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testSortByAscendOrdersTheXGroups(testCase)
          % SortBy orders the x-groups by their group mean. The branch that
          % would have done this was commented out.
@@ -420,7 +499,8 @@ classdef test_boxchartcats < matlab.unittest.TestCase
 
       function testHiddenOutliersFitTheYLimitsToTheWhiskers(testCase)
          % With MarkerStyle "none" boxchart draws no outlier points, so the
-         % y limits follow the whiskers rather than the data range.
+         % y limits follow the whiskers, boxes, and notches rather than the
+         % data range.
 
          tbl = outlierTable();
 
@@ -444,6 +524,61 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          bounds = ylim;
          testCase.verifyLessThanOrEqual(bounds(1), min(y.whiskers));
          testCase.verifyGreaterThanOrEqual(bounds(2), max(y.whiskers));
+      end
+
+      function testHiddenOutliersKeepTheBoxTopAndTheNotch(testCase)
+         % For [1 2 3 4 100] the box top is Q3 = 4 + 0.25 * 96 = 28, above
+         % every inside value. The notch is the median 3 plus or minus
+         % 1.57 * 26.25 / sqrt(5), and its lower end lies below the lowest
+         % value. Limits fit to the inside values alone, [1 4], cut off both.
+         % The limits must hold the box and the notch and leave out the
+         % hidden outlier 100.
+
+         tbl = table(categorical(repmat("a", 5, 1)), [1; 2; 3; 4; 100], ...
+            'VariableNames', {'Grp', 'Value'});
+
+         groupstats.boxchartcats(tbl, "Value", "Grp", MarkerStyle = "none");
+
+         notchlow = 3 - 1.57 * 26.25 / sqrt(5);
+         bounds = ylim;
+         testCase.verifyLessThanOrEqual(bounds(1), notchlow);
+         testCase.verifyGreaterThanOrEqual(bounds(2), 28);
+         testCase.verifyLessThan(bounds(2), 100);
+      end
+
+      function testHiddenOutliersKeepANotchBeyondTheWhiskers(testCase)
+         % For 2.^(0:7) the median is 12, Q1 = 2 + 0.5 * 2 = 3, and
+         % Q3 = 32 + 0.5 * 32 = 48. The notch reaches down to
+         % 12 - 1.57 * 45 / sqrt(8), about -12.98, far below the lower
+         % whisker tip at 1. The upper fence is 48 + 1.5 * 45 = 115.5, so
+         % 128 is a hidden outlier and the upper tip is 64.
+
+         tbl = table(categorical(repmat("a", 8, 1)), 2 .^ (0:7)', ...
+            'VariableNames', {'Grp', 'Value'});
+
+         groupstats.boxchartcats(tbl, "Value", "Grp", MarkerStyle = "none");
+
+         notchlow = 12 - 1.57 * 45 / sqrt(8);
+         bounds = ylim;
+         testCase.verifyLessThanOrEqual(bounds(1), notchlow);
+         testCase.verifyGreaterThanOrEqual(bounds(2), 64);
+         testCase.verifyLessThan(bounds(2), 128);
+      end
+
+      function testHiddenOutliersKeepTheNotchesOfTwoValueBoxes(testCase)
+         % Every fixture pairing holds two values two apart, and its box
+         % spans them. Each notch is the median plus or minus
+         % 1.57 * 2 / sqrt(2). Pairing a-x holds 1 and 3, with the
+         % lowest notch end, 2 - 1.57 * sqrt(2). Pairing c-y holds 10 and
+         % 12, with the highest, 11 + 1.57 * sqrt(2). Both lie past every
+         % whisker tip.
+
+         groupstats.boxchartcats(testCase.Tbl, "Value", "Grp", "Sub", ...
+            MarkerStyle = "none");
+
+         bounds = ylim;
+         testCase.verifyLessThanOrEqual(bounds(1), 2 - 1.57 * sqrt(2));
+         testCase.verifyGreaterThanOrEqual(bounds(2), 11 + 1.57 * sqrt(2));
       end
 
       function testConstantDataDoesNotBreakTheYLimits(testCase)
@@ -643,6 +778,43 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          testCase.verifyEqual(returned, expected);
       end
 
+
+      % ---- Family legend and axis labels (groupstats-ctg)
+      %
+      % The family legend sits above the axes in up to three columns. It
+      % sets no font size of its own, so it follows the axes font. MATLAB
+      % draws a legend at 0.9 of its axes font. Axis labels come from the
+      % table's description and units of the variable, else its name.
+
+      function testLegendSitsAboveTheAxesInUpToThreeColumns(testCase)
+         % Four basins give four entries, so three columns.
+
+         data = groupstats.test.generateTestData('info');
+         [~, L, ax] = groupstats.boxchartcats(data.Info, "peak", ...
+            "month", "basin");
+
+         testCase.verifyEqual(string(L.Location), "northoutside");
+         testCase.verifyEqual(L.NumColumns, 3);
+         testCase.verifyEqual(L.FontSize, 0.9 * ax.FontSize, ...
+            'RelTol', 1e-12);
+      end
+
+      function testYLabelComesFromTheTableMetadata(testCase)
+         % The boxes show the values themselves, so the label is the
+         % variable's description and units, else its name.
+
+         [~, ~, ax] = groupstats.boxchartcats(testCase.Tbl, "Value", ...
+            "Grp");
+         testCase.verifyEqual(string(ax.YLabel.String), "Value");
+
+         tbl = testCase.Tbl;
+         tbl.Properties.VariableDescriptions{'Value'} = 'value of things';
+         tbl.Properties.VariableUnits{'Value'} = 'kg';
+         cla
+         [~, ~, ax] = groupstats.boxchartcats(tbl, "Value", "Grp");
+         testCase.verifyEqual(string(ax.YLabel.String), ...
+            "value of things (kg)");
+      end
    end
 
    methods (Access = private)
@@ -680,6 +852,7 @@ classdef test_boxchartcats < matlab.unittest.TestCase
          expected = [1, 2, 10, 20, 100, 200];
          testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
       end
+
 
    end
 end

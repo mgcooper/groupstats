@@ -29,6 +29,10 @@ function out = groupmap(tbl, groupvar, fcn, varargin)
    %      d. Inserts GROUPVAR as the first column of the result, as categorical
    %   3. Vertically concatenates all group results into a single table
    %
+   %   A missing value of GROUPVAR (NaN, <missing>, <undefined>, NaT, or '')
+   %   forms one group, as in groupcounts. FCN gets all of its rows at once,
+   %   and its row in OUT is <undefined>, after the other groups.
+   %
    %   GROUPVAR comes first to match MATLAB's groupsummary and groupcounts.
    %   It is categorical in OUT whatever its type in TBL. The conversion keeps
    %   a numeric group variable out of a downstream vartype("numeric") sweep.
@@ -64,11 +68,13 @@ function out = groupmap(tbl, groupvar, fcn, varargin)
       varargin
    end
 
-   members = unique(tbl.(groupvar));
+   % A missing group value equals no member, so memberrows collects its
+   % rows as one more group, sorted last, as groupcounts treats them.
+   [members, rows] = memberrows(tbl.(groupvar));
    out = cell(numel(members), 1);
 
    for n = 1:numel(members)
-      t = tbl(ismember(tbl.(groupvar), members(n)), :);
+      t = tbl(rows{n}, :);
       out{n} = fcn(t, varargin{:});
 
       if ~istable(out{n})

@@ -6,7 +6,7 @@
          nothing uses. -->
     <!-- (Required) Release of MATLAB. Not used, but required to parse
          the file. -->
-    <matlabrelease>R2021a</matlabrelease>
+    <matlabrelease>R2024b</matlabrelease>
     <!-- (Required) Title of the toolbox. Appears in the Contents pane. -->
     <name>Group Stats</name>
     <!-- (Required) Label for the toolbox, one of matlab, toolbox,

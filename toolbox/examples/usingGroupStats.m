@@ -65,17 +65,18 @@ groupstats.barchartcats(Info, "peak", "basin", ...
 %[text] Order the groups explicitly. Naming one puts it first and leaves the rest behind it:
 figure
 groupstats.boxchartcats(Info, "peak", "basin", "scenario", ...
-   XGroupOrder = "Outlet")
+   XGroupOrder = "basinC")
 %%
-%[text] `groupstats.histogram` takes the built-in's call shape for categorical data, and a table with a grouping variable as the third argument. This section counts the months when a large flood, one with a peak above 13.5, reached the outlet, so the bar heights differ:
+%[text] `groupstats.histogram` takes the built-in's call shape for categorical data. This section counts the months when a large flood, one with a peak above 13.5, reached the outlet. The peak follows a seasonal cycle that is highest in January, so April to October hold no large flood, and the bar heights differ:
 floods = Info(Info.basin == "Outlet" & Info.peak > 13.5, :);
 
 figure
 groupstats.histogram(floods.month, ["Jan", "Feb", "Mar"])
-
+%%
+%[text] With a table, the third argument groups the data: one overlaid histogram per member. A lower `FaceAlpha` keeps the overlapping groups visible, and `FitPDF` draws each group's fitted normal density:
 figure
-groupstats.histogram(floods, "month", "scenario", ...
-   Normalization = "probability")
+groupstats.histogram(Info, "peak", "scenario", ...
+   Normalization = "pdf", FitPDF = "normal", FaceAlpha = 0.4)
 %%
 %[text] `groupstats.scatter` colors by one group and sizes by another:
 figure

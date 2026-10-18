@@ -31,6 +31,20 @@ classdef test_histogram < matlab.unittest.TestCase
    end
 
    methods (Test)
+      function testTimeDimensionGroupsHistogramData(testCase)
+         % Time groups must keep each histogram's data and legend paired.
+
+         tbl = timetable([1; 8; 3; 10], ...
+            'RowTimes', datetime(2020, 1, 1) + days([0; 1; 0; 1]), ...
+            'VariableNames', {'Value'});
+
+         [H, L] = groupstats.histogram(tbl, "Value", "Time");
+
+         returned = {H(1).Data(:); H(2).Data(:); string(L.String(:))};
+         expected = {[1; 3]; [8; 10]; ["01-Jan-2020"; "02-Jan-2020"]};
+         testCase.verifyEqual(returned, expected);
+      end
+
       function testMergeWithoutGroupVarIsReported(testCase)
          % Merging pools members of the group variable. Without one the
          % request had no effect, and nothing said so.
@@ -118,6 +132,39 @@ classdef test_histogram < matlab.unittest.TestCase
             "scenario", Legend = "off");
 
          testCase.verifyEmpty(L);
+      end
+
+      function testGroupColorsFollowThePaletteAndWrap(testCase)
+         % histogram colors its k-th group with the k-th defaultcolors row,
+         % as the other charts do, and starts over after the last row. The
+         % axes color order holds seven colors, so a chart that used it
+         % would give group 8 the color of group 1. Each fitted curve takes
+         % its group's color.
+
+         defaultcolors = groupstats.internal.privatefunction( ...
+            'defaultcolors');
+         palette = defaultcolors();
+         ngroups = size(palette, 1) + 1;
+
+         % Three rows per group with some spread, so each group gets a
+         % curve, and one group more than the palette holds.
+         g = categorical(repelem(string(1:ngroups)', 3, 1), ...
+            string(1:ngroups));
+         tbl = table(g, repmat([1; 2; 4], ngroups, 1), ...
+            'VariableNames', {'g', 'y'});
+
+         [H, ~, ax] = groupstats.histogram(tbl, "y", "g", ...
+            FitPDF = "normal");
+
+         expected = palette([1:end, 1], :);
+         testCase.verifyEqual(vertcat(H.FaceColor), expected, ...
+            'AbsTol', 1e-12);
+
+         % findobj lists the newest curve first, so flip it into drawing
+         % order, which is group order.
+         curves = flip(findobj(ax, 'Type', 'Line'));
+         testCase.verifyEqual(vertcat(curves.Color), expected, ...
+            'AbsTol', 1e-12);
       end
 
 
@@ -516,6 +563,117 @@ classdef test_histogram < matlab.unittest.TestCase
          expected = "probability";
          testCase.verifyEqual(returned, expected);
       end
+
+      % ---- Family legend and axis labels (groupstats-ctg)
+      %
+      % The family legend sits above the axes in up to three columns. It
+      % sets no font size of its own, so it follows the axes font. MATLAB
+      % draws a legend at 0.9 of its axes font. Axis labels come from the
+      % table's description and units of the variable, else its name.
+
+      function testLegendSitsAboveTheAxesInUpToThreeColumns(testCase)
+         % Four basins give four entries, so three columns.
+
+         [~, L, ax] = groupstats.histogram(testCase.Info, "peak", "basin");
+
+         testCase.verifyEqual(string(L.Location), "northoutside");
+         testCase.verifyEqual(L.NumColumns, 3);
+         testCase.verifyEqual(L.FontSize, 0.9 * ax.FontSize, ...
+            'RelTol', 1e-12);
+      end
+
+      function testXLabelComesFromTheTableMetadata(testCase)
+         % The bins hold the data variable, so the x axis names it: the
+         % name alone without metadata, else the description and units.
+
+         info = testCase.Info;
+         info.Properties.VariableDescriptions = {};
+         info.Properties.VariableUnits = {};
+         [~, ~, ax] = groupstats.histogram(info, "peak", "basin");
+         testCase.verifyEqual(string(ax.XLabel.String), "peak");
+
+         info.Properties.VariableDescriptions{'peak'} = 'flood size';
+         info.Properties.VariableUnits{'peak'} = 'm3/s';
+         cla
+         [~, ~, ax] = groupstats.histogram(info, "peak", "basin");
+         testCase.verifyEqual(string(ax.XLabel.String), ...
+            "flood size (m3/s)");
+      end
+
+      % ---- FitPDF (groupstats-ctg.5)
+      %
+      % Group a holds 1 to 5: mean 3 and sample standard deviation
+      % sqrt(2.5), so its normal PDF peaks at 1 / (sqrt(2.5) * sqrt(2*pi))
+      % = 0.2523133 at x = 3. Group b holds 11 to 15, the same shape
+      % centered at 13.
+
+      function testFitPdfOverlaysEachGroupsNormalDensity(testCase)
+         tbl = twoGroups();
+
+         [H, ~, ax] = groupstats.histogram(tbl, "Y", "G", ...
+            Normalization = "pdf", FitPDF = "normal");
+
+         lines = findobj(ax, 'Type', 'line');
+         testCase.verifyNumElements(lines, 2);
+         for k = 1:numel(H)
+            line = lines([lines.SeriesIndex] == H(k).SeriesIndex);
+            testCase.verifyNumElements(line, 1);
+            center = 3 + 10 * (k - 1);
+            returned = interp1(line.XData, line.YData, center);
+            testCase.verifyEqual(returned, 0.2523133, 'RelTol', 1e-3);
+         end
+      end
+
+      function testFitPdfScalesToTheNormalization(testCase)
+         % Count with unit bins: five values times bin width 1 times the
+         % density, so the peak is 5 * 0.2523133 = 1.2615663.
+
+         tbl = twoGroups();
+
+         [~, ~, ax] = groupstats.histogram(tbl, "Y", "G", ...
+            Normalization = "count", BinWidth = 1, FitPDF = "normal");
+
+         lines = findobj(ax, 'Type', 'line');
+         returned = max([lines.YData]);
+         testCase.verifyEqual(returned, 1.2615663, 'RelTol', 1e-3);
+      end
+
+      function testFitPdfRejectsACumulativeNormalization(testCase)
+         % A cumulative histogram is not a density, so no PDF fits it.
+
+         testCase.verifyError(@() groupstats.histogram(twoGroups(), "Y", ...
+            "G", Normalization = "cdf", FitPDF = "normal"), ...
+            'groupstats:histogram:fitPdfNormalization');
+      end
+
+      function testFitPdfWithNonuniformBins(testCase)
+         % Bins of unequal width have no one width to scale a count by,
+         % so "count" is an error. A density needs no width, so "pdf"
+         % still draws each group's curve at its peak of 0.2523133.
+
+         edges = [0 2 3 6 12 16];
+         testCase.verifyError(@() groupstats.histogram(twoGroups(), "Y", ...
+            "G", BinEdges = edges, Normalization = "count", ...
+            FitPDF = "normal"), 'groupstats:histogram:fitPdfNonuniformBins');
+
+         cla
+         [~, ~, ax] = groupstats.histogram(twoGroups(), "Y", "G", ...
+            BinEdges = edges, Normalization = "pdf", FitPDF = "normal");
+         lines = findobj(ax, 'Type', 'line');
+         testCase.verifyNumElements(lines, 2);
+         returned = arrayfun(@(line) max(line.YData), lines);
+         expected = [0.2523133; 0.2523133];
+         testCase.verifyEqual(returned, expected, 'RelTol', 1e-3);
+      end
+
+      function testFitPdfNeedsNumericData(testCase)
+         % Categorical data has no density to fit.
+
+         testCase.verifyError(@() groupstats.histogram(testCase.Info, ...
+            "month", FitPDF = "normal"), ...
+            'groupstats:histogram:fitPdfNeedsNumericData');
+      end
+
    end
 end
 
@@ -526,4 +684,11 @@ function fourHistOutputs(Info)
    % place a four-output request is syntactically valid.
 
    [~, ~, ~, ~] = groupstats.histogram(Info, "peak", "scenario");
+end
+
+function tbl = twoGroups()
+   %TWOGROUPS Two groups of five values: a holds 1 to 5, b holds 11 to 15.
+
+   tbl = table(categorical(repelem(["a"; "b"], 5)), [1:5, 11:15]', ...
+      'VariableNames', {'G', 'Y'});
 end

@@ -15,6 +15,7 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
    % h = groupstats.histogram(_, Legend = "on" or "off")
    % h = groupstats.histogram(_, LegendString = legend_text)
    % h = groupstats.histogram(_, LegendOrientation = orientation)
+   % h = groupstats.histogram(_, FitPDF = "normal")
    % [h, l, ax] = groupstats.histogram(_)
    %
    % The Name-Value pairs can be any accepted by HISTOGRAM
@@ -81,6 +82,28 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
    % by the group mean of the data variable, or by the category counts in
    % categorical mode. "none" keeps the order the groups already have.
    %
+   % FitPDF: "none" (default) or "normal". "normal" draws, over each group,
+   % the normal PDF of the group's sample mean and standard deviation, in
+   % the group's color. The curve takes the units of the Normalization.
+   % "pdf" keeps the density. "count" multiplies it by the group size times
+   % the bin width, "probability" by the bin width, "percentage" by 100
+   % times the bin width, and "countdensity" by the group size. A group with
+   % fewer than two values or no spread gets no curve. The curves are Line
+   % objects in the axes and stay out of the legend. Find them with
+   % findobj(ax, "Type", "line").
+   %
+   % Legend and labels: the legend sits above the axes in up to three
+   % columns, fewer when three would be wider than its tile, subplot, or
+   % figure. LegendOrientation "horizontal" puts every entry in one row,
+   % wrapped when that row is wider than its tile, subplot, or figure. The
+   % legend text follows the axes font. With a table, the x label names the data
+   % variable: its VariableDescriptions and VariableUnits entries when set,
+   % else its name. The y label names the Normalization.
+   %
+   % Colors: the k-th group takes the k-th row of defaultcolors, as in
+   % every chart of the family. The palette holds 21 colors, and the 22nd
+   % group starts over at the first. Pass FaceColor to override it.
+   %
    % Legend: "on" or "off". The default is "on", except with no groupvar and
    % no LegendString, where the built-in shows no legend either. That
    % unset-by-default state is deliberate: an ungrouped histogram has one
@@ -126,6 +149,12 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
    % bin counts or bin edges, not categories.
    % groupstats:histogram:categoriesGivenTwice - the built-in's array call
    % shape was given categories both positionally and as GroupMembers.
+   % groupstats:histogram:fitPdfNeedsNumericData - FitPDF was given for
+   % categorical data, which has no density.
+   % groupstats:histogram:fitPdfNormalization - FitPDF was given with a
+   % cumulative Normalization, "cumcount" or "cdf", which is not a density.
+   % groupstats:histogram:fitPdfNonuniformBins - FitPDF was given with
+   % nonuniform bins and a Normalization that scales by the bin width.
    %
    % Matt Cooper, https://github.com/mgcooper
    %
@@ -161,6 +190,9 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
       opts.LegendOrientation (1, 1) string ...
          {groupstats.namelists.mustBeMemberOf(opts.LegendOrientation, ...
          "legendorientation")} = "vertical"
+      opts.FitPDF (1, 1) string ...
+         {groupstats.namelists.mustBeMemberOf(opts.FitPDF, ...
+         "fitpdf")} = "none"
       props.?matlab.graphics.chart.primitive.Histogram
    end
 
@@ -172,6 +204,9 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
    % name: histogram(Info.month, members). Wrap the array in a one-variable
    % table, and read the second argument as the categories to keep, which
    % is what the built-in does with it.
+   % Only a table names its data variable, so only a table call labels
+   % the x axis, as the built-in labels nothing for an array.
+   labelx = istabular(tbl);
    if ~istabular(tbl)
       [tbl, datavar, opts] = wrapArrayInput(tbl, datavar, groupvar, opts);
    end
@@ -201,6 +236,12 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
       error('groupstats:histogram:mergeWithoutGroupVar', ...
          ['MergeGroupMembers was given without groupvar. Name the group ' ...
          'variable whose members are pooled.'])
+   end
+
+   % A fitted density needs numeric data and a density-like histogram.
+   % Check before anything is drawn.
+   if opts.FitPDF ~= "none"
+      requireFittableHistogram(tbl.(datavar), props)
    end
 
    props = namedargs2cell(props);
@@ -285,12 +326,19 @@ function varargout = histogram(tbl, datavar, groupvar, opts, props)
          opts.LegendString = string(unique(XData));
       end
 
-      % Create the figure
+      % Create the figure. The fitted densities come after the legend,
+      % which does not update, so they stay out of it.
       H = createHistogram(XData, YData, opts, props);
       L = createLegend(opts);
+      if opts.FitPDF == "normal"
+         plotNormalPdfs(H, XData, YData, opts.Parent)
+      end
    end
 
    formatHistogram(H, opts.Parent)
+   if labelx
+      xlabel(opts.Parent, axislabel(tbl, datavar));
+   end
 
    % The third output is the axes the chart was drawn into, matching the
    % other charts' (H, L, ax) signature.
@@ -329,6 +377,16 @@ function H = createHistogram(XData, YData, opts, props)
    if ~washeld
       hold(opts.Parent, "off")
    end
+
+   % Color each group from the family palette, so the k-th group has one
+   % color in every chart. The axes color order repeats after seven
+   % colors. A FaceColor the caller passed wins.
+   if ~ismember("FaceColor", string(props(1:2:end)))
+      colors = groupcolors(numel(H));
+      for n = 1:numel(H)
+         H(n).FaceColor = colors(n, :);
+      end
+   end
 end
 
 %% Format the plot
@@ -358,14 +416,105 @@ function L = createLegend(opts)
       return
    end
 
+   % The family layout puts the legend above the axes in up to three
+   % columns that fit its tile, subplot, or figure. The legend uses the
+   % axes font.
    try
       withwarnoff('MATLAB:legend:IgnoringExtraEntries');
-      L = legend(opts.Parent, opts.LegendString, ...
-         'Location', 'northwest', ...
-         'AutoUpdate', 'off', ...
-         'Orientation', opts.LegendOrientation, ...
-         'FontSize', 12);
+      L = legend(opts.Parent, opts.LegendString, 'AutoUpdate', 'off');
+      legendlayout(L, opts.LegendOrientation);
    catch
+   end
+end
+
+%% Fitted densities
+function requireFittableHistogram(data, props)
+   %REQUIREFITTABLEHISTOGRAM Error when FitPDF cannot apply.
+   %
+   % Categorical data has no density, and a cumulative histogram is not a
+   % density, so neither takes a fitted PDF. The default Normalization,
+   % "count", takes one.
+
+   if iscategorical(data)
+      error('groupstats:histogram:fitPdfNeedsNumericData', ...
+         ['FitPDF needs numeric data. The data variable is categorical, ' ...
+         'which has no density.'])
+   end
+   if isfield(props, 'Normalization') ...
+         && ismember(string(props.Normalization), ["cumcount", "cdf"])
+      error('groupstats:histogram:fitPdfNormalization', ...
+         ['FitPDF needs a density-like Normalization. "%s" is ' ...
+         'cumulative.'], props.Normalization)
+   end
+end
+
+function plotNormalPdfs(H, XData, YData, ax)
+   %PLOTNORMALPDFS Draw each group's fitted normal PDF over its histogram.
+   %
+   % H(n) holds the n-th member of unique(XData), as createHistogram draws
+   % them. Each curve takes its histogram's SeriesIndex and face color, so
+   % it takes the group's color. A face set to "auto" or "none" has no
+   % color to copy, so its curve keeps the series color from the axes
+   % ColorOrder. The scale turns the density into the units of the
+   % histogram's Normalization.
+
+   members = unique(XData);
+   washeld = ishold(ax);
+   hold(ax, "on")
+   for n = 1:numel(H)
+      y = YData(XData == members(n));
+      y = y(~isnan(y));
+      mu = mean(y);
+      sigma = std(y);
+      if numel(y) < 2 || sigma == 0
+         continue
+      end
+
+      % Span the group's bins and three standard deviations on each side,
+      % so the curve shows its tails.
+      x = linspace(min(H(n).BinLimits(1), mu - 3 * sigma), ...
+         max(H(n).BinLimits(2), mu + 3 * sigma), 201);
+      density = exp(-0.5 * ((x - mu) / sigma) .^ 2) / (sigma * sqrt(2 * pi));
+
+      % Pair the curve with its histogram's series, and copy the face
+      % color when it is a triplet. Color comes last, so it wins.
+      if isnumeric(H(n).FaceColor)
+         color = {'SeriesIndex', H(n).SeriesIndex, 'Color', H(n).FaceColor};
+      else
+         color = {'SeriesIndex', H(n).SeriesIndex};
+      end
+      plot(ax, x, pdfScale(H(n), numel(y)) * density, color{:});
+   end
+   if ~washeld
+      hold(ax, "off")
+   end
+end
+
+function scale = pdfScale(h, numvalues)
+   %PDFSCALE Factor from a density to the units of a histogram's bars.
+   %
+   % A bar of width w holds about numvalues * w * density values, so count
+   % scales by numvalues * w and probability by w.
+
+   width = h.BinWidth;
+   needswidth = ismember(h.Normalization, ["count", "probability", ...
+      "percentage"]);
+   if needswidth && ~isnumeric(width)
+      error('groupstats:histogram:fitPdfNonuniformBins', ...
+         ['FitPDF with Normalization "%s" needs uniform bins, which set ' ...
+         'one bin width.'], h.Normalization)
+   end
+   switch h.Normalization
+      case "pdf"
+         scale = 1;
+      case "countdensity"
+         scale = numvalues;
+      case "count"
+         scale = numvalues * width;
+      case "probability"
+         scale = width;
+      case "percentage"
+         scale = 100 * width;
    end
 end
 

@@ -32,6 +32,8 @@ Grouped statistics for MATLAB tables:
 - Group-wise frequencies and percentages, including group sets
   (`groupstats.grouppercent`)
 - Group-wise conditional (Bayesian) probabilities (`groupstats.groupbayes`)
+- Group-wise confidence intervals of the mean or the median, one table row
+  per pairing of the chart groupings (`groupstats.groupci`)
 - Group comparison by rank-sum, sign-rank, or permutation test, with an
   optional bootstrapped median difference (`groupstats.groupcompare`), and
   the grouped samples it reads (`groupstats.groupsamples`)
@@ -42,20 +44,23 @@ Grouped statistics for MATLAB tables:
 Charts for categorical (grouped) table data:
 
 - Bar and box charts grouped along the x-axis and colored within groups
-  (`groupstats.barchartcats`, `groupstats.boxchartcats`)
+  (`groupstats.barchartcats`, `groupstats.boxchartcats`). Bar error bars
+  show the spread or the `groupci` interval.
 - Grouped scatter charts and histograms (`groupstats.scatter`,
   `groupstats.histogram`)
+- Heatmaps with one cell per pairing of two groupings, colored by a summary
+  of the data (`groupstats.groupheatmap`)
 
 ## Requirements
 
-- MATLAB R2021a or later. The code uses `arguments` blocks (R2019b),
-  `props.?Class` property validation (R2021a), and `name = value` syntax
-  (R2021a). The test suite passes on R2024b and R2025b, the same releases
-  the toolbox is developed on. Older releases are untested.
+- MATLAB R2024b or later. The test suite passes on R2024b and R2025b, the
+  same releases the toolbox is developed on. Older releases are untested.
+  Base MATLAB before R2022a also lacks `quantile`. The box charts,
+  `groupci`, and the median whiskers of `barchartcats` need it.
 - `groupstats.groupcompare` needs the Statistics and Machine Learning
-  Toolbox for `ranksum`, `signrank`, `tinv`, and `quantile`. Its
-  `Test="permutation"` option also needs the Image Processing
-  Toolbox.
+  Toolbox for `ranksum` and `signrank`. Its `Test="permutation"` option
+  runs the vendored `permutest`, which also needs that toolbox for `tinv`
+  and the Image Processing Toolbox for `bwconncomp`.
 - `groupstats.scatter` needs the Statistics and Machine Learning Toolbox
   for `gscatter`. The rest of the toolbox requires only base MATLAB.
 

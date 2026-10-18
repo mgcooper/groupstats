@@ -65,21 +65,40 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % series, so an entry stays on its member. SortBy orders the x-groups
    % and leaves the legend as it is.
    %
+   % Legend and labels: The legend sits above the axes in up to three
+   % columns, fewer when three would be wider than its tile, subplot, or
+   % figure. LegendOrientation "horizontal" puts every entry in one row,
+   % wrapped when that row is wider than its tile, subplot, or figure. The
+   % legend text follows the axes font. The legend handle comes back as L,
+   % so a caller can move it, for example to "northwest" in one column.
+   % The y label is the data variable: its VariableDescriptions and
+   % VariableUnits entries when the table sets them, else its name.
+   %
    % ShadeGroups: Shade alternating x-tick groups to tell one group of
    % boxes from the next. Defaults to true when cgroupvar is given and
    % false otherwise, because the shading marks a boundary between
    % colored boxes that a single-series chart does not have. Pass
    % ShadeGroups=true to shade a single-series chart anyway.
    %
+   % Colors: the k-th color group takes the k-th row of defaultcolors, as
+   % in every chart of the family. The palette holds 21 colors, and the
+   % 22nd group starts over at the first. The outliers and the mean symbol
+   % of a box take its color. Pass BoxFaceColor to override it.
+   %
    % Note: a box holding one observation collapses to a zero-height box
    % with zero-length whiskers, so the mean symbol is its only visible
    % mark. The chart warns when every box is like that.
    %
+   % Y-limits: when every MarkerStyle is "none", boxchart draws no outlier
+   % points. The chart then fits its y-limits to the whisker tips, the box
+   % edges, and the notches when Notch is "on". A notch can reach past the
+   % whisker tips for a small or skewed box.
+   %
    % Output Arguments
    %
    % H: A handle to the created box chart.
-   % L: The legend, or an empty graphics placeholder when the legend could
-   %    not be created.
+   % L: The legend, or an empty graphics placeholder when the legend is off
+   %    or could not be created. With no legend, the axes fill the figure.
    % AX: The axes the chart was drawn into.
    %
    % Example
@@ -118,9 +137,8 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % These ship in +groupstats/private, vendored from matfunclib and
    % listed in toolbox/vendored.txt, so no separate path is needed:
    %
-   %  defaultcolors (libplot)      colors the mean symbols like the boxes
-   %  makevalidvarnames (libtable) builds the y-axis label
-   %  naninterp1 (libstats)        fills gaps in the group shading bounds
+   %  defaultcolors (libplot)      colors the boxes and their mean symbols
+   %  naninterp1 (libmath)         fills gaps in the group shading bounds
    %  dealout (functools)          splits the outputs
    %
    % Errors and warnings
@@ -201,9 +219,9 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
          {groupstats.namelists.mustBeMemberOf(opts.Legend, ...
          "legendvisibility")} = "on"
       opts.LegendString string = string.empty()
-      % Every chart in the family defaults to a vertical legend. The
-      % legend still sits above the axes; horizontal remains available for
-      % a wide row of entries.
+      % Every chart in the family defaults to a vertical legend of up to
+      % three columns above the axes; horizontal puts the entries in one
+      % row.
       opts.LegendOrientation (1, 1) string ...
          { groupstats.namelists.mustBeMemberOf(opts.LegendOrientation, ...
          "legendorientation") } = "vertical"
@@ -326,9 +344,11 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % order from the categories of CData. LegendString moves with them.
    [CData, opts] = reorderCGroups(opts, CData);
 
-   [H, L] = categoricalBoxChart(XData, YData, CData, ydatavar, opts, varargs);
+   [H, L] = categoricalBoxChart(XData, YData, CData, ...
+      axislabel(tbl, ydatavar), opts, varargs);
 
-   % If "markerstyle", "none" is in varargin, clip the ylimits to the data
+   % If "markerstyle", "none" is in varargin, fit the ylimits to the drawn
+   % whiskers, boxes, and notches
    setboxchartylim(ax, H, XData, YData, CData);
 
    % Add the means if requested
@@ -337,9 +357,6 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
    % Add shaded bars to distinguish groups if requested
    shadeboxchartgroups(opts,H);
 
-   if opts.Legend == "off"
-      legend(ax, 'off')
-   end
    hold(ax, 'off')
 
    % The third output is the axes the chart was drawn into, matching the
@@ -348,11 +365,45 @@ function varargout = boxchartcats(tbl, ydatavar, xgroupvar, cgroupvar, opts, pro
 end
 
 %% Local Functions
-function [H, L] = categoricalBoxChart(XData, YData, CData, YDataVar, CustomOpts, varargs)
+function [H, L] = categoricalBoxChart(XData, YData, CData, YDataLabel, ...
+      CustomOpts, varargs)
 
    % Create the box chart, in the caller's axes
    ax = CustomOpts.Parent;
    H = boxchart(ax, XData, YData, 'GroupByColor', CData, varargs{:});
+
+   % Color each box from the family palette, so the k-th color group has
+   % one color in every chart. The axes color order repeats after seven
+   % colors. BoxFaceColor also sets the box edge and the median line. The
+   % outliers keep the series color, so they take the box color here. A
+   % color the caller passed wins.
+   colors = groupcolors(numel(H));
+   given = string(varargs(1:2:end));
+   for n = 1:numel(H)
+      if ~ismember("BoxFaceColor", given)
+         H(n).BoxFaceColor = colors(n, :);
+      end
+      if ~ismember("MarkerColor", given)
+         H(n).MarkerColor = H(n).BoxFaceColor;
+      end
+   end
+
+   % Add a ylabel. The boxes show the values themselves, so the label is
+   % the data variable, from the table's description and units when set.
+   ylabel(ax, YDataLabel)
+
+   % Format the plot
+   set(ax, "YGrid", "off", "XGrid", "off", "XMinorTick", "off", "box", ...
+      "on", "TickLength", [0 0]);
+
+   % With the legend off, make none. L is then the empty placeholder that
+   % barchartcats, histogram, and scatter return, and the axes fill the
+   % figure. A deleted legend would come back as a handle that is not
+   % empty.
+   if CustomOpts.Legend == "off"
+      L = gobjects(0);
+      return
+   end
 
    % Add the legend
    withwarnoff('MATLAB:legend:IgnoringExtraEntries');
@@ -360,32 +411,18 @@ function [H, L] = categoricalBoxChart(XData, YData, CData, YDataVar, CustomOpts,
    if isempty(legendtxt)
       legendtxt = unique(CData);
    end
-   % One column per entry lays the entries out in a row; one column stacks
-   % them. Either way the legend sits above the axes.
-   if CustomOpts.LegendOrientation == "horizontal"
-      numcolumns = numel(legendtxt);
-   else
-      numcolumns = 1;
-   end
-
+   % The family layout puts the legend above the axes. A vertical legend
+   % takes up to three columns, and a horizontal one takes one row; either
+   % wraps to fit its tile, subplot, or figure. The legend uses the axes
+   % font.
    try
-      L = legend(ax, legendtxt, ...
-         'Orientation', CustomOpts.LegendOrientation, ...
-         'Location', 'northoutside', ...
-         'AutoUpdate', 'off', ...
-         'numcolumns', numcolumns );
+      L = legend(ax, legendtxt, 'AutoUpdate', 'off');
+      legendlayout(L, CustomOpts.LegendOrientation);
    catch
       % A legend failure must still assign L. An empty graphics
       % placeholder matches the other charts' legend-failure value.
       L = gobjects(0);
    end
-
-   % Add a ylabel
-   ylabel(ax, makevalidvarnames(YDataVar))
-
-   % Format the plot
-   set(ax, "YGrid", "off", "XGrid", "off", "XMinorTick", "off", "box", ...
-      "on", "TickLength", [0 0]);
 end
 
 function [CData, opts] = reorderCGroups(opts, CData)
@@ -471,16 +508,15 @@ function plotboxchartstats(opts,H,XData,YData,CData)
    ax = opts.Parent;
    hold(ax, 'on');
 
-   % Load default colors to match the mean symbols to the boxcharts
-   colors = defaultcolors;
-
    % Get the x-coordinate of each boxchart center and the mean of each boxchart
    [mu, med, xlocs] = boxchartstats(H, XData, YData, CData);
 
-   % Plot the means
+   % Plot the means. Each mean symbol takes the color of its drawn box, so
+   % it matches the box whether the color came from the palette or from
+   % the caller.
    if opts.PlotMeans
-      arrayfun(@(n) scatter(ax, xlocs(n,:), mu(n,:), 30, colors(n, :), ...
-         'filled', 's'), 1:numel(H));
+      arrayfun(@(n) scatter(ax, xlocs(n,:), mu(n,:), 30, ...
+         H(n).BoxFaceColor, 'filled', 's'), 1:numel(H));
    end
 
    % Connect the means. plot reads each column as one line, and xlocs holds
@@ -610,14 +646,17 @@ function shadeboxchartgroups(CustomOpts, H)
 end
 
 function setboxchartylim(ax, H, XData, YData, CData)
-   %SETBOXCHARTYLIM Fit the y limits to the whiskers when outliers are hidden.
+   %SETBOXCHARTYLIM Fit the y limits to the drawn boxes when outliers are hidden.
    %
    % With MarkerStyle "none" boxchart draws no outlier points, so the visible
-   % extent is the whisker tips. Fitting the limits to the plotted data
-   % instead leaves empty space wherever an outlier was suppressed.
+   % extent is the whisker tips, the box edges, and, with Notch "on", the
+   % notches. Fitting the limits to the plotted data instead leaves empty
+   % space wherever an outlier was suppressed. Limits fit to the whiskers
+   % alone can clip a notch. A notch reaches past the whisker tips for a
+   % small or skewed box, such as 2.^(0:7) or a box of two values.
    %
-   % The whiskers come from groupstats.boxchartydata, which computes them from
-   % the data. Reading them off H(n).NodeChildren(4).VertexData instead
+   % The coordinates come from groupstats.boxchartydata, which computes them
+   % from the data. Reading them off H(n).NodeChildren(4).VertexData instead
    % depends on undocumented graphics internals and needs a drawnow first.
 
    import groupstats.boxchartydata
@@ -626,10 +665,14 @@ function setboxchartylim(ax, H, XData, YData, CData)
       return
    end
 
+   % The notches count only where boxchart draws them.
+   drawsnotch = any([H.Notch] == "on");
+
    % One box per pairing of an x-group member with a color-group member.
+   % Each row holds the extent of one box. A pairing with no rows stays NaN.
    xmembers = unique(XData);
    cmembers = unique(CData);
-   whiskers = nan(numel(xmembers) * numel(cmembers), 2);
+   extents = nan(numel(xmembers) * numel(cmembers), 2);
 
    k = 0;
    for x = 1:numel(xmembers)
@@ -637,19 +680,27 @@ function setboxchartylim(ax, H, XData, YData, CData)
          k = k + 1;
          inbox = XData == xmembers(x) & CData == cmembers(c);
          if any(inbox)
-            whiskers(k, :) = boxchartydata(YData(inbox)).whiskers;
+            % The whisker tips never lie inside the box, so they bound the
+            % box edges too. Only the notches can reach farther.
+            y = boxchartydata(YData(inbox));
+            extent = y.whiskers;
+            if drawsnotch
+               extent = [min(extent(1), y.notches(1)) ...
+                  max(extent(2), y.notches(2))];
+            end
+            extents(k, :) = extent;
          end
       end
    end
 
-   ywhiskers = whiskers(~isnan(whiskers));
-   if isempty(ywhiskers)
+   yextents = extents(~isnan(extents));
+   if isempty(yextents)
       return
    end
 
    % Compute axis limits with padding. Pad by a fixed amount when every
-   % whisker sits at the same value, because ylim rejects a zero-width range.
-   bounds = [min(ywhiskers) max(ywhiskers)];
+   % box sits at the same value, because ylim rejects a zero-width range.
+   bounds = [min(yextents) max(yextents)];
    padding = 0.01 * diff(bounds);
    if padding == 0
       padding = max(abs(bounds(1)), 1) * 0.01;

@@ -19,7 +19,10 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
    %  TBL is either a raw data table, one row per observation, or a table that
    %  a previous groupsummary or groupcounts call already summarized, one row
    %  per group. A GroupCount variable is what tells the two apart: a raw
-   %  table has none, so this function calls groupcounts first.
+   %  table has none, so this function calls groupcounts first. A grouping
+   %  variable therefore cannot be named GroupCount, or Percent, which G
+   %  also holds. Either name, in GROUPVARS or in GroupSets, raises a
+   %  reservedName error.
    %
    %  G gains one Percent_<groupvar> variable per member of GroupSets. Each
    %  one holds a within-group percent: for every member of that group
@@ -48,15 +51,23 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
    %  variable is all that path takes. Set variables that are in GROUPVARS,
    %  and every set variable of a table that already carries GroupCount,
    %  each get their Percent_ column.
+   %  groupstats:grouppercent:reservedName - a GROUPVARS or GroupSets
+   %  variable is named GroupCount or Percent.
    %
    %  Percent, which groupcounts produces, is a different quantity. It is each
    %  row's share of every observation in the table, so the whole column sums
    %  to 100.
    %
    %  When grouppercent computes the counts from a raw table, a binned group
-   %  variable keeps its original name in G: the disc_ prefix groupcounts
-   %  adds is removed. A table that already carries GroupCount is used as
-   %  given, so a disc_ name in it stays.
+   %  variable keeps its original name in G: the disc_ prefix, or the named
+   %  bin prefix such as month_, that groupcounts adds is removed. A table
+   %  that already carries GroupCount is used as given, so a disc_ name in
+   %  it stays.
+   %
+   %  A missing value of a group variable forms one group, as in groupcounts.
+   %  For Percent_<groupvar> it is one more member, so its rows sum to 100.
+   %  A missing value of a GroupSets variable outside GROUPVARS forms one
+   %  set the same way, counted after the other sets.
    %
    %  IncludedEdge, "left" (default) or "right", is the bin edge a value on
    %  an edge belongs to, passed to groupcounts for every binned group
@@ -99,6 +110,14 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
    if isempty(groupsets)
       groupsets = groupvars;
    end
+
+   % G names its count and percent columns GroupCount and Percent, and a
+   % GroupCount variable marks a counted table. This function would read a
+   % GroupCount grouping variable as the count. A Percent grouping variable
+   % would take the place of the Percent share. Reject both, as
+   % groupstats.groupsummary does.
+   validategroupvarnames([groupvars, groupsets], ...
+      ["GroupCount", "Percent"], "grouppercent")
 
    % Keep only the requested rows. Row selection needs both halves, and the
    % shared check raises the same two errors prepareTableGroups raises,
@@ -146,11 +165,13 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
                numel(extrasets), strjoin(extrasets, ', '))
          end
 
-         sets = unique(G.(setvar));
+         % A missing set value equals no member, so memberrows collects its
+         % rows as one more set, sorted last, as groupcounts treats a
+         % missing group.
+         [sets, setrows] = memberrows(G.(setvar));
          tmpG = cell(numel(sets), 1);
          for n = 1:numel(sets)
-            idx = ismember(G.(setvar), sets(n));
-            Gn = groupcounts(G(idx, :), groupvars, groupbins, ...
+            Gn = groupcounts(G(setrows{n}, :), groupvars, groupbins, ...
                "IncludedEdge", opts.IncludedEdge);
             Gn.(setvar) = repmat(sets(n), height(Gn), 1);
             tmpG{n} = Gn;
@@ -164,36 +185,27 @@ function G = grouppercent(tbl, groupvars, groupbins, opts)
       end
 
       % Restore each binned group variable's original name, so a caller reads
-      % the same name whether or not groupbins was used. Only a name built
-      % from one of groupvars is renamed; a blanket substring replace would
-      % also rewrite a variable the caller named disc_something.
-      names = string(G.Properties.VariableNames);
-      binned = "disc_" + groupvars;
-      [isbinned, loc] = ismember(names, binned);
-      names(isbinned) = groupvars(loc(isbinned));
-      G.Properties.VariableNames = names;
+      % the same name whether or not groupbins was used.
+      G = restoregroupvarnames(G, groupvars);
    end
 
    % If multiple groupvars, calculate the GroupPercent for each groupvar
    for m = 1:numel(groupsets)
       groupvar = groupsets(m);
-      grps = unique(G.(groupvar));
 
-      % Convert a cellstr group column to string; indexing grps(n) and the ==
-      % comparison below fail on a cell array. iscellstr reads no element,
-      % so an empty column, as in a zero-row summarized table, passes
-      % through to the empty loop below. A string column is left as it is.
-      if iscellstr(grps) || isstring(grps)
-         grps = string(grps);
-      end
+      % The count makes every missing value one group, but a missing value
+      % equals no member. memberrows gives those rows one member of their
+      % own, so they get the percents of one more member. It also reads a
+      % cellstr column, and a zero-row column gives no member.
+      [~, grprows] = memberrows(G.(groupvar));
 
       % Compute the within group percentages. Every member's rows sum to 100,
       % including a member holding one row, which is then 100 percent of
       % itself. Normalizing over the whole table instead would produce
       % Percent, which is a different quantity groupcounts already returns.
       G.("Percent_" + groupvar) = nan(height(G), 1);
-      for n = 1:numel(grps)
-         idx = G.(groupvar) == grps(n);
+      for n = 1:numel(grprows)
+         idx = grprows{n};
          G.("Percent_" + groupvar)(idx) = ...
             100 .* G.GroupCount(idx) ./ sum(G.GroupCount(idx));
       end

@@ -55,8 +55,8 @@ classdef test_groupsummary < matlab.unittest.TestCase
          returned = string(G.Properties.VariableNames);
          testCase.verifyTrue(any(returned == "Set"));
 
-         % The percent join has to find a match for every row.
-         testCase.verifyTrue(any(startsWith(returned, "Percent")));
+         % The set variable gets its within-set percent column.
+         testCase.verifyTrue(any(returned == "Percent_Set"));
       end
 
       function testGroupsetsOutsideGroupvarsIsNotSummarizedAsData(testCase)
@@ -302,12 +302,26 @@ classdef test_groupsummary < matlab.unittest.TestCase
       end
 
       function testUnknownGroupBinsTextErrors(testCase)
-         % Text other than "none" names no binning scheme.
+         % Text other than "none" names no binning scheme. With two group
+         % variables, bare text is a badGroupBins error. With one, bare
+         % text is the alias of its cell form, so an unknown name raises
+         % the error the cell form raises.
 
          testCase.verifyError( ...
-            @() groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
-            "Value", "quarterly"), ...
+            @() groupstats.groupsummary(testCase.Tbl, ["Grp", "Sub"], ...
+            "mean", "Value", "quarterly"), ...
             'groupstats:groupsummary:badGroupBins');
+
+         exception = MException.empty();
+         try
+            groupstats.groupsummary(testCase.Tbl, "Grp", "mean", "Value", ...
+               {"quarterly"});
+         catch exception
+         end
+         testCase.assertNotEmpty(exception);
+         testCase.verifyError( ...
+            @() groupstats.groupsummary(testCase.Tbl, "Grp", "mean", ...
+            "Value", "quarterly"), exception.identifier);
       end
 
       function testNoDataVariablesErrors(testCase)
@@ -417,9 +431,9 @@ classdef test_groupsummary < matlab.unittest.TestCase
       end
 
       function testBinsThatDoNotSpanTheDataAreReported(testCase)
-         % Rows outside the edges would form an <undefined> group and the
-         % percent join would fail on a missing key with a message that
-         % names no cause. The error names the scheme and the row count.
+         % Rows outside the edges would form an <undefined> group that
+         % mixes them with missing values. The error names the scheme and
+         % the row count.
 
          testCase.verifyError(@() groupstats.groupsummary(testCase.Tbl, ...
             "Value", "mean", "Other", {[0 6]}), ...
@@ -483,6 +497,223 @@ classdef test_groupsummary < matlab.unittest.TestCase
                true; true; true};
             testCase.verifyEqual(returned, expected);
          end
+      end
+
+
+      % ---- Missing groups, categorical data, GroupSets, named time bins
+      %
+      % The fixture: Grp a is rows 1 to 4, b 5 to 8, c 9 to 12; Sub
+      % alternates x, y; Value is 1 to 12 and Other 101 to 112. Expected
+      % values are hand counts and means of those rows.
+
+      function testMissingGroupValueFormsItsOwnRow(testCase)
+         % Rows 11 and 12 lose their Grp value. Each type of missing value
+         % forms one group, last, as in the builtin: c keeps 9 and 10
+         % (mean 9.5) and the missing group holds 11 and 12 (mean 11.5).
+         % A join on the group keys would reject the missing key.
+
+         tbl = testCase.Tbl;
+         labels = [repelem(["a"; "b"; "c"], [4; 4; 2]); missing; missing];
+         codes = [repelem([1; 2; 3], [4; 4; 2]); NaN; NaN];
+         missinggrp = {categorical(labels), labels, codes};
+         for n = 1:numel(missinggrp)
+            tbl.Grp = missinggrp{n};
+
+            G = groupstats.groupsummary(tbl, "Grp", "mean", "Value");
+
+            returned = [G.GroupCount, G.mean_Value, G.Percent];
+            expected = [4 2.5 100/3; 4 6.5 100/3; 2 9.5 50/3; 2 11.5 50/3];
+            testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+            testCase.verifyTrue(ismissing(G.Grp(end)));
+         end
+      end
+
+      function testMissingSetMemberPercentsSumToOneHundred(testCase)
+         % GroupSets names Grp, so each Grp member's rows sum to 100,
+         % including the missing member. Rows 11 (Sub x) and 12 (Sub y) are
+         % its two rows of one each, so 50 each.
+
+         tbl = testCase.Tbl;
+         tbl.Grp(11:12) = missing;
+
+         G = groupstats.groupsummary(tbl, "Sub", "mean", "Value", ...
+            GroupSets = "Grp");
+
+         returned = G.Percent_Grp(ismissing(G.Grp));
+         expected = [50; 50];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
+      function testMissingValueOfABinnedVariableFormsItsOwnBin(testCase)
+         % Value 12 is missing. Edges [0 6 12] put 1 to 5 in the first
+         % bin and 6 to 11 in the second. The missing value lies outside
+         % no edge, so it forms an <undefined> bin of one row (Other 112)
+         % rather than a binsDoNotSpanData error.
+
+         tbl = testCase.Tbl;
+         tbl.Value(12) = NaN;
+
+         G = groupstats.groupsummary(tbl, "Value", "mean", "Other", ...
+            {[0 6 12]});
+
+         returned = [G.GroupCount, G.mean_Other];
+         expected = [5 103; 6 108.5; 1 112];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+         testCase.verifyTrue(isundefined(G.Value(end)));
+      end
+
+      function testBinsNotSpanningCountOnlyPresentValues(testCase)
+         % The last bin includes its right edge, so edges [0 6] hold 1 to
+         % 6 and leave 7 to 11 outside: five rows. The missing value 12 is
+         % not outside the edges, so the message counts five rows, not six.
+
+         tbl = testCase.Tbl;
+         tbl.Value(12) = NaN;
+
+         try
+            groupstats.groupsummary(tbl, "Value", "mean", "Other", {[0 6]});
+            testCase.verifyFail("no error was raised");
+         catch e
+            returned = {e.identifier; contains(e.message, "5 rows")};
+            expected = {'groupstats:groupsummary:binsDoNotSpanData'; true};
+            testCase.verifyEqual(returned, expected);
+         end
+      end
+
+      function testCategoricalDataSummarizesItsValues(testCase)
+         % The category codes of these values differ from the values, so
+         % a mean of the codes fails. Hand means: a (50 40 30 20) is 35,
+         % b (10 10 20 30) is 17.5, and c (40 50 60 70) is 55.
+
+         tbl = testCase.Tbl;
+         tbl.Cat = categorical( ...
+            [50; 40; 30; 20; 10; 10; 20; 30; 40; 50; 60; 70]);
+
+         G = groupstats.groupsummary(tbl, "Grp", "mean", "Cat");
+
+         returned = G.mean_Cat;
+         expected = [35; 17.5; 55];
+         testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+      end
+
+      function testCategoricalOfNamesKeepsItsCategories(testCase)
+         % Categories that are names have no numeric value. The data stays
+         % categorical, so "mode" returns a category, and "mean" is the
+         % builtin's error rather than a mean of the codes.
+
+         tbl = testCase.Tbl;
+         tbl.Lvl = categorical(["lo"; "lo"; "lo"; "hi"; "hi"; "hi"; "hi"; ...
+            "lo"; "lo"; "hi"; "hi"; "hi"]);
+
+         G = groupstats.groupsummary(tbl, "Grp", "mode", "Lvl");
+
+         returned = string(G.mode_Lvl);
+         expected = ["lo"; "hi"; "hi"];
+         testCase.verifyEqual(returned, expected);
+         testCase.verifyError( ...
+            @() groupstats.groupsummary(tbl, "Grp", "mean", "Lvl"), ...
+            ?MException);
+      end
+
+      function testOmittedGroupSetsAddsNoSetPercent(testCase)
+         % The help: omit GroupSets to request no groupsets. Percent, the
+         % share of the whole table, stays.
+
+         G = groupstats.groupsummary(testCase.Tbl, ["Grp", "Sub"], ...
+            "mean", "Value");
+
+         returned = string(G.Properties.VariableNames);
+         expected = ["Grp", "Sub", "mean_Value", "GroupCount", "Percent"];
+         testCase.verifyEqual(returned, expected);
+      end
+
+      function testGroupVariableNamedLikeAResultColumnErrors(testCase)
+         % G holds GroupCount and Percent. A grouping variable with either
+         % name would lose its labels to the count or the percents, so it
+         % is an error, as a groupvar or as a GroupSets variable.
+
+         for name = ["GroupCount", "Percent"]
+            tbl = renamevars(testCase.Tbl, "Grp", name);
+            testCase.verifyError(@() groupstats.groupsummary(tbl, name, ...
+               "mean", "Value"), 'groupstats:groupsummary:reservedName');
+            testCase.verifyError(@() groupstats.groupsummary(tbl, "Sub", ...
+               "mean", "Value", GroupSets = name), ...
+               'groupstats:groupsummary:reservedName');
+         end
+      end
+
+      function testNamedTimeBinsKeepTheGroupVariableName(testCase)
+         % Month bins of six dates: two in January (x 1, 2), one in
+         % February (3), and three in March (4, 5, 6). The builtin names
+         % the binned column month_t; the result names it t, for a
+         % timetable's row times and for a table's datetime variable.
+
+         t = datetime(2020, [1; 1; 2; 3; 3; 3], [1; 15; 1; 1; 10; 20]);
+         x = (1:6)';
+         inputs = {timetable(t, x), table(t, x)};
+         for n = 1:numel(inputs)
+            G = groupstats.groupsummary(inputs{n}, "t", "mean", "x", ...
+               {"month"});
+
+            returned = string(G.Properties.VariableNames);
+            expected = ["t", "mean_x", "GroupCount", "Percent"];
+            testCase.verifyEqual(returned, expected);
+            returned = [G.GroupCount, G.mean_x];
+            expected = [2 1.5; 1 3; 3 5];
+            testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+         end
+      end
+
+      function testBareNamedBinWithOneGroupVariableIsTheCellForm(testCase)
+         % With one group variable, bare "month" is an alias for {"month"},
+         % the builtin's bare form. The month bins of the six dates hold
+         % 2, 1, and 3 rows, with means 1.5, 3, and 5. The alias holds for
+         % a timetable's row times, a table's datetime variable, char text,
+         % and a call that adds GroupSets.
+
+         t = datetime(2020, [1; 1; 2; 3; 3; 3], [1; 15; 1; 1; 10; 20]);
+         x = (1:6)';
+         k = ["p"; "q"; "p"; "q"; "p"; "q"];
+         inputs = {timetable(t, x, k), table(t, x, k)};
+         for n = 1:numel(inputs)
+            expected = groupstats.groupsummary(inputs{n}, "t", "mean", "x", ...
+               {"month"});
+            for bin = {"month", 'month'}
+               returned = groupstats.groupsummary(inputs{n}, "t", "mean", ...
+                  "x", bin{1});
+               testCase.verifyEqual(returned, expected);
+            end
+
+            returned = [returned.GroupCount, returned.mean_x];
+            expected = [2 1.5; 1 3; 3 5];
+            testCase.verifyEqual(returned, expected, 'AbsTol', 1e-12);
+
+            expected = groupstats.groupsummary(inputs{n}, "t", "mean", "x", ...
+               {"month"}, GroupSets = "k");
+            returned = groupstats.groupsummary(inputs{n}, "t", "mean", "x", ...
+               "month", GroupSets = "k");
+            testCase.verifyEqual(returned, expected);
+         end
+      end
+
+      function testBareNamedBinWithTwoGroupVariablesErrors(testCase)
+         % The alias covers one group variable only. With two, bare text
+         % names no variable, so it is a badGroupBins error. The cell form,
+         % one scheme per variable, works: January holds p 2 and q 1, and
+         % February p 1.
+
+         t = datetime(2020, [1; 1; 1; 2], [1; 15; 20; 1]);
+         tbl = table(t, ["p"; "p"; "q"; "p"], (1:4)', ...
+            'VariableNames', {'t', 'k', 'x'});
+
+         testCase.verifyError(@() groupstats.groupsummary(tbl, ["t", "k"], ...
+            "mean", "x", "month"), 'groupstats:groupsummary:badGroupBins');
+
+         G = groupstats.groupsummary(tbl, ["t", "k"], "mean", "x", ...
+            {"month", "none"});
+         returned = G.GroupCount;
+         expected = [2; 1; 1];
+         testCase.verifyEqual(returned, expected);
       end
 
    end

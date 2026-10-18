@@ -10,7 +10,7 @@ function tblstack = stacktables(tbls, opts)
    % variables, filling in dummy values where necessary.
    %
    % Inputs:
-   %  tbls - table, where each table can have a different number of rows and
+   %  tbls - tables or timetables, each with a different number of rows and
    %  same and/or different variables*
    %
    % Outputs:
@@ -58,12 +58,27 @@ function tblstack = stacktables(tbls, opts)
 
    %% table properties
 
+   % Tables and timetables have different row labels and cannot be mixed.
+   assert(~isempty(tbls), 'stacktables:EmptyInput', ...
+      'Provide at least one table or timetable.')
+   assert(all(cellfun(@istable, tbls)) || ...
+      all(cellfun(@istimetable, tbls)), 'stacktables:MixedTypes', ...
+      'Inputs must be all tables or all timetables.')
+
    % Get the number of tables and number of rows in each table
    N = length(tbls);
    nrows = cellfun(@height,tbls);
 
-   % Convert columns of chars to string if the char widths are not identical,
-   % otherwise the join will fail.
+   % Plain tables avoid outerjoin filling right-only row times with NaT.
+   sourceTables = tbls;
+   wastimetable = istimetable(tbls{1});
+   if wastimetable
+      rowtimes = cellfun(@(tbl) tbl.Properties.RowTimes, tbls, 'Uniform', false);
+      tbls = cellfun(@(tbl) timetable2table(tbl, 'ConvertRowTimes', false), ...
+         tbls, 'Uniform', false);
+   end
+
+   % Convert char columns to string so unequal widths can concatenate.
    tbls = cellfun(@tblchars2string, tbls, 'Uniform', false);
 
    % % More explicit
@@ -77,6 +92,9 @@ function tblstack = stacktables(tbls, opts)
 
    % Assign temporary keys going from 1 to total # rows among all tables
    rowKey = 'tpbedd3216830044debb7fc4c22fe01b92'; % purposefully obscure keyname
+   % Preserve a user variable even when it has the temporary key's name.
+   names = cellfun(@(tbl) tbl.Properties.VariableNames, tbls, 'Uniform', false);
+   rowKey = matlab.lang.makeUniqueStrings(rowKey, [names{:}]);
    tmpKey = [0 cumsum(nrows)];
    for n = 1:N
       % Assign range to rowKey column for outerjoin
@@ -100,14 +118,32 @@ function tblstack = stacktables(tbls, opts)
    end
 
    % Remove temporary ids
+   t1 = sortrows(t1, rowKey);
    tblstack = removevars(t1,rowKey);
 
+   % Restore row times and variable continuity after joining timetable data.
+   if wastimetable
+      tblstack = table2timetable(tblstack, 'RowTimes', vertcat(rowtimes{:}));
+      tblstack.Properties.DimensionNames = ...
+         sourceTables{1}.Properties.DimensionNames;
+      continuity = repmat("unset", 1, width(tblstack));
+      for n = N:-1:1
+         props = sourceTables{n}.Properties;
+         if ~isempty(props.VariableContinuity)
+            [~, indices] = ismember(props.VariableNames, ...
+               tblstack.Properties.VariableNames);
+            continuity(indices) = string(props.VariableContinuity);
+         end
+      end
+      tblstack.Properties.VariableContinuity = continuity;
+   end
+
    % Collect rownames, which may or may not exist
-   if all(cellfun(@istable, tbls))
+   if ~wastimetable
       rownames = cellfun(@(tbl) tbl.Properties.RowNames, tbls, 'Uniform', 0);
-   elseif all(cellfun(@istimetable, tbls))
-      % Timetables do not hvae rownames
-      rownames = "";
+   else
+      % Timetables do not have rownames.
+      rownames = {};
    end
 
    % Merge row names if they exist
@@ -122,7 +158,9 @@ function tblstack = stacktables(tbls, opts)
       catch e
          if strcmp(e.identifier, 'MATLAB:table:DuplicateRowNames')
             % There are duplicate rownames, add them as a new column
-            tblstack.rowNames = string(rownames);
+            rowNameVar = matlab.lang.makeUniqueStrings( ...
+               'rowNames', tblstack.Properties.VariableNames);
+            tblstack.(rowNameVar) = string(rownames);
          end
 
          if strcmp(e.identifier, 'MATLAB:table:IncorrectNumberOfRowNames')
@@ -136,6 +174,10 @@ function tblstack = stacktables(tbls, opts)
             %    [string(rownames);
             %    repelem(missing, height(tblstack)-numel(rownames))'];
          end
+         % Unexpected assignment errors must remain visible to callers.
+         if ~strcmp(e.identifier, 'MATLAB:table:DuplicateRowNames')
+            rethrow(e)
+         end
       end
 
       % This is true if there are no duplicate rownames
@@ -148,24 +190,17 @@ function tblstack = stacktables(tbls, opts)
    % Merge custom properties
    if opts.MergeCustomProps
       customProps = cellfun(@(tbl) ...
-         tbl.Properties.CustomProperties, tbls, 'UniformOutput', false);
+         tbl.Properties.CustomProperties, sourceTables, 'UniformOutput', false);
 
       if any(~cellfun(@(props) isempty(fieldnames(props)), customProps))
-         tblstack.Properties.CustomProperties = mergeCustomProps(tbls{:});
+         tblstack.Properties.CustomProperties = mergeCustomProps(sourceTables{:});
       end
    end
 end
 
 function tbl = tblchars2string(tbl)
-   try
-      idxchar = cellfun(@ischar, table2cell(tbl(1, :)));
-      tbl.(tbl.Properties.VariableNames{idxchar}) = string(tbl{:, idxchar});
-
-      % Using vartype, in case it is more robust
-      % varchar = string(tbl(1, vartype("char")).Properties.VariableNames);
-      % tbl.(varchar) = string(tbl{:, vartype('char')});
-   catch
-   end
+   % Convert every char variable, including variables in an empty table.
+   tbl = convertvars(tbl, vartype('char'), 'string');
 end
 
 %% testing

@@ -8,9 +8,9 @@ function column = mergegroupmembers(column, mergegroups)
    %  pool into one group. A bare string vector is one merge group. The
    %  merged group's label joins the member names with " and ", in the
    %  order given. The merged group takes the category position of its
-   %  first member in the current category order. All four chart functions
-   %  merge through this helper, so the identifiers below stay the same
-   %  from every chart.
+   %  first member in the current category order. All five chart functions
+   %  and groupstats.groupci merge through this helper, so the identifiers
+   %  below stay the same from every caller.
    %
    % Errors
    %  groupstats:mergegroupmembers:unknownMergeMember - A named member is
